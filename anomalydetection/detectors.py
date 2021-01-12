@@ -103,3 +103,21 @@ class DiffRangeDetector(RangeDetector):
 
     def detect(self, data):
         return super().detect(data.diff())
+
+
+class RollingStdDetector(BaseDetector):
+    def __init__(self, window_size=1, threshold=0):
+        super().__init__()
+        self._window_size = window_size
+        self._threshold = 0
+
+    def fit(self, data):
+        super().validate(data)
+        return self
+
+    def detect(self, data):
+        super().validate(data)
+        return data.rolling(self._window_size).std() > self._threshold
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
