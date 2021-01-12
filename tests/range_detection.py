@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
+from anomalydetection.custom_exceptions import NoRangeDefinedError, WrongInputDataType
 from anomalydetection.detectors import RangeDetector, DiffRangeDetector, AnomalyDetectionPipeline, PeakDetector
 
 
@@ -21,14 +22,24 @@ def range_data_series(range_data):
     return pd.Series(normal_data, index=time), pd.Series(abnormal_data, index=time), expected_anomalies
 
 
+def test_base_detector_exceptions(range_data, range_data_series):
+    data, _, _ = range_data
+    data_series, _, _ = range_data_series
+
+    detector = RangeDetector()
+    pytest.raises(NoRangeDefinedError, detector.detect, data_series)
+    pytest.raises(WrongInputDataType, detector.fit, data)
+
+
 def test_range_detector(range_data_series):
     data, _, _ = range_data_series
 
     detector = RangeDetector(0, 2)
     anomalies = detector.detect(data)
-
+    expected_anomalies = [False, False, False, False, False, False, True, True]
     assert len(anomalies) == len(data)
     assert sum(anomalies) == 2
+    assert all(expected_anomalies == anomalies)
 
 
 def test_range_detector_autoset(range_data_series):
