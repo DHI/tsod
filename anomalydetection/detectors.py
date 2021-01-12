@@ -106,10 +106,10 @@ class DiffRangeDetector(RangeDetector):
 
 
 class RollingStdDetector(BaseDetector):
-    def __init__(self, window_size=1, threshold=0):
+    def __init__(self, window_size=10, threshold=0.1):
         super().__init__()
         self._window_size = window_size
-        self._threshold = 0
+        self._threshold = threshold
 
     def fit(self, data):
         super().validate(data)
@@ -117,7 +117,10 @@ class RollingStdDetector(BaseDetector):
 
     def detect(self, data):
         super().validate(data)
-        return data.rolling(self._window_size).std() > self._threshold
+        anomalies = data.rolling(self._window_size).std() > self._threshold
+        anomalies = anomalies.astype(int).diff() > 0  # only take positive edges
+        anomalies[0] = False  # first element cannot be determined by diff
+        return anomalies
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
