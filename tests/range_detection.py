@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
+from anomalydetection.custom_exceptions import NoRangeDefinedError, WrongInputDataType
 from anomalydetection.detectors import RangeDetector, DiffRangeDetector, AnomalyDetectionPipeline
 
 
@@ -19,6 +20,15 @@ def range_data_series(range_data):
     normal_data, abnormal_data, expected_anomalies = range_data
     time = pd.date_range(start='2020', periods=len(normal_data), freq='1H')
     return pd.Series(normal_data, index=time), pd.Series(abnormal_data, index=time), expected_anomalies
+
+
+def test_base_detector_exceptions(range_data, range_data_series):
+    data, _, _ = range_data
+    data_series, _, _ = range_data_series
+
+    detector = RangeDetector()
+    pytest.raises(NoRangeDefinedError, detector.detect, data_series)
+    pytest.raises(WrongInputDataType, detector.fit, data)
 
 
 def test_range_detector(range_data_series):
