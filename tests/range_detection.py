@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from dataio.detectors import RangeDetector, DiffRangeDetector, AnomalyDetectionPipeline
+from anomalydetection.detectors import RangeDetector, DiffRangeDetector, AnomalyDetectionPipeline
 
 
 @pytest.fixture
