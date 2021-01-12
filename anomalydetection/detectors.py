@@ -105,7 +105,7 @@ class DiffRangeDetector(RangeDetector):
         return super().detect(data.diff())
 
 
-class RollingStdDetector(BaseDetector):
+class PeakDetector(BaseDetector):
     def __init__(self, window_size=10, threshold=0.1):
         super().__init__()
         self._window_size = window_size
