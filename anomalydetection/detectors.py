@@ -11,8 +11,7 @@ class BaseDetector:
         return self
 
     def detect(self, data: pd.Series):
-        """ Detect anomalies in data. """
-        return pd.Series([False] * len(data), index=data.index)
+        pass
 
     def validate(self, data):
         if not isinstance(data, pd.Series):
