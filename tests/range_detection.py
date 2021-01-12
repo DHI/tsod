@@ -36,9 +36,10 @@ def test_range_detector(range_data_series):
 
     detector = RangeDetector(0, 2)
     anomalies = detector.detect(data)
-
+    expected_anomalies = [False, False, False, False, False, False, True, True]
     assert len(anomalies) == len(data)
     assert sum(anomalies) == 2
+    assert all(expected_anomalies == anomalies)
 
 
 def test_range_detector_autoset(range_data_series):
