@@ -11,7 +11,7 @@ class BaseDetector:
         return self
 
     def detect(self, data: pd.Series):
-        pass
+        NotImplementedError()
 
     def validate(self, data):
         if not isinstance(data, pd.Series):
