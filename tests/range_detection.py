@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from anomalydetection.detectors import RangeDetector, DiffRangeDetector, AnomalyDetectionPipeline
+from anomalydetection.detectors import RangeDetector, DiffRangeDetector, AnomalyDetectionPipeline, PeakDetector
 
 
 @pytest.fixture
@@ -51,3 +51,13 @@ def test_range_detector_pipeline(range_data_series):
 
     detected_anomalies = anomaly_detector.detect_detailed(abnormal_data)
     assert all(detected_anomalies.is_anomaly == expected_anomalies)
+
+
+def test_peak_detector(range_data_series):
+    data, _, _ = range_data_series
+
+    detector = PeakDetector(3, 0.1)
+    anomalies = detector.detect(data)
+
+    assert len(anomalies) == len(data)
+    assert sum(anomalies) == 1
