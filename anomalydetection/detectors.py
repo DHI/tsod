@@ -141,5 +141,3 @@ class HampelDetector(BaseDetector):
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._threshold}, {self._window_size})"
-
-

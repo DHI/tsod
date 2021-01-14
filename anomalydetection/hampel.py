@@ -1,6 +1,4 @@
 import numpy as np
-import pandas as pd
-from numba import jit
 
 '''
 GAUSSIAN_SCALE_FACTOR = k = 1/Phi^(-1)(3/4)
