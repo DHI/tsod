@@ -58,3 +58,78 @@ def validate_arguments(window_size, threshold):
     else:
         if threshold < 0:
             raise ValueError("Threshold must be positive.")
+
+
+from numba import jit
+import pandas as pd
+
+
+@jit(nopython=True)
+def hampel_filter_numba(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_FACTOR):
+    """
+    Hampel filter implementation that works on numpy arrays, implemented with numba. Snatched from this implementation:
+    https://github.com/erykml/medium_articles/blob/master/Machine%20Learning/outlier_detection_hampel_filter.ipynb
+
+    Parameters
+    ----------
+    time_series: numpy.ndarray
+    window_size: int
+        The window range is from [(i - window_size):(i + window_size)], so window_size is half of the
+        window, counted in number of array elements (as opposed to specify a time span, which is not
+        supported by this implementation)
+    threshold: float
+        The threshold for marking an outlier. A low threshold "narrows" the band within which values are deemed as
+        outliers. n_sigmas
+    k
+
+    Returns
+    -------
+    new_series: numpy.ndarray
+        series with outliers replaced by rolling median
+    indices: list
+        List of indices with detected outliers
+    """
+
+    time_series_clean = time_series.copy()
+    outlier_indices = []
+    is_outlier = [False] * len(time_series)
+
+    for t in range(window_size, (len(time_series) - window_size)):
+        time_series_window = time_series[(t - window_size):(t + window_size)]
+        median_in_window = np.nanmedian(time_series_window)
+        mad_in_window = k * np.nanmedian(np.abs(time_series_window - median_in_window))
+        absolute_deviation_from_median = np.abs(time_series[t] - median_in_window)
+        is_outlier[t] = absolute_deviation_from_median > threshold * mad_in_window
+        if is_outlier[t]:
+            outlier_indices.append(t)
+            time_series_clean[t] = median_in_window
+
+    return is_outlier, outlier_indices, time_series_clean
+
+
+def hampel_filter_numba(time_series, window_size=7, t0=3):
+    """
+    Wraps the numba implementation of the Hampel filter to work on dataframes with datetime index.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        pandas series of values from which to remove outliers. The dataframe must have 'date' as index
+        and one column named 'value'
+    window_size : int
+        size of window (including the sample; 7 is equal to 3 on either side of value)
+    t0 : float
+        The threshold for marking an outlier. A low threshold "narrows" the band within which values are deemed as
+        outliers.
+
+    Returns
+    -------
+    df_outliers : pandas.DataFrame
+        Series containing only the outliers
+    df_clean : pandas.DataFrame
+        Series with outliers replaced by rolling median
+    """
+    window_size = int(window_size / 2)
+    outlier_indices, time_series_clean = hampel_filter_numba(time_series.to_numpy(), window_size, t0)
+
+    return time_series[outlier_indices], time_series_clean
