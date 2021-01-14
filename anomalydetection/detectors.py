@@ -1,6 +1,7 @@
 import pandas as pd
 
 from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError
+from anomalydetection import hampel
 
 
 class BaseDetector:
@@ -124,3 +125,21 @@ class PeakDetector(BaseDetector):
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
+
+
+class HampelDetector(BaseDetector):
+    def __init__(self, window_size=5, threshold=3):
+        super().__init__()
+        hampel.validate_arguments(window_size, threshold)
+        self._threshold = threshold
+        self._window_size = window_size
+
+    def detect(self, data):
+        super().validate(data)
+        anomalies, indices, _ = hampel.detect(data, self._window_size, self._threshold)
+        return anomalies
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self._threshold}, {self._window_size})"
+
+
