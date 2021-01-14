@@ -1,5 +1,7 @@
 import pandas as pd
 
+from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError
+
 
 class BaseDetector:
     def __init__(self):
@@ -11,12 +13,11 @@ class BaseDetector:
         return self
 
     def detect(self, data: pd.Series):
-        """ Detect anomalies in data. """
-        return pd.Series([False] * len(data), index=data.index)
+        NotImplementedError()
 
     def validate(self, data):
         if not isinstance(data, pd.Series):
-            raise ValueError("Input data must be a pandas.Series.")
+            raise WrongInputDataType()
 
 
 class AnomalyDetectionPipeline(BaseDetector):
@@ -85,8 +86,7 @@ class RangeDetector(BaseDetector):
 
     def _validate_fit(self):
         if self._min is None and self._max is None:
-            raise ValueError("Please call fit() before detect() or "
-                             "specify min/max range when instantiating detector object.")
+            raise NoRangeDefinedError()
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._min}, {self._max})"
@@ -103,3 +103,24 @@ class DiffRangeDetector(RangeDetector):
 
     def detect(self, data):
         return super().detect(data.diff())
+
+
+class PeakDetector(BaseDetector):
+    def __init__(self, window_size=10, threshold=0.1):
+        super().__init__()
+        self._window_size = window_size
+        self._threshold = threshold
+
+    def fit(self, data):
+        super().validate(data)
+        return self
+
+    def detect(self, data):
+        super().validate(data)
+        anomalies = data.rolling(self._window_size).std() > self._threshold
+        anomalies = anomalies.astype(int).diff() > 0  # only take positive edges
+        anomalies[0] = False  # first element cannot be determined by diff
+        return anomalies
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"

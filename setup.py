@@ -6,10 +6,10 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="anomalydetection",
     version='0.0.1',
-    install_requires=["pandas"],
+    install_requires=["pandas>=1.2.0"],
     extras_require={
-        "dev": ["pytest"],
-        "test": ["pytest"],
+        "dev": ["pytest>=6.2.1"],
+        "test": ["pytest>=6.2.1"],
     },
     author="Rasmus Halvgaard",
     author_email="rha@dhigroup.com",
@@ -17,7 +17,7 @@ setuptools.setup(
     license="MIT",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/DHI/mikeio",
+    url="https://github.com/DHI/anomalydetection",
     packages=setuptools.find_packages(),
     include_package_data=True,
 )
