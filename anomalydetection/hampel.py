@@ -14,6 +14,7 @@ def median_absolute_deviation(x):
 
 def filter(time_series, window_size=5, threshold=3, k=GAUSSIAN_SCALE_FACTOR):
     """ Detect and filter out outliers using the Hampel filter.
+        Based on https://github.com/MichaelisTrofficus/hampel_filter
 
     Parameters
     ----------
