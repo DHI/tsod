@@ -3,7 +3,17 @@ import numpy as np
 import pandas as pd
 
 from anomalydetection.custom_exceptions import NoRangeDefinedError, WrongInputDataType
-from anomalydetection.detectors import RangeDetector, DiffRangeDetector, AnomalyDetectionPipeline, PeakDetector
+from anomalydetection.detectors import RangeDetector, DiffRangeDetector, AnomalyDetectionPipeline, PeakDetector, \
+    HampelDetector
+from tests.data_generation import create_random_walk_with_outliers
+
+
+@pytest.fixture
+def data_series():
+    n_steps = 100
+    time_series_with_outliers, outlier_indices = create_random_walk_with_outliers(n_steps)
+    time = pd.date_range(start='2020', periods=n_steps, freq='1H')
+    return pd.Series(time_series_with_outliers, index=time), outlier_indices
 
 
 @pytest.fixture
@@ -72,3 +82,13 @@ def test_peak_detector(range_data_series):
 
     assert len(anomalies) == len(data)
     assert sum(anomalies) == 1
+
+
+def test_hampel_detector(data_series):
+    data, expected_anomalies_indices = data_series
+    detector = HampelDetector()
+    anomalies = detector.detect(data)
+    anomalies_indices = np.array(np.where(anomalies)).flatten()
+    # Validate if the found anomalies are also in the expected anomaly set
+    # NB Not necessarily all of them
+    assert all(i in expected_anomalies_indices for i in anomalies_indices)
