@@ -6,9 +6,10 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="anomalydetection",
     version='0.0.2',
-    install_requires=["pandas>=1.2.0", "pyod"],
+    install_requires=["pandas>=1.2.0"],
     extras_require={
         "dev": ["pytest>=6.2.1"],
+        "ml": ["pyod", "keras", "tensorflow"],
         "test": ["pytest>=6.2.1"],
     },
     author="Rasmus Halvgaard",
