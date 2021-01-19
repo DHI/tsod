@@ -96,7 +96,7 @@ def test_hampel_detector(data_series):
 
 def test_autoencoder_detector(data_series):
     data_with_anomalies, expected_anomalies_indices, normal_data = data_series
-    detector = AutoEncoder(hidden_neurons=[1, 1, 1, 1])  # TODO add lagged features to increase layer size
+    detector = AutoEncoder(hidden_neurons=[1, 1, 1, 1], epochs=1)  # TODO add lagged features to increase layer size
     detector.fit(normal_data)
     anomalies = detector.detect(data_with_anomalies)
     anomalies_indices = np.array(np.where(anomalies)).flatten()
