@@ -1,25 +1,4 @@
 import numpy as np
-import pandas as pd
-import pytest
-
-from anomalydetection.detectors import HampelDetector
-
-
-@pytest.fixture
-def data_series():
-    n_steps = 100
-    time_series_with_outliers, outlier_indices = create_random_walk_with_outliers(n_steps)
-    time = pd.date_range(start='2020', periods=n_steps, freq='1H')
-    return pd.Series(time_series_with_outliers, index=time), outlier_indices
-
-
-def test_hampel_detector(data_series):
-    data, expected_anomalies_indices = data_series
-    detector = HampelDetector()
-    anomalies = detector.detect(data)
-    anomalies_indices = np.array(np.where(anomalies)).flatten()
-    # Validate if the found anomalies are also in the expected anomaly set
-    assert all(i in expected_anomalies_indices for i in anomalies_indices)
 
 
 def create_random_walk_with_outliers(n_steps, t0=0, outlier_fraction=0.1, outlier_scale=10, seed=42):
@@ -56,7 +35,8 @@ def create_random_walk_with_outliers(n_steps, t0=0, outlier_fraction=0.1, outlie
     random_walk = np.append(t0, random_steps[:-1]).cumsum(axis=0)
 
     # Add outliers
+    random_walk_with_outliers = random_walk.copy()
     outlier_indices = np.random.randint(0, n_steps, n_outliers)
-    random_walk[outlier_indices] += random_steps[outlier_indices] * outlier_scale
+    random_walk_with_outliers[outlier_indices] += random_steps[outlier_indices] * outlier_scale
 
-    return random_walk, sorted(outlier_indices)
+    return random_walk_with_outliers, sorted(outlier_indices), random_walk
