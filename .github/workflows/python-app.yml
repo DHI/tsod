@@ -34,6 +34,7 @@ jobs:
     - name: Install anomalydetection
       run: |
         pip install .[test]
+        pip install .[ml]
     - name: Test with pytest
       run: |
         pytest --cov=anomalydetection tests
