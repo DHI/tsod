@@ -35,7 +35,8 @@ def create_random_walk_with_outliers(n_steps, t0=0, outlier_fraction=0.1, outlie
     random_walk = np.append(t0, random_steps[:-1]).cumsum(axis=0)
 
     # Add outliers
+    random_walk_with_outliers = random_walk.copy()
     outlier_indices = np.random.randint(0, n_steps, n_outliers)
-    random_walk[outlier_indices] += random_steps[outlier_indices] * outlier_scale
+    random_walk_with_outliers[outlier_indices] += random_steps[outlier_indices] * outlier_scale
 
-    return random_walk, sorted(outlier_indices)
+    return random_walk_with_outliers, sorted(outlier_indices), random_walk
