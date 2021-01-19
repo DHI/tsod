@@ -1,16 +1,10 @@
 # anomalydetection: Anomaly Detection for time series data.
+Sensors often provide faulty or missing observations. These anomalies must be detected automatically and replaced with more feasible values before feeding the data to numerical simulation engines as boundary conditions or real time decision systems.
 
-Sensors often provide faulty or missing observations, i.e. anomalies. Detecting anomalies in time series is a recurring problem in many applications. It is often the first step in data preprocessing and automated data quality assurance that also involves: gap-filling and modelling missing observations in real data sets.
+This package aims to provide examples and algortihms for detecting anomalies in time series data specifically tailored to DHI users and the water domain. It is simple to install and deploy operationally and is accessible to everyone (open-source).
 
-Both in realtime but also for using timeseries data without large errors to run numerical models and decision support tools.
-
-# Goals
-This package aims to be:
-- Simple to use, install and deploy operationally
-- Accessible to everyone (open-source)
-- Low computational cost
-- Prodive a catalog examples tailored to DHI users and the water domain
-
+# Installation
+pip install git+https://github.com/DHI/anomalydetection.git
 
 # Definitons
 Note that we distinguish between [two types of anomaly detection]: https://scikit-learn.org/stable/modules/outlier_detection.html
@@ -22,5 +16,4 @@ The training data may contain outliers, i.e. observations far from most other ob
 The training data is considered "normal" and is not polluted by outliers. New test data observations can be categorized as an outlier and is in this context called a novelty.
 
 
-# Installation
-pip install git+https://github.com/DHI/anomalydetection.git
+
