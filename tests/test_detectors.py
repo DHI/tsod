@@ -13,7 +13,7 @@ def data_series():
     n_steps = 100
     time_series_with_outliers, outlier_indices, random_walk = create_random_walk_with_outliers(n_steps)
     time = pd.date_range(start='2020', periods=n_steps, freq='1H')
-    return pd.Series(time_series_with_outliers, index=time), outlier_indices, random_walk
+    return pd.Series(time_series_with_outliers, index=time), outlier_indices, pd.Series(random_walk, index=time)
 
 
 @pytest.fixture
@@ -85,7 +85,7 @@ def test_peak_detector(range_data_series):
 
 
 def test_hampel_detector(data_series):
-    data_with_anomalies, expected_anomalies_indices, data = data_series
+    data_with_anomalies, expected_anomalies_indices, _ = data_series
     detector = HampelDetector()
     anomalies = detector.detect(data_with_anomalies)
     anomalies_indices = np.array(np.where(anomalies)).flatten()
