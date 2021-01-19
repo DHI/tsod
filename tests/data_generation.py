@@ -1,25 +1,4 @@
 import numpy as np
-import pandas as pd
-import pytest
-
-from anomalydetection.detectors import HampelDetector
-
-
-@pytest.fixture
-def data_series():
-    n_steps = 100
-    time_series_with_outliers, outlier_indices = create_random_walk_with_outliers(n_steps)
-    time = pd.date_range(start='2020', periods=n_steps, freq='1H')
-    return pd.Series(time_series_with_outliers, index=time), outlier_indices
-
-
-def test_hampel_detector(data_series):
-    data, expected_anomalies_indices = data_series
-    detector = HampelDetector()
-    anomalies = detector.detect(data)
-    anomalies_indices = np.array(np.where(anomalies)).flatten()
-    # Validate if the found anomalies are also in the expected anomaly set
-    assert all(i in expected_anomalies_indices for i in anomalies_indices)
 
 
 def create_random_walk_with_outliers(n_steps, t0=0, outlier_fraction=0.1, outlier_scale=10, seed=42):
