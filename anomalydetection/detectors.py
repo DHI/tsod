@@ -2,6 +2,7 @@ import pandas as pd
 
 from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError
 from anomalydetection import hampel
+from pyod.models.auto_encoder import AutoEncoder as AutoEncoderPyod
 
 
 class BaseDetector:
@@ -23,6 +24,7 @@ class BaseDetector:
 
 class AnomalyDetectionPipeline(BaseDetector):
     """ Combine detectors. """
+
     def __init__(self, detectors):
         super().__init__()
         self._detectors = detectors
@@ -53,6 +55,7 @@ class AnomalyDetectionPipeline(BaseDetector):
 
 class RangeDetector(BaseDetector):
     """ Detect values outside range. """
+
     def __init__(self, min_value=None, max_value=None):
         super().__init__()
         self._min = min_value
@@ -95,6 +98,7 @@ class RangeDetector(BaseDetector):
 
 class DiffRangeDetector(RangeDetector):
     """ Detect values outside diff or rate of change. """
+
     def fit(self, data):
         super().validate(data)
         data_diff = data.diff()
@@ -141,3 +145,28 @@ class HampelDetector(BaseDetector):
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
+
+
+class AutoEncoder(BaseDetector):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self._model = AutoEncoderPyod(**kwargs)
+
+    def fit(self, data):
+        data = self._validate(data)
+        self._model.fit(data)
+
+        return self
+
+    def detect(self, data):
+        data = self._validate(data)
+        return self._model.predict(data)
+
+    def _validate(self, data):
+        if isinstance(data, pd.Series):
+            return data.values.reshape(-1, 1)
+        else:
+            return data
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self._model})"
