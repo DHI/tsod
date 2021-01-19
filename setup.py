@@ -9,6 +9,7 @@ setuptools.setup(
     install_requires=["pandas>=1.2.0"],
     extras_require={
         "dev": ["pytest>=6.2.1"],
+        "ml": ["numba"],
         "test": ["pytest>=6.2.1"],
     },
     author="Rasmus Halvgaard",
