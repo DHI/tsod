@@ -2,7 +2,6 @@ import pandas as pd
 
 from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError
 from anomalydetection import hampel
-from anomalydetection.hampel import detect_using_numba
 
 
 class BaseDetector:
@@ -140,7 +139,7 @@ class HampelDetector(BaseDetector):
         super().validate(data)
 
         if self._use_numba:
-            anomalies, indices, _ = detect_using_numba(data.values, self._window_size, self._threshold)
+            anomalies, indices, _ = hampel.detect_using_numba(data.values, self._window_size, self._threshold)
         else:
             anomalies, indices, _ = hampel.detect(data, self._window_size, self._threshold)
 
