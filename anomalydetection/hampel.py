@@ -64,8 +64,7 @@ def validate_arguments(window_size, threshold):
 @jit(nopython=True)
 def detect_using_numba(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_FACTOR):
     """
-    Hampel filter implementation that works on numpy arrays, implemented with numba. Snatched from this implementation:
-    https://github.com/erykml/medium_articles/blob/master/Machine%20Learning/outlier_detection_hampel_filter.ipynb
+    Hampel filter implementation that works on numpy arrays, implemented with numba.
 
     Parameters
     ----------
