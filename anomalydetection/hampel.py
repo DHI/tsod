@@ -77,7 +77,8 @@ def detect_using_numba(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_F
     threshold: float
         The threshold for marking an outlier. A low threshold "narrows" the band within which values are deemed as
         outliers. n_sigmas
-    k
+    k : float
+        Constant scale factor dependent on distribution. Default is normal distribution.
     """
 
     time_series_clean = time_series.copy()
