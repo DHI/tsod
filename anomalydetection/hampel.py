@@ -1,6 +1,8 @@
 import numpy as np
 from numba import jit
 
+from anomalydetection.custom_exceptions import NotInteger, InvalidArgument
+
 '''
 GAUSSIAN_SCALE_FACTOR = k = 1/Phi^(-1)(3/4)
 Choosing 3/4 as argument makes +-MAD cover 50% of the standard normal cumulative distribution function.
@@ -48,24 +50,23 @@ def detect(time_series, window_size, threshold, k=GAUSSIAN_SCALE_FACTOR):
 
 
 def validate_arguments(window_size, threshold):
-    if type(window_size) != int:
-        raise ValueError("Window size must be an integer.")
+    if not isinstance(window_size, int):
+        raise NotInteger("window_size")
     else:
         if window_size <= 0:
-            raise ValueError("Window size must be nonnegative.")
+            raise InvalidArgument("window_size", "nonnegative")
 
-    if type(threshold) != int:
-        raise ValueError("Threshold must be an integer.")
+    if not isinstance(threshold, int):
+        raise NotInteger("threshold")
     else:
         if threshold < 0:
-            raise ValueError("Threshold must be positive.")
+            raise InvalidArgument("threshold", "positive")
 
 
 @jit(nopython=True)
 def detect_using_numba(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_FACTOR):
     """
-    Hampel filter implementation that works on numpy arrays, implemented with numba. Snatched from this implementation:
-    https://github.com/erykml/medium_articles/blob/master/Machine%20Learning/outlier_detection_hampel_filter.ipynb
+    Hampel filter implementation that works on numpy arrays, implemented with numba.
 
     Parameters
     ----------
@@ -77,7 +78,8 @@ def detect_using_numba(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_F
     threshold: float
         The threshold for marking an outlier. A low threshold "narrows" the band within which values are deemed as
         outliers. n_sigmas
-    k
+    k : float
+        Constant scale factor dependent on distribution. Default is normal distribution.
     """
 
     time_series_clean = time_series.copy()
