@@ -1,6 +1,8 @@
 import numpy as np
 from numba import jit
 
+from anomalydetection.custom_exceptions import NotInteger, InvalidArgument
+
 '''
 GAUSSIAN_SCALE_FACTOR = k = 1/Phi^(-1)(3/4)
 Choosing 3/4 as argument makes +-MAD cover 50% of the standard normal cumulative distribution function.
@@ -48,17 +50,17 @@ def detect(time_series, window_size, threshold, k=GAUSSIAN_SCALE_FACTOR):
 
 
 def validate_arguments(window_size, threshold):
-    if type(window_size) != int:
-        raise ValueError("Window size must be an integer.")
+    if not isinstance(window_size, int):
+        raise NotInteger("window_size")
     else:
         if window_size <= 0:
-            raise ValueError("Window size must be nonnegative.")
+            raise InvalidArgument("window_size", "nonnegative")
 
-    if type(threshold) != int:
-        raise ValueError("Threshold must be an integer.")
+    if not isinstance(threshold, int):
+        raise NotInteger("threshold")
     else:
         if threshold < 0:
-            raise ValueError("Threshold must be positive.")
+            raise InvalidArgument("threshold", "positive")
 
 
 @jit(nopython=True)

@@ -13,3 +13,14 @@ class NotFittedError(Exception):
 class NoRangeDefinedError(NotFittedError):
     def __init__(self, message="Or specify min/max range when instantiating detector object."):
         super().__init__(message)
+
+
+class InvalidArgument(Exception):
+    def __init__(self, argument_name, requirement):
+        self.message = f"{argument_name} must be {requirement}."
+        super().__init__(self.message)
+
+
+class NotInteger(InvalidArgument):
+    def __init__(self, argument_name):
+        super().__init__(argument_name, "an integer")
