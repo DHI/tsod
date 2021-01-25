@@ -92,3 +92,8 @@ def test_hampel_detector(data_series):
     # Validate if the found anomalies are also in the expected anomaly set
     # NB Not necessarily all of them
     assert all(i in expected_anomalies_indices for i in anomalies_indices)
+
+    detector_numba = HampelDetector(use_numba=True)
+    anomalies_numba = detector_numba.detect(data_with_anomalies)
+    anomalies_indices_numba = np.array(np.where(anomalies_numba)).flatten()
+    assert all(i in anomalies_indices_numba for i in anomalies_indices)
