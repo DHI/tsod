@@ -132,15 +132,21 @@ class PeakDetector(BaseDetector):
 
 
 class HampelDetector(BaseDetector):
-    def __init__(self, window_size=5, threshold=3):
+    def __init__(self, window_size=5, threshold=3, use_numba=False):
         super().__init__()
         hampel.validate_arguments(window_size, threshold)
         self._threshold = threshold
         self._window_size = window_size
+        self._use_numba = use_numba
 
     def detect(self, data):
         super().validate(data)
-        anomalies, indices, _ = hampel.detect(data, self._window_size, self._threshold)
+
+        if self._use_numba:
+            anomalies, indices, _ = hampel.detect_using_numba(data.values, self._window_size, self._threshold)
+        else:
+            anomalies, indices, _ = hampel.detect(data, self._window_size, self._threshold)
+
         return anomalies
 
     def __str__(self):
