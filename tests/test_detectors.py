@@ -3,17 +3,32 @@ import numpy as np
 import pandas as pd
 
 from anomalydetection.custom_exceptions import NoRangeDefinedError, WrongInputDataType
-from anomalydetection.detectors import RangeDetector, DiffRangeDetector, AnomalyDetectionPipeline, PeakDetector, \
-    HampelDetector
+from anomalydetection.detectors import (
+    RangeDetector,
+    DiffRangeDetector,
+    AnomalyDetectionPipeline,
+    PeakDetector,
+    HampelDetector,
+    ConstantValueDetector,
+    LinearGradientDetector,
+)
 from tests.data_generation import create_random_walk_with_outliers
 
 
 @pytest.fixture
 def data_series():
     n_steps = 100
-    time_series_with_outliers, outlier_indices, random_walk = create_random_walk_with_outliers(n_steps)
-    time = pd.date_range(start='2020', periods=n_steps, freq='1H')
-    return pd.Series(time_series_with_outliers, index=time), outlier_indices, pd.Series(random_walk, index=time)
+    (
+        time_series_with_outliers,
+        outlier_indices,
+        random_walk,
+    ) = create_random_walk_with_outliers(n_steps)
+    time = pd.date_range(start="2020", periods=n_steps, freq="1H")
+    return (
+        pd.Series(time_series_with_outliers, index=time),
+        outlier_indices,
+        pd.Series(random_walk, index=time),
+    )
 
 
 @pytest.fixture
@@ -28,8 +43,27 @@ def range_data():
 @pytest.fixture
 def range_data_series(range_data):
     normal_data, abnormal_data, expected_anomalies = range_data
-    time = pd.date_range(start='2020', periods=len(normal_data), freq='1H')
-    return pd.Series(normal_data, index=time), pd.Series(abnormal_data, index=time), expected_anomalies
+    time = pd.date_range(start="2020", periods=len(normal_data), freq="1H")
+    return (
+        pd.Series(normal_data, index=time),
+        pd.Series(abnormal_data, index=time),
+        expected_anomalies,
+    )
+
+
+@pytest.fixture
+def constant_data_series(range_data):
+    normal_data = np.array([0, np.nan, 1, 1.1, 1.4, 1.5555, 3.14, 4])
+    abnormal_data = np.array([-1, np.nan, 1, 1, 1, 1, 4, 10])
+    expected_anomalies = np.array(
+        [False, False, False, True, True, False, False, False]
+    )
+    time = pd.date_range(start="2020", periods=len(normal_data), freq="1H")
+    return (
+        pd.Series(normal_data, index=time),
+        pd.Series(abnormal_data, index=time),
+        expected_anomalies,
+    )
 
 
 def test_base_detector_exceptions(range_data, range_data_series):
@@ -97,3 +131,18 @@ def test_hampel_detector(data_series):
     anomalies_numba = detector_numba.detect(data_with_anomalies)
     anomalies_indices_numba = np.array(np.where(anomalies_numba)).flatten()
     assert all(i in anomalies_indices_numba for i in anomalies_indices)
+
+
+def test_constant_value_detector(constant_data_series):
+    data, _, _ = constant_data_series
+
+    detector = ConstantValueDetector(3, 0.01)
+    anomalies = detector.detect(data)
+
+    assert len(anomalies) == len(data)
+    assert sum(anomalies) == 2
+
+
+def test_linear_gradient_detector():
+    assert False
+
