@@ -52,6 +52,19 @@ def range_data_series(range_data):
 
 
 @pytest.fixture
+def constant_gradient_data_series(range_data):
+    normal_data = np.array([0, np.nan, 1, 1.1, 1.4, 1.5555, 3.14, 4])
+    abnormal_data = np.array([-1, 2.0, 2.1, 2.2, 2.3, 2.4, 4, 10])
+    expected_anomalies = np.array([False, False, True, True, True, False, False, False])
+    time = pd.date_range(start="2020", periods=len(normal_data), freq="1H")
+    return (
+        pd.Series(normal_data, index=time),
+        pd.Series(abnormal_data, index=time),
+        expected_anomalies,
+    )
+
+
+@pytest.fixture
 def constant_data_series(range_data):
     normal_data = np.array([0, np.nan, 1, 1.1, 1.4, 1.5555, 3.14, 4])
     abnormal_data = np.array([-1, np.nan, 1, 1, 1, 1, 4, 10])
@@ -136,13 +149,31 @@ def test_hampel_detector(data_series):
 def test_constant_value_detector(constant_data_series):
     good_data, abnormal_data, _ = constant_data_series
 
-    detector = ConstantValueDetector(3, 0.0001)
+    detector = ConstantValueDetector(2, 0.0001)
     anomalies = detector.detect(good_data)
 
     assert len(anomalies) == len(good_data)
+    assert sum(anomalies) == 0
+
+    detector = ConstantValueDetector(3, 0.0001)
+    anomalies = detector.detect(abnormal_data)
+
+    assert len(anomalies) == len(abnormal_data)
     assert sum(anomalies) == 2
 
 
-def test_constant_gradient_detector():
-    assert False
+def test_constant_gradient_detector(constant_gradient_data_series):
+    good_data, abnormal_data, _ = constant_gradient_data_series
+
+    detector = ConstantGradientDetector(3)
+    anomalies = detector.detect(good_data)
+
+    assert len(anomalies) == len(good_data)
+    assert sum(anomalies) == 0
+
+    detector = ConstantGradientDetector(3)
+    anomalies = detector.detect(abnormal_data)
+
+    assert len(anomalies) == len(abnormal_data)
+    assert sum(anomalies) == 2
 
