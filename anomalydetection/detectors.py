@@ -1,5 +1,5 @@
 import pandas as pd
-
+import numpy as np
 from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError
 from anomalydetection import hampel
 
@@ -20,9 +20,18 @@ class BaseDetector:
         if not isinstance(data, pd.Series):
             raise WrongInputDataType()
 
+    def _gradient(self, data: pd.Series):
+        dt = data.index.diff()
+        if dt.min() < 1e-15:
+            raise ValueError("Input must be monotonic increasing")
+
+        gradient = data.diff() / dt
+        return gradient
+
 
 class AnomalyDetectionPipeline(BaseDetector):
     """ Combine detectors. """
+
     def __init__(self, detectors):
         super().__init__()
         self._detectors = detectors
@@ -53,6 +62,7 @@ class AnomalyDetectionPipeline(BaseDetector):
 
 class RangeDetector(BaseDetector):
     """ Detect values outside range. """
+
     def __init__(self, min_value=None, max_value=None):
         super().__init__()
         self._min = min_value
@@ -95,6 +105,7 @@ class RangeDetector(BaseDetector):
 
 class DiffRangeDetector(RangeDetector):
     """ Detect values outside diff or rate of change. """
+
     def fit(self, data):
         super().validate(data)
         data_diff = data.diff()
@@ -139,11 +150,50 @@ class HampelDetector(BaseDetector):
         super().validate(data)
 
         if self._use_numba:
-            anomalies, indices, _ = hampel.detect_using_numba(data.values, self._window_size, self._threshold)
+            anomalies, indices, _ = hampel.detect_using_numba(
+                data.values, self._window_size, self._threshold
+            )
         else:
-            anomalies, indices, _ = hampel.detect(data, self._window_size, self._threshold)
+            anomalies, indices, _ = hampel.detect(
+                data, self._window_size, self._threshold
+            )
 
         return anomalies
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
+
+
+class ConstantValueDetector(BaseDetector):
+    def __init__(self, window_size: int = 5, threshold: float = 1e-7):
+        super().__init__()
+        self._threshold = threshold
+        self._window_size = window_size
+
+    def fit(self, data):
+        super().validate(data)
+        return self
+
+    def detect(self, data):
+        super().validate(data)
+        rollmax = data.rolling(self._window_size).max()
+        rollmin = data.rolling(self._window_size).min()
+        anomalies = np.abs(rollmax - rollmin) > self._threshold
+        anomalies[0] = False  # first element cannot be determined
+        return anomalies
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
+
+
+class LinearGradientDetector(ConstantValueDetector):
+    def __init__(self, window_size: int = 5):
+        super().__init__(window_size=window_size)
+
+    def detect(self, data):
+        super().validate(data)
+        gradient = self._gradient(data)
+        return super().detect(gradient)
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self._window_size})"
