@@ -21,7 +21,7 @@ class BaseDetector:
             raise WrongInputDataType()
 
     def _gradient(self, data: pd.Series):
-        dt = data.index.diff()
+        dt = data.index.to_series().diff().dt.total_seconds()
         if dt.min() < 1e-15:
             raise ValueError("Input must be monotonic increasing")
 
@@ -176,9 +176,9 @@ class ConstantValueDetector(BaseDetector):
 
     def detect(self, data):
         super().validate(data)
-        rollmax = data.rolling(self._window_size).max()
-        rollmin = data.rolling(self._window_size).min()
-        anomalies = np.abs(rollmax - rollmin) > self._threshold
+        rollmax = data.rolling(self._window_size).apply(np.nanmax)
+        rollmin = data.rolling(self._window_size).apply(np.nanmin)
+        anomalies = np.abs(rollmax - rollmin) < self._threshold
         anomalies[0] = False  # first element cannot be determined
         return anomalies
 
