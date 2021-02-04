@@ -1,6 +1,7 @@
 import pandas as pd
+import numpy as np
 
-from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError
+from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError, NonUniqueTimeStamps
 from anomalydetection import hampel
 
 
@@ -95,9 +96,24 @@ class RangeDetector(BaseDetector):
 
 class DiffRangeDetector(RangeDetector):
     """ Detect values outside diff or rate of change. """
+
+    def __init__(self, min_value=None, max_value=None, time_unit='s'):
+        super().__init__(min_value, max_value)
+        if not time_unit == 's':
+            raise Exception("Can currently only handle diff ranges per seconds")
+        self._time_unit = time_unit
+
+    def diff_time_series(self, data):
+        time_diff = data.index.shift() - data.index
+        if any(time_diff == 0):
+            raise NonUniqueTimeStamps()
+
+        return data.diff() / time_diff.total_seconds()
+
     def fit(self, data):
         super().validate(data)
-        data_diff = data.diff()
+        data_diff = self.diff_time_series(data)
+
         self._min = data_diff.min() if self._min is None else self._min
         self._max = data_diff.max() if self._max is None else self._max
         return self
