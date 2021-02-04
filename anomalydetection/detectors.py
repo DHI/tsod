@@ -186,7 +186,7 @@ class ConstantValueDetector(BaseDetector):
         return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
 
 
-class LinearGradientDetector(ConstantValueDetector):
+class ConstantGradientDetector(ConstantValueDetector):
     def __init__(self, window_size: int = 5):
         super().__init__(window_size=window_size)
 

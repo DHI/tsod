@@ -10,7 +10,7 @@ from anomalydetection.detectors import (
     PeakDetector,
     HampelDetector,
     ConstantValueDetector,
-    LinearGradientDetector,
+    ConstantGradientDetector,
 )
 from tests.data_generation import create_random_walk_with_outliers
 
@@ -134,15 +134,15 @@ def test_hampel_detector(data_series):
 
 
 def test_constant_value_detector(constant_data_series):
-    data, _, _ = constant_data_series
+    good_data, abnormal_data, _ = constant_data_series
 
-    detector = ConstantValueDetector(3, 0.01)
-    anomalies = detector.detect(data)
+    detector = ConstantValueDetector(3, 0.0001)
+    anomalies = detector.detect(good_data)
 
-    assert len(anomalies) == len(data)
+    assert len(anomalies) == len(good_data)
     assert sum(anomalies) == 2
 
 
-def test_linear_gradient_detector():
+def test_constant_gradient_detector():
     assert False
 
