@@ -54,10 +54,22 @@ class AnomalyDetectionPipeline(BaseDetector):
 
 class RangeDetector(BaseDetector):
     """ Detect values outside range. """
-    def __init__(self, min_value=None, max_value=None):
+    def __init__(self, min_value=None, max_value=None, quantiles=None):
+        """ Set min or max manually. Optionally change quantiles used in fit().
+
+        Parameters
+        ----------
+        min_value : float
+            Minimum value threshold.
+        max_value : float
+            Maximum value threshold.
+        quantiles : list[2]
+                    Default quantiles [0, 1]. Same as min and max value.
+        """
         super().__init__()
         self._min = min_value
         self._max = max_value
+        self._quantiles = [0, 1] if quantiles is None else quantiles
 
     def fit(self, data):
         """ Set min and max based on data.
@@ -68,8 +80,9 @@ class RangeDetector(BaseDetector):
                 Normal time series data.
         """
         super().validate(data)
-        self._min = data.min() if self._min is None else self._min
-        self._max = data.max() if self._max is None else self._max
+        quantiles = np.quantile(data.dropna(), self._quantiles)
+        self._min = quantiles.min() if self._min is None else self._min
+        self._max = quantiles.max() if self._max is None else self._max
 
         assert self._max >= self._min
         return self

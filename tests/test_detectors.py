@@ -74,6 +74,7 @@ def test_range_detector_pipeline(range_data_series):
     normal_data, abnormal_data, expected_anomalies = range_data_series
     anomaly_detector = AnomalyDetectionPipeline([RangeDetector(), DiffRangeDetector()])
 
+    expected_anomalies[-3] = True  # Set diff range expected anomaly
     anomaly_detector.fit(normal_data)
     detected_anomalies = anomaly_detector.detect(abnormal_data)
     assert all(detected_anomalies == expected_anomalies)
