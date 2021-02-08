@@ -1,5 +1,5 @@
 import pandas as pd
-
+import numpy as np
 from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError
 from anomalydetection import hampel
 from pyod.models.auto_encoder import AutoEncoder as AutoEncoderPyod
@@ -20,6 +20,14 @@ class BaseDetector:
     def validate(self, data):
         if not isinstance(data, pd.Series):
             raise WrongInputDataType()
+
+    def _gradient(self, data: pd.Series):
+        dt = data.index.to_series().diff().dt.total_seconds()
+        if dt.min() < 1e-15:
+            raise ValueError("Input must be monotonic increasing")
+
+        gradient = data.diff() / dt
+        return gradient
 
 
 class AnomalyDetectionPipeline(BaseDetector):
@@ -143,9 +151,13 @@ class HampelDetector(BaseDetector):
         super().validate(data)
 
         if self._use_numba:
-            anomalies, indices, _ = hampel.detect_using_numba(data.values, self._window_size, self._threshold)
+            anomalies, indices, _ = hampel.detect_using_numba(
+                data.values, self._window_size, self._threshold
+            )
         else:
-            anomalies, indices, _ = hampel.detect(data, self._window_size, self._threshold)
+            anomalies, indices, _ = hampel.detect(
+                data, self._window_size, self._threshold
+            )
 
         return anomalies
 
@@ -176,3 +188,38 @@ class AutoEncoder(BaseDetector):
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._model})"
+
+
+class ConstantValueDetector(BaseDetector):
+    def __init__(self, window_size: int = 5, threshold: float = 1e-7):
+        super().__init__()
+        self._threshold = threshold
+        self._window_size = window_size
+
+    def fit(self, data):
+        super().validate(data)
+        return self
+
+    def detect(self, data):
+        super().validate(data)
+        rollmax = data.rolling(self._window_size).apply(np.nanmax)
+        rollmin = data.rolling(self._window_size).apply(np.nanmin)
+        anomalies = np.abs(rollmax - rollmin) < self._threshold
+        anomalies[0] = False  # first element cannot be determined
+        return anomalies
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
+
+
+class ConstantGradientDetector(ConstantValueDetector):
+    def __init__(self, window_size: int = 5):
+        super().__init__(window_size=window_size)
+
+    def detect(self, data):
+        super().validate(data)
+        gradient = self._gradient(data)
+        return super().detect(gradient)
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self._window_size})"
