@@ -74,6 +74,21 @@ class RangeDetector(BaseDetector):
             Maximum value threshold.
         quantiles : list[2]
                     Default quantiles [0, 1]. Same as min and max value.
+
+        Examples
+        --------
+        >>> detector = RangeDetector(min_value=0.0, max_value=2.0)
+        >>> anomalies = detector.detect(data)
+        >>>
+        >>> detector = RangeDetector()
+        >>> detector.fit(normal_data) # min, max inferred from normal data
+        >>> anomalies = detector.detect(data)
+        >>>
+        >>> detector = RangeDetector(quantiles=[0.001,0.999])
+        >>> detector.fit(normal_data_with_some_outliers)
+        >>> anomalies = detector.detect(data)
+
+
         """
 
         super().__init__()
@@ -115,6 +130,9 @@ class RangeDetector(BaseDetector):
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._min}, {self._max})"
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(min: {self._min:.1e}, max: {self._max:.1e})"
 
 
 class DiffRangeDetector(RangeDetector):

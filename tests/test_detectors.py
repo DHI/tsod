@@ -109,6 +109,34 @@ def test_range_detector_autoset(range_data_series):
     assert sum(anomalies) == 2
 
 
+def test_range_detector_quantile():
+
+    np.random.seed(42)
+    train = np.random.normal(size=1000)
+    test = np.random.normal(size=1000)
+
+    train[42] = -6.5
+    train[560] = 10.5
+
+    test[142] = -4.5
+    test[960] = 5.5
+
+    normal_data_incl_two_outliers =  pd.Series(train)
+    test_data = pd.Series(test)
+
+    # all test data is within range of train data, no anomalies detected
+    nqdetector = RangeDetector().fit(normal_data_incl_two_outliers)
+    detected_anomalies = nqdetector.detect(test_data)
+    assert sum(detected_anomalies) == 0
+
+    # exclude extreme values
+    detector = RangeDetector(quantiles=[0.001, 0.999]).fit(normal_data_incl_two_outliers)
+    detected_anomalies = detector.detect(test_data)
+    assert sum(detected_anomalies) == 2
+    assert detector._min  > normal_data_incl_two_outliers.min()
+    assert detector._max  < normal_data_incl_two_outliers.max()
+
+
 def test_diff_range_detector_autoset(range_data_series):
     normal_data, abnormal_data, expected_anomalies = range_data_series
 
@@ -185,4 +213,3 @@ def test_constant_gradient_detector(constant_gradient_data_series):
 
     assert len(anomalies) == len(abnormal_data)
     assert sum(anomalies) == 2
-
