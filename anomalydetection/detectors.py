@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError
+
+from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError, NonUniqueTimeStamps
 from anomalydetection import hampel
 
 
@@ -62,11 +63,38 @@ class AnomalyDetectionPipeline(BaseDetector):
 
 class RangeDetector(BaseDetector):
     """ Detect values outside range. """
+    def __init__(self, min_value=None, max_value=None, quantiles=None):
+        """ Set min or max manually. Optionally change quantiles used in fit().
 
-    def __init__(self, min_value=None, max_value=None):
+        Parameters
+        ----------
+        min_value : float
+            Minimum value threshold.
+        max_value : float
+            Maximum value threshold.
+        quantiles : list[2]
+                    Default quantiles [0, 1]. Same as min and max value.
+
+        Examples
+        --------
+        >>> detector = RangeDetector(min_value=0.0, max_value=2.0)
+        >>> anomalies = detector.detect(data)
+        >>>
+        >>> detector = RangeDetector()
+        >>> detector.fit(normal_data) # min, max inferred from normal data
+        >>> anomalies = detector.detect(data)
+        >>>
+        >>> detector = RangeDetector(quantiles=[0.001,0.999])
+        >>> detector.fit(normal_data_with_some_outliers)
+        >>> anomalies = detector.detect(data)
+
+
+        """
+
         super().__init__()
         self._min = min_value
         self._max = max_value
+        self._quantiles = [0, 1] if quantiles is None else quantiles
 
     def fit(self, data):
         """ Set min and max based on data.
@@ -77,8 +105,9 @@ class RangeDetector(BaseDetector):
                 Normal time series data.
         """
         super().validate(data)
-        self._min = data.min() if self._min is None else self._min
-        self._max = data.max() if self._max is None else self._max
+        quantiles = np.quantile(data.dropna(), self._quantiles)
+        self._min = quantiles.min() if self._min is None else self._min
+        self._max = quantiles.max() if self._max is None else self._max
 
         assert self._max >= self._min
         return self
@@ -102,13 +131,30 @@ class RangeDetector(BaseDetector):
     def __str__(self):
         return f"{self.__class__.__name__}({self._min}, {self._max})"
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(min: {self._min:.1e}, max: {self._max:.1e})"
+
 
 class DiffRangeDetector(RangeDetector):
     """ Detect values outside diff or rate of change. """
 
+    def __init__(self, min_value=None, max_value=None, time_unit='s'):
+        super().__init__(min_value, max_value)
+        if not time_unit == 's':
+            raise Exception("Can currently only handle diff ranges per seconds")
+        self._time_unit = time_unit
+
+    def diff_time_series(self, data):
+        time_diff = data.index.shift() - data.index
+        if any(time_diff == 0):
+            raise NonUniqueTimeStamps()
+
+        return data.diff() / time_diff.total_seconds()
+
     def fit(self, data):
         super().validate(data)
-        data_diff = data.diff()
+        data_diff = self.diff_time_series(data)
+
         self._min = data_diff.min() if self._min is None else self._min
         self._max = data_diff.max() if self._max is None else self._max
         return self
