@@ -7,7 +7,7 @@ from anomalydetection.detectors import (
     RangeDetector,
     DiffRangeDetector,
     AnomalyDetectionPipeline,
-    PeakDetector,
+    RollingStandardDeviationDetector,
     HampelDetector,
     ConstantValueDetector,
     ConstantGradientDetector,
@@ -158,10 +158,10 @@ def test_range_detector_pipeline(range_data_series):
     assert all(detected_anomalies.is_anomaly == expected_anomalies)
 
 
-def test_peak_detector(range_data_series):
+def test_rollingstddev_detector(range_data_series):
     data, _, _ = range_data_series
 
-    detector = PeakDetector(3, 0.1)
+    detector = RollingStandardDeviationDetector(3, 0.1)
     anomalies = detector.detect(data)
 
     assert len(anomalies) == len(data)
