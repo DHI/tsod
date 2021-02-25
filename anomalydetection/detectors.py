@@ -3,6 +3,7 @@ import numpy as np
 
 from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError, NonUniqueTimeStamps
 from anomalydetection import hampel
+from pyod.models.auto_encoder import AutoEncoder as AutoEncoderPyod
 
 
 class BaseDetector:
@@ -208,6 +209,31 @@ class HampelDetector(BaseDetector):
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
+
+
+class AutoEncoder(BaseDetector):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self._model = AutoEncoderPyod(**kwargs)
+
+    def fit(self, data):
+        data = self._validate(data)
+        self._model.fit(data)
+
+        return self
+
+    def detect(self, data):
+        data = self._validate(data)
+        return self._model.predict(data)
+
+    def _validate(self, data):
+        if isinstance(data, pd.Series):
+            return data.values.reshape(-1, 1)
+        else:
+            return data
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self._model})"
 
 
 class ConstantValueDetector(BaseDetector):
