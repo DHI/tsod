@@ -5,11 +5,11 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="anomalydetection",
-    version='0.0.2',
+    version='0.0.3',
     install_requires=["pandas>=1.2.0", "numba"],
     extras_require={
         "dev": ["pytest>=6.2.1"],
-        "ml": ["numba"],
+        "ml": ["pyod", "keras", "tensorflow"],
         "test": ["pytest>=6.2.1"],
     },
     author="Rasmus Halvgaard",
