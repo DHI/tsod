@@ -5,8 +5,8 @@ from tensorflow.keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDist
 
 
 def build_model(X_train, dropout_fraction=0.2, size=128):
-    timesteps = X_train.shape[0]
-    num_features = X_train.shape[1]
+    timesteps = X_train.shape[1]
+    num_features = X_train.shape[2]
 
     model = Sequential([
         LSTM(size, input_shape=(timesteps, num_features)),
