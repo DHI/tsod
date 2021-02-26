@@ -5,8 +5,8 @@ from tensorflow.keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDist
 
 
 def build_model(X_train, dropout_fraction=0.2, size=128):
-    timesteps = X_train.shape[1]
-    num_features = X_train.shape[2]
+    timesteps = X_train.shape[0]
+    num_features = X_train.shape[1]
 
     model = Sequential([
         LSTM(size, input_shape=(timesteps, num_features)),
@@ -35,12 +35,12 @@ def fit(model, X_train, y_train=None):
 
 
 def calculate_loss(X, X_pred):
-    """ Caluclate loss used with threshold to detect anomaly. """
+    """ Calculate loss used with threshold to detect anomaly. """
     mae_loss = np.mean(np.abs(X_pred - X), axis=1)
     return mae_loss
 
 
-def detect(X, model, threshold=0.65):
+def detect(model, X, threshold=0.65):
     X_pred = model.predict(X)
     is_anomaly = calculate_loss(X, X_pred) > threshold
     return is_anomaly
