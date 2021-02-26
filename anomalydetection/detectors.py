@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError, NonUniqueTimeStamps
-from anomalydetection import hampel
+from anomalydetection import hampel, autoencoder_lstm
 from pyod.models.auto_encoder import AutoEncoder as AutoEncoderPyod
 
 
@@ -225,6 +225,37 @@ class AutoEncoder(BaseDetector):
     def detect(self, data):
         data = self._validate(data)
         return self._model.predict(data)
+
+    def _validate(self, data):
+        if isinstance(data, pd.Series):
+            return data.values.reshape(-1, 1)
+        else:
+            return data
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self._model})"
+
+
+class AutoEncoderLSTM(BaseDetector):
+    def __init__(self, threshold=0.65, size=128, dropout_fraction=0.2):
+        super().__init__()
+        self._model = None
+        self._history = None
+        self._threshold = threshold
+        self._dropout_fraction = dropout_fraction
+        self._size = size
+
+    def fit(self, data):
+        data = self._validate(data)
+        self._model = autoencoder_lstm.build_model(data)
+        data = np.expand_dims(data, axis=0)
+        self._history = autoencoder_lstm.fit(self._model, data) # TODO check notebook example on final dimension
+        return self
+
+    def detect(self, data):
+        data = self._validate(data)
+        is_anomaly = autoencoder_lstm.detect(self._model, data, self._threshold)
+        return is_anomaly
 
     def _validate(self, data):
         if isinstance(data, pd.Series):
