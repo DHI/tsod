@@ -12,7 +12,7 @@ from anomalydetection.detectors import (
     AutoEncoder,
     ConstantValueDetector,
     ConstantGradientDetector,
-)
+    AutoEncoderLSTM)
 
 from tests.data_generation import create_random_walk_with_outliers
 
@@ -194,6 +194,14 @@ def test_autoencoder_detector(data_series):
     # Validate if the found anomalies are also in the expected anomaly set
     # NB Not necessarily all of them
     # assert all(i in expected_anomalies_indices for i in anomalies_indices)
+
+
+def test_autoencoderlstm_detector(data_series):
+    data_with_anomalies, expected_anomalies_indices, normal_data = data_series
+    detector = AutoEncoderLSTM()
+    detector.fit(data_with_anomalies)
+    anomalies = detector.detect(data_with_anomalies)
+    anomalies_indices = np.array(np.where(anomalies)).flatten()
 
 
 def test_constant_value_detector(constant_data_series):
