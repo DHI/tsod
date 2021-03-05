@@ -2,6 +2,7 @@ import numpy as np
 from numba import jit
 
 from anomalydetection.custom_exceptions import NotInteger, InvalidArgument
+from anomalydetection.detectors import BaseDetector
 
 '''
 GAUSSIAN_SCALE_FACTOR = k = 1/Phi^(-1)(3/4)
@@ -97,3 +98,29 @@ def detect_using_numba(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_F
             time_series_clean[t] = median_in_window
 
     return is_outlier, outlier_indices, time_series_clean
+
+
+class HampelDetector(BaseDetector):
+    def __init__(self, window_size=5, threshold=3, use_numba=False):
+        super().__init__()
+        validate_arguments(window_size, threshold)
+        self._threshold = threshold
+        self._window_size = window_size
+        self._use_numba = use_numba
+
+    def detect(self, data):
+        super().validate(data)
+
+        if self._use_numba:
+            anomalies, indices, _ = detect_using_numba(
+                data.values, self._window_size, self._threshold
+            )
+        else:
+            anomalies, indices, _ = detect(
+                data, self._window_size, self._threshold
+            )
+
+        return anomalies
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"

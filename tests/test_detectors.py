@@ -8,11 +8,11 @@ from anomalydetection.detectors import (
     DiffRangeDetector,
     AnomalyDetectionPipeline,
     RollingStandardDeviationDetector,
-    HampelDetector,
-    AutoEncoder,
     ConstantValueDetector,
     ConstantGradientDetector,
 )
+from anomalydetection.hampel import HampelDetector
+from anomalydetection.autoencoders import AutoEncoder
 
 from tests.data_generation import create_random_walk_with_outliers
 
