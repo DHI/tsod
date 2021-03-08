@@ -61,13 +61,13 @@ class AutoEncoderLSTM(BaseDetector):
 
     def fit(self, data):
         X, y = self._create_features(data)
-        self._model = autoencoder_lstm.build_model(X)  # TODO add scaler
-        self._history = autoencoder_lstm.fit(self._model, X, y)
+        self._model = build_model(X)  # TODO add scaler
+        self._history = fit(self._model, X, y)
         return self
 
     def detect(self, data):
         X, _ = self._create_features(data)
-        is_anomaly = autoencoder_lstm.detect(self._model, X, self._threshold)
+        is_anomaly = detect(self._model, X, self._threshold)
         return is_anomaly
 
     def _create_features(self, data):
