@@ -11,8 +11,8 @@ from anomalydetection.detectors import (
     HampelDetector,
     AutoEncoder,
     ConstantValueDetector,
-    ConstantGradientDetector,
-    AutoEncoderLSTM)
+    ConstantGradientDetector)
+from anomalydetection.autoencoder_lstm import AutoEncoderLSTM
 
 from tests.data_generation import create_random_walk_with_outliers
 
