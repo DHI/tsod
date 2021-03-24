@@ -3,8 +3,8 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed
 
-from anomalydetection.detectors import BaseDetector
-from anomalydetection.features import create_dataset
+from tsod.detectors import BaseDetector
+from tsod.features import create_dataset
 
 
 def build_model(X_train, dropout_fraction=0.2, size=128):
