@@ -1,6 +1,8 @@
 # tsod: Anomaly Detection for time series data.
 [![Full test](https://github.com/DHI/tsod/actions/workflows/python-app.yml/badge.svg)](https://github.com/DHI/tsod/actions/workflows/python-app.yml)
 
+![Python version](https://img.shields.io/pypi/pyversions/tsod.svg) 
+
 ![univariate](https://raw.githubusercontent.com/DHI/tsod/main/images/anomaly.png)
 
 Sensors often provide faulty or missing observations. These anomalies must be detected automatically and replaced with more feasible values before feeding the data to numerical simulation engines as boundary conditions or real time decision systems.
