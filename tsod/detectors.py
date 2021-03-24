@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from anomalydetection.custom_exceptions import WrongInputDataType, NoRangeDefinedError, NonUniqueTimeStamps
+from tsod.custom_exceptions import WrongInputDataType, NoRangeDefinedError, NonUniqueTimeStamps
 
 
 class BaseDetector:

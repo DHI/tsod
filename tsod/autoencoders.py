@@ -1,7 +1,7 @@
 import pandas as pd
 from pyod.models.auto_encoder import AutoEncoder as AutoEncoderPyod
 
-from anomalydetection.detectors import BaseDetector
+from tsod.detectors import BaseDetector
 
 
 class AutoEncoder(BaseDetector):
