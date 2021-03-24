@@ -1,5 +1,0 @@
-name: tsod
-
-dependencies:
-  - python>=3.6
-  - pandas>=1.0
