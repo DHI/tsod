@@ -234,3 +234,14 @@ def test_constant_gradient_detector(constant_gradient_data_series):
 
     assert len(anomalies) == len(abnormal_data)
     assert sum(anomalies) == 2
+
+
+def test_create_dataset(data_series):
+    data_with_anomalies, _, _ = data_series
+    data_with_anomalies.name = 'y'
+    data = data_with_anomalies.to_frame()
+    time_steps = 2
+    X, y = create_dataset(data[['y']], data.y, time_steps)
+    assert len(y) == len(data) - time_steps
+    assert X.shape[0] == len(data) - time_steps
+    assert X.shape[1] == time_steps
