@@ -1,0 +1,4 @@
+name: tsod
+
+dependencies:
+  - python>=3.6
