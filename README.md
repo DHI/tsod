@@ -1,7 +1,7 @@
 # tsod: Anomaly Detection for time series data.
 [![Full test](https://github.com/DHI/tsod/actions/workflows/python-app.yml/badge.svg)](https://github.com/DHI/tsod/actions/workflows/python-app.yml)
 
-![univariate](images/anomaly.png)
+![univariate](https://raw.githubusercontent.com/DHI/tsod/main/images/anomaly.png)
 
 Sensors often provide faulty or missing observations. These anomalies must be detected automatically and replaced with more feasible values before feeding the data to numerical simulation engines as boundary conditions or real time decision systems.
 
@@ -10,7 +10,13 @@ This package aims to provide examples and algorithms for detecting anomalies in 
 
 
 # Installation
-pip install git+https://github.com/DHI/tsod.git
+From PyPI:
+
+`pip install tsod`
+
+Or development version:
+
+'pip install https://github.com/DHI/tsod/archive/main.zip`
 
 # Definitions
 Note that we distinguish between [two types of anomaly detection](https://scikit-learn.org/stable/modules/outlier_detection.html)

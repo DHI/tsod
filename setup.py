@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tsod",
-    version='0.1.0',
+    version='0.1.1',
     install_requires=["pandas>=1.2.0", "numba"],
     extras_require={
         "dev": ["pytest>=6.2.1"],
