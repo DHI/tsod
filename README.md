@@ -7,7 +7,7 @@ This package aims to provide examples and algorithms for detecting anomalies in 
 pip install git+https://github.com/DHI/tsod.git
 
 # Definitions
-Note that we distinguish between [two types of anomaly detection]: https://scikit-learn.org/stable/modules/outlier_detection.html
+Note that we distinguish between [two types of anomaly detection](https://scikit-learn.org/stable/modules/outlier_detection.html)
 
 - Outlier detection (unsupervised anomaly detection)
 The training data may contain outliers, i.e. observations far from most other observations. Outlier detectors try to concentrate on the observations in the training data that similar and close together, and ignores observations further away.
