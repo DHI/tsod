@@ -1,6 +1,6 @@
 # tsod: Anomaly Detection for time series data.
 [![Full test](https://github.com/DHI/tsod/actions/workflows/python-app.yml/badge.svg)](https://github.com/DHI/tsod/actions/workflows/python-app.yml)
-
+[![PyPI version](https://badge.fury.io/py/tsod.svg)](https://badge.fury.io/py/tsod)
 ![Python version](https://img.shields.io/pypi/pyversions/tsod.svg) 
 
 ![univariate](https://raw.githubusercontent.com/DHI/tsod/main/images/anomaly.png)
@@ -18,7 +18,7 @@ From PyPI:
 
 Or development version:
 
-'pip install https://github.com/DHI/tsod/archive/main.zip`
+`pip install https://github.com/DHI/tsod/archive/main.zip`
 
 # Definitions
 Note that we distinguish between [two types of anomaly detection](https://scikit-learn.org/stable/modules/outlier_detection.html)
