@@ -5,8 +5,8 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tsod",
-    version='0.1.1',
-    install_requires=["pandas>=1.2.0", "numba"],
+    version='0.1.2',
+    install_requires=["pandas>=1.0.0", "numba"],
     extras_require={
         "dev": ["pytest>=6.2.1"],
         "ml": ["pyod", "keras", "tensorflow"],
@@ -21,4 +21,16 @@ setuptools.setup(
     url="https://github.com/DHI/tsod",
     packages=setuptools.find_packages(),
     include_package_data=True,
+    classifiers=[
+        "License :: OSI Approved :: MIT License",
+        "Development Status :: 2 - Pre-Alpha",
+        "Intended Audience :: Science/Research",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Operating System :: OS Independent"
+        "Topic :: Scientific/Engineering",
+    ],
 )
