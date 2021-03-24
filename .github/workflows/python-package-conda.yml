@@ -23,7 +23,8 @@ jobs:
         conda env create --file environment.yml
     - name: Install tsod
       run: |
-        pip install .
+        pip install .[test]
+        pip install .[ml]
     - name: Lint with flake8
       run: |
         conda install flake8
