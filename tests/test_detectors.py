@@ -2,8 +2,8 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from anomalydetection.custom_exceptions import NoRangeDefinedError, WrongInputDataType
-from anomalydetection.detectors import (
+from tsod.custom_exceptions import NoRangeDefinedError, WrongInputDataType
+from tsod.detectors import (
     RangeDetector,
     DiffRangeDetector,
     AnomalyDetectionPipeline,
@@ -11,8 +11,8 @@ from anomalydetection.detectors import (
     ConstantValueDetector,
     ConstantGradientDetector,
 )
-from anomalydetection.hampel import HampelDetector
-from anomalydetection.autoencoders import AutoEncoder
+from tsod.hampel import HampelDetector
+from tsod.autoencoders import AutoEncoder
 
 from tests.data_generation import create_random_walk_with_outliers
 

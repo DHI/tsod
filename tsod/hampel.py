@@ -1,8 +1,8 @@
 import numpy as np
 from numba import jit
 
-from anomalydetection.custom_exceptions import NotInteger, InvalidArgument
-from anomalydetection.detectors import BaseDetector
+from tsod.custom_exceptions import NotInteger, InvalidArgument
+from tsod.detectors import BaseDetector
 
 '''
 GAUSSIAN_SCALE_FACTOR = k = 1/Phi^(-1)(3/4)
