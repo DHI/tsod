@@ -1,10 +1,10 @@
-# anomalydetection: Anomaly Detection for time series data.
+# tsod: Anomaly Detection for time series data.
 Sensors often provide faulty or missing observations. These anomalies must be detected automatically and replaced with more feasible values before feeding the data to numerical simulation engines as boundary conditions or real time decision systems.
 
 This package aims to provide examples and algorithms for detecting anomalies in time series data specifically tailored to DHI users and the water domain. It is simple to install and deploy operationally and is accessible to everyone (open-source).
 
 # Installation
-pip install git+https://github.com/DHI/anomalydetection.git
+pip install git+https://github.com/DHI/tsod.git
 
 # Definitions
 Note that we distinguish between [two types of anomaly detection]: https://scikit-learn.org/stable/modules/outlier_detection.html
