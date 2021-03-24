@@ -9,7 +9,7 @@ setuptools.setup(
     install_requires=["pandas>=1.0.0", "numba"],
     extras_require={
         "dev": ["pytest>=6.2.1"],
-        "ml": ["pyod", "keras", "tensorflow"],
+        "ml": ["pyod", "tensorflow"],
         "test": ["pytest>=6.2.1"],
     },
     author="Henrik Andersson",
