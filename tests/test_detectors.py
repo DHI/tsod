@@ -9,10 +9,12 @@ from tsod.detectors import (
     AnomalyDetectionPipeline,
     RollingStandardDeviationDetector,
     ConstantValueDetector,
-    ConstantGradientDetector,
-)
+    ConstantGradientDetector)
+    
+from tsod.features import create_dataset
 from tsod.hampel import HampelDetector
 from tsod.autoencoders import AutoEncoder
+from tsod.autoencoder_lstm import AutoEncoderLSTM
 
 from tests.data_generation import create_random_walk_with_outliers
 
@@ -112,7 +114,6 @@ def test_range_detector_autoset(range_data_series):
 
 
 def test_range_detector_quantile():
-
     np.random.seed(42)
     train = np.random.normal(size=1000)
     test = np.random.normal(size=1000)
@@ -123,7 +124,7 @@ def test_range_detector_quantile():
     test[142] = -4.5
     test[960] = 5.5
 
-    normal_data_incl_two_outliers =  pd.Series(train)
+    normal_data_incl_two_outliers = pd.Series(train)
     test_data = pd.Series(test)
 
     # all test data is within range of train data, no anomalies detected
@@ -135,8 +136,8 @@ def test_range_detector_quantile():
     detector = RangeDetector(quantiles=[0.001, 0.999]).fit(normal_data_incl_two_outliers)
     detected_anomalies = detector.detect(test_data)
     assert sum(detected_anomalies) == 2
-    assert detector._min  > normal_data_incl_two_outliers.min()
-    assert detector._max  < normal_data_incl_two_outliers.max()
+    assert detector._min > normal_data_incl_two_outliers.min()
+    assert detector._max < normal_data_incl_two_outliers.max()
 
 
 def test_diff_range_detector_autoset(range_data_series):
@@ -183,7 +184,7 @@ def test_hampel_detector(data_series):
     anomalies_numba = detector_numba.detect(data_with_anomalies)
     anomalies_indices_numba = np.array(np.where(anomalies_numba)).flatten()
     assert all(i in anomalies_indices_numba for i in anomalies_indices)
-    
+
 
 def test_autoencoder_detector(data_series):
     data_with_anomalies, expected_anomalies_indices, normal_data = data_series
@@ -194,6 +195,14 @@ def test_autoencoder_detector(data_series):
     # Validate if the found anomalies are also in the expected anomaly set
     # NB Not necessarily all of them
     # assert all(i in expected_anomalies_indices for i in anomalies_indices)
+
+
+def test_autoencoderlstm_detector(data_series):
+    data_with_anomalies, expected_anomalies_indices, normal_data = data_series
+    detector = AutoEncoderLSTM()
+    detector.fit(data_with_anomalies)
+    anomalies = detector.detect(data_with_anomalies)
+    anomalies_indices = np.array(np.where(anomalies)).flatten()
 
 
 def test_constant_value_detector(constant_data_series):
@@ -226,3 +235,14 @@ def test_constant_gradient_detector(constant_gradient_data_series):
 
     assert len(anomalies) == len(abnormal_data)
     assert sum(anomalies) == 2
+
+
+def test_create_dataset(data_series):
+    data_with_anomalies, _, _ = data_series
+    data_with_anomalies.name = 'y'
+    data = data_with_anomalies.to_frame()
+    time_steps = 2
+    X, y = create_dataset(data[['y']], data.y, time_steps)
+    assert len(y) == len(data) - time_steps
+    assert X.shape[0] == len(data) - time_steps
+    assert X.shape[1] == time_steps
