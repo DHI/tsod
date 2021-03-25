@@ -88,7 +88,6 @@ def test_base_detector_exceptions(range_data, range_data_series):
     data_series, _, _ = range_data_series
 
     detector = RangeDetector()
-    pytest.raises(NoRangeDefinedError, detector.detect, data_series)
     pytest.raises(WrongInputDataType, detector.fit, data)
 
 

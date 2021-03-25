@@ -102,14 +102,20 @@ class RangeDetector(BaseDetector):
         >>> detector = RangeDetector(quantiles=[0.001,0.999])
         >>> detector.fit(normal_data_with_some_outliers)
         >>> anomalies = detector.detect(data)
-
-
         """
 
         super().__init__()
+        
         self._min = min_value
+        
         self._max = max_value
-        self._quantiles = [0, 1] if quantiles is None else quantiles
+
+        if quantiles is None:
+            self._quantiles = [0.0, 1.0]
+        else:
+            assert 0.0 <= quantiles[0] <= 1.0
+            assert 0.0 <= quantiles[1] <= 1.0
+            self._quantiles = quantiles
 
     def fit(self, data):
         """ Set min and max based on data.
@@ -120,9 +126,10 @@ class RangeDetector(BaseDetector):
                 Normal time series data.
         """
         super().validate(data)
+        
         quantiles = np.quantile(data.dropna(), self._quantiles)
-        self._min = quantiles.min() if self._min is None else self._min
-        self._max = quantiles.max() if self._max is None else self._max
+        self._min = quantiles.min()
+        self._max = quantiles.max()
 
         assert self._max >= self._min
         return self
