@@ -1,10 +1,12 @@
+from abc import ABC, abstractmethod
 import pandas as pd
 import numpy as np
 
 from tsod.custom_exceptions import WrongInputDataType, NoRangeDefinedError, NonUniqueTimeStamps
 
 
-class BaseDetector:
+class BaseDetector(ABC):
+    """Abstract base class for all detectors"""
     def __init__(self):
         pass
 
@@ -13,7 +15,9 @@ class BaseDetector:
         self.validate(data)
         return self
 
+    @abstractmethod
     def detect(self, data: pd.Series):
+        "Detect anomalies"
         NotImplementedError()
 
     def validate(self, data):
@@ -112,6 +116,8 @@ class RangeDetector(BaseDetector):
         return self
 
     def detect(self, data):
+        "Detect anomalies"
+
         super().validate(data)
         self._validate_fit()
 
@@ -159,6 +165,7 @@ class DiffRangeDetector(RangeDetector):
         return self
 
     def detect(self, data):
+        "Detect anomalies"
         return super().detect(data.diff())
 
 

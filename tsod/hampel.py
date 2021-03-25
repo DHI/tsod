@@ -101,6 +101,21 @@ def detect_using_numba(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_F
 
 
 class HampelDetector(BaseDetector):
+    """
+    Hampel filter implementation that works on numpy arrays, implemented with numba.
+
+    Parameters
+    ----------
+    window_size: int
+        The window range is from [(i - window_size):(i + window_size)], so window_size is half of the
+        window, counted in number of array elements (as opposed to specify a time span, which is not
+        supported by this implementation)
+    threshold: float
+        The threshold for marking an outlier. A low threshold "narrows" the band within which values are deemed as
+        outliers. n_sigmas
+    use_numba: bool
+        option to use numba for higher performance, default false
+    """
     def __init__(self, window_size=5, threshold=3, use_numba=False):
         super().__init__()
         validate_arguments(window_size, threshold)
