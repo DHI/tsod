@@ -19,7 +19,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/DHI/tsod",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages("tsod",exclude="tests"),
     include_package_data=True,
     classifiers=[
         "License :: OSI Approved :: MIT License",
