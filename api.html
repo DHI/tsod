@@ -166,6 +166,13 @@
 <dt id="tsod.detectors.AnomalyDetectionPipeline">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">AnomalyDetectionPipeline</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">detectors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.AnomalyDetectionPipeline" title="Permalink to this definition">¶</a></dt>
 <dd><p>Combine detectors.</p>
+<p>It is possible to combine several anomaly detection strategies into a combined detector.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">anomaly_detector</span> <span class="o">=</span> <span class="n">AnomalyDetectionPipeline</span><span class="p">([</span><span class="n">RangeDetector</span><span class="p">(),</span> <span class="n">DiffRangeDetector</span><span class="p">()])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">anomaly_detector</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">normal_data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">detected_anomalies</span> <span class="o">=</span> <span class="n">anomaly_detector</span><span class="o">.</span><span class="n">detect</span><span class="p">(</span><span class="n">abnormal_data</span><span class="p">)</span>
+</pre></div>
+</div>
 <dl class="py method">
 <dt id="tsod.detectors.AnomalyDetectionPipeline.detect">
 <code class="sig-name descname"><span class="pre">detect</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">potentially_abnormal_data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.AnomalyDetectionPipeline.detect" title="Permalink to this definition">¶</a></dt>
@@ -201,7 +208,9 @@
 <dl class="py class">
 <dt id="tsod.detectors.ConstantGradientDetector">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">ConstantGradientDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.ConstantGradientDetector" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="py method">
+<dd><p>Detect constant gradients.</p>
+<p>Typically caused by linear interpolation over a long interval.</p>
+<dl class="py method">
 <dt id="tsod.detectors.ConstantGradientDetector.detect">
 <code class="sig-name descname"><span class="pre">detect</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.ConstantGradientDetector.detect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Detect anomalies</p>
@@ -212,7 +221,9 @@
 <dl class="py class">
 <dt id="tsod.detectors.ConstantValueDetector">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">ConstantValueDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">1e-07</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.ConstantValueDetector" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="py method">
+<dd><p>Detect constant values over a longer period.</p>
+<p>Commonly caused by sensor failures, which get stuck at a constant level.</p>
+<dl class="py method">
 <dt id="tsod.detectors.ConstantValueDetector.detect">
 <code class="sig-name descname"><span class="pre">detect</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.ConstantValueDetector.detect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Detect anomalies</p>
@@ -251,7 +262,7 @@
 
 <dl class="py class">
 <dt id="tsod.detectors.RangeDetector">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">RangeDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quantiles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.RangeDetector" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">RangeDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quantiles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.RangeDetector" title="Permalink to this definition">¶</a></dt>
 <dd><p>Detect values outside range.</p>
 <dl class="py method">
 <dt id="tsod.detectors.RangeDetector.detect">
