@@ -32,9 +32,21 @@ class BaseDetector(ABC):
         gradient = data.diff() / dt
         return gradient
 
+    def __str__(self):
+        return f"{self.__class__.__name__}"
+
 
 class AnomalyDetectionPipeline(BaseDetector):
-    """ Combine detectors. """
+    """ Combine detectors. 
+
+    It is possible to combine several anomaly detection strategies into a combined detector.
+    
+    Examples
+    --------
+    >>> anomaly_detector = AnomalyDetectionPipeline([RangeDetector(), DiffRangeDetector()])
+    >>> anomaly_detector.fit(normal_data)
+    >>> detected_anomalies = anomaly_detector.detect(abnormal_data)
+    """
 
     def __init__(self, detectors):
         super().__init__()
@@ -66,7 +78,7 @@ class AnomalyDetectionPipeline(BaseDetector):
 
 class RangeDetector(BaseDetector):
     """ Detect values outside range. """
-    def __init__(self, min_value=None, max_value=None, quantiles=None):
+    def __init__(self, min_value=-np.inf, max_value=np.inf, quantiles=None):
         """ Set min or max manually. Optionally change quantiles used in fit().
 
         Parameters
@@ -134,7 +146,8 @@ class RangeDetector(BaseDetector):
             raise NoRangeDefinedError()
 
     def __str__(self):
-        return f"{self.__class__.__name__}({self._min}, {self._max})"
+
+        return f"{super.__str__(self)}{self._min}, {self._max})"
 
     def __repr__(self):
         return f"{self.__class__.__name__}(min: {self._min:.1e}, max: {self._max:.1e})"
@@ -150,6 +163,7 @@ class DiffRangeDetector(RangeDetector):
         self._time_unit = time_unit
 
     def diff_time_series(self, data):
+        # TODO handle non-equidistant data
         time_diff = data.index.shift() - data.index
         if any(time_diff == 0):
             raise NonUniqueTimeStamps()
@@ -191,6 +205,11 @@ class RollingStandardDeviationDetector(BaseDetector):
 
 
 class ConstantValueDetector(BaseDetector):
+    """
+    Detect constant values over a longer period.
+
+    Commonly caused by sensor failures, which get stuck at a constant level.
+    """
     def __init__(self, window_size: int = 5, threshold: float = 1e-7):
         super().__init__()
         self._threshold = threshold
@@ -213,6 +232,10 @@ class ConstantValueDetector(BaseDetector):
 
 
 class ConstantGradientDetector(ConstantValueDetector):
+    """Detect constant gradients.
+
+    Typically caused by linear interpolation over a long interval.
+    """
     def __init__(self, window_size: int = 5):
         super().__init__(window_size=window_size)
 
