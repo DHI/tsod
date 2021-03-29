@@ -163,31 +163,6 @@
 <div class="section" id="module-tsod.detectors">
 <span id="generic"></span><h2>Generic<a class="headerlink" href="#module-tsod.detectors" title="Permalink to this headline">¶</a></h2>
 <dl class="py class">
-<dt id="tsod.detectors.AnomalyDetectionPipeline">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">AnomalyDetectionPipeline</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">detectors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.AnomalyDetectionPipeline" title="Permalink to this definition">¶</a></dt>
-<dd><p>Combine detectors.</p>
-<p>It is possible to combine several anomaly detection strategies into a combined detector.</p>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">anomaly_detector</span> <span class="o">=</span> <span class="n">AnomalyDetectionPipeline</span><span class="p">([</span><span class="n">RangeDetector</span><span class="p">(),</span> <span class="n">DiffRangeDetector</span><span class="p">()])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">anomaly_detector</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">normal_data</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">detected_anomalies</span> <span class="o">=</span> <span class="n">anomaly_detector</span><span class="o">.</span><span class="n">detect</span><span class="p">(</span><span class="n">abnormal_data</span><span class="p">)</span>
-</pre></div>
-</div>
-<dl class="py method">
-<dt id="tsod.detectors.AnomalyDetectionPipeline.detect">
-<code class="sig-name descname"><span class="pre">detect</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">potentially_abnormal_data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.AnomalyDetectionPipeline.detect" title="Permalink to this definition">¶</a></dt>
-<dd><p>Detect anomalies</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="tsod.detectors.AnomalyDetectionPipeline.fit">
-<code class="sig-name descname"><span class="pre">fit</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.AnomalyDetectionPipeline.fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Set detector parameters based on data.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
 <dt id="tsod.detectors.BaseDetector">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">BaseDetector</span></code><a class="headerlink" href="#tsod.detectors.BaseDetector" title="Permalink to this definition">¶</a></dt>
 <dd><p>Abstract base class for all detectors</p>
@@ -200,6 +175,31 @@
 <dl class="py method">
 <dt id="tsod.detectors.BaseDetector.fit">
 <code class="sig-name descname"><span class="pre">fit</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.BaseDetector.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set detector parameters based on data.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="tsod.detectors.CombinedDetector">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">CombinedDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">detectors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.CombinedDetector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combine detectors.</p>
+<p>It is possible to combine several anomaly detection strategies into a combined detector.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">anomaly_detector</span> <span class="o">=</span> <span class="n">CombinedDetector</span><span class="p">([</span><span class="n">RangeDetector</span><span class="p">(),</span> <span class="n">DiffRangeDetector</span><span class="p">()])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">anomaly_detector</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">normal_data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">detected_anomalies</span> <span class="o">=</span> <span class="n">anomaly_detector</span><span class="o">.</span><span class="n">detect</span><span class="p">(</span><span class="n">abnormal_data</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt id="tsod.detectors.CombinedDetector.detect">
+<code class="sig-name descname"><span class="pre">detect</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">my_data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.CombinedDetector.detect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Detect anomalies</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="tsod.detectors.CombinedDetector.fit">
+<code class="sig-name descname"><span class="pre">fit</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.CombinedDetector.fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set detector parameters based on data.</p>
 </dd></dl>
 
