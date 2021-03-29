@@ -36,14 +36,14 @@ class BaseDetector(ABC):
         return f"{self.__class__.__name__}"
 
 
-class AnomalyDetectionPipeline(BaseDetector):
+class CombinedDetector(BaseDetector):
     """ Combine detectors. 
 
     It is possible to combine several anomaly detection strategies into a combined detector.
     
     Examples
     --------
-    >>> anomaly_detector = AnomalyDetectionPipeline([RangeDetector(), DiffRangeDetector()])
+    >>> anomaly_detector = CombinedDetector([RangeDetector(), DiffRangeDetector()])
     >>> anomaly_detector.fit(normal_data)
     >>> detected_anomalies = anomaly_detector.detect(abnormal_data)
     """
@@ -51,17 +51,21 @@ class AnomalyDetectionPipeline(BaseDetector):
     def __init__(self, detectors):
         super().__init__()
         self._detectors = detectors
-        self._series_name = "is_anomaly"
 
     def fit(self, data):
         for detector in self._detectors:
             detector.fit(data)
         return self
 
-    def detect(self, potentially_abnormal_data):
-        detected_anomalies = [False] * len(potentially_abnormal_data)
+    def detect(self, my_data: pd.Series):
+        
+        all_anomalies = []
         for detector in self._detectors:
-            detected_anomalies |= detector.detect(potentially_abnormal_data)
+            anom = detector.detect(my_data)
+            all_anomalies.append(anom)
+        df = pd.DataFrame(all_anomalies).T
+        return df.any(axis=1)
+
 
         return detected_anomalies
 

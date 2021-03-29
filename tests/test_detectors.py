@@ -6,7 +6,7 @@ from tsod.custom_exceptions import WrongInputDataType
 from tsod.detectors import (
     RangeDetector,
     DiffRangeDetector,
-    AnomalyDetectionPipeline,
+    CombinedDetector,
     RollingStandardDeviationDetector,
     ConstantValueDetector,
     ConstantGradientDetector,
@@ -148,18 +148,26 @@ def test_diff_range_detector_autoset(range_data_series):
     assert sum(detected_anomalies) == 3
 
 
-def test_range_detector_pipeline(range_data_series):
+def test_range_detector_combined(range_data_series):
     normal_data, abnormal_data, expected_anomalies = range_data_series
-    anomaly_detector = AnomalyDetectionPipeline([RangeDetector(), DiffRangeDetector()])
+    anomaly_detector = CombinedDetector([RangeDetector(), DiffRangeDetector()])
 
     expected_anomalies[-3] = True  # Set diff range expected anomaly
     anomaly_detector.fit(normal_data)
     detected_anomalies = anomaly_detector.detect(abnormal_data)
     assert all(detected_anomalies == expected_anomalies)
 
-    detected_anomalies = anomaly_detector.detect_detailed(abnormal_data)
-    assert all(detected_anomalies.is_anomaly == expected_anomalies)
 
+def test_combined_detector():
+    df = pd.read_csv("tests/data/example.csv", parse_dates=True, index_col=0)
+    combined = CombinedDetector([ConstantValueDetector(),
+                                 RangeDetector(max_value=2.0),
+                                     ])
+
+    series = df.value
+    res = combined.detect(series)
+    
+    assert isinstance(res, pd.Series)
 
 def test_rollingstddev_detector(range_data_series):
     data, _, _ = range_data_series
