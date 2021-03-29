@@ -123,8 +123,7 @@ class HampelDetector(BaseDetector):
         self._window_size = window_size
         self._use_numba = use_numba
 
-    def detect(self, data):
-        super().validate(data)
+    def _detect(self, data):
 
         if self._use_numba:
             anomalies, indices, _ = detect_using_numba(

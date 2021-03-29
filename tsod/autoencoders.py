@@ -9,17 +9,16 @@ class AutoEncoder(BaseDetector):
         super().__init__()
         self._model = AutoEncoderPyod(**kwargs)
 
-    def fit(self, data):
-        data = self._validate(data)
+    def _fit(self, data):
+        
         self._model.fit(data)
 
         return self
 
-    def detect(self, data):
-        data = self._validate(data)
+    def _detect(self, data):
         return self._model.predict(data)
 
-    def _validate(self, data):
+    def validate(self, data):
         if isinstance(data, pd.Series):
             return data.values.reshape(-1, 1)
         else:

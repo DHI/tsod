@@ -145,17 +145,7 @@ def test_diff_range_detector_autoset(range_data_series):
 
     detector = DiffRangeDetector().fit(normal_data)
     detected_anomalies = detector.detect(abnormal_data)
-    assert sum(detected_anomalies) == 3
-
-
-def test_range_detector_combined(range_data_series):
-    normal_data, abnormal_data, expected_anomalies = range_data_series
-    anomaly_detector = CombinedDetector([RangeDetector(), DiffRangeDetector()])
-
-    expected_anomalies[-3] = True  # Set diff range expected anomaly
-    anomaly_detector.fit(normal_data)
-    detected_anomalies = anomaly_detector.detect(abnormal_data)
-    assert all(detected_anomalies == expected_anomalies)
+    assert sum(detected_anomalies) == 2
 
 
 def test_combined_detector():

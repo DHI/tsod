@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import pandas as pd
 import numpy as np
 
-from tsod.custom_exceptions import WrongInputDataType, NoRangeDefinedError, NonUniqueTimeStamps
+from tsod.custom_exceptions import WrongInputDataType
 
 
 class BaseDetector(ABC):
@@ -10,19 +10,37 @@ class BaseDetector(ABC):
     def __init__(self):
         pass
 
-    def fit(self, data: pd.Series):
+    def fit(self, data: pd.Series) -> "BaseDetector":
         """ Set detector parameters based on data. """
-        self.validate(data)
+        data = self.validate(data)
+        self._fit(data)
         return self
 
+    def _fit(self, data: pd.Series):
+        # Default implementation is a NoOp
+        return self
+
+
+    def detect(self, data: pd.Series)  -> pd.Series:
+        "Detect anomalies"
+        data = self.validate(data)
+
+        pred = self._detect(data)
+        return self._postprocess(pred)
+
+    def _postprocess(self, pred: pd.Series) -> pd.Series:
+        # TODO implement
+        return pred
+
     @abstractmethod
-    def detect(self, data: pd.Series):
+    def _detect(self, data: pd.Series)  -> pd.Series:
         "Detect anomalies"
         NotImplementedError()
 
     def validate(self, data):
         if not isinstance(data, pd.Series):
             raise WrongInputDataType()
+        return data
 
     def _gradient(self, data: pd.Series):
         dt = data.index.to_series().diff().dt.total_seconds()
@@ -52,32 +70,18 @@ class CombinedDetector(BaseDetector):
         super().__init__()
         self._detectors = detectors
 
-    def fit(self, data):
+    def _fit(self, data):
         for detector in self._detectors:
             detector.fit(data)
         return self
 
-    def detect(self, my_data: pd.Series):
-        
+    def _detect(self, data: pd.Series) -> pd.Series:   
         all_anomalies = []
         for detector in self._detectors:
-            anom = detector.detect(my_data)
+            anom = detector.detect(data)
             all_anomalies.append(anom)
         df = pd.DataFrame(all_anomalies).T
         return df.any(axis=1)
-
-
-        return detected_anomalies
-
-    def detect_detailed(self, potentially_abnormal_data):
-        detected_anomalies = pd.DataFrame(index=potentially_abnormal_data.index)
-        detected_anomalies[self._series_name] = False
-        for detector in self._detectors:
-            name = str(detector)
-            detected_anomalies[name] = detector.detect(potentially_abnormal_data)
-            detected_anomalies[self._series_name] |= detected_anomalies[name]
-
-        return detected_anomalies
 
 
 class RangeDetector(BaseDetector):
@@ -121,7 +125,7 @@ class RangeDetector(BaseDetector):
             assert 0.0 <= quantiles[1] <= 1.0
             self._quantiles = quantiles
 
-    def fit(self, data):
+    def _fit(self, data):
         """ Set min and max based on data.
 
         Parameters
@@ -138,11 +142,8 @@ class RangeDetector(BaseDetector):
         assert self._max >= self._min
         return self
 
-    def detect(self, data):
-        "Detect anomalies"
-
-        super().validate(data)
-        self._validate_fit()
+    def _detect(self, data: pd.Series) -> pd.Series:
+        "Detect anomalies outside range"
 
         if self._max is None:
             return data < self._min
@@ -152,9 +153,6 @@ class RangeDetector(BaseDetector):
 
         return (data < self._min) | (data > self._max)
 
-    def _validate_fit(self):
-        if self._min is None and self._max is None:
-            raise NoRangeDefinedError()
 
     def __str__(self):
 
@@ -167,31 +165,24 @@ class RangeDetector(BaseDetector):
 class DiffRangeDetector(RangeDetector):
     """ Detect values outside diff or rate of change. """
 
-    def __init__(self, min_value=None, max_value=None, time_unit='s'):
+    def __init__(self, min_value=None, max_value=None):
         super().__init__(min_value, max_value)
-        if not time_unit == 's':
-            raise Exception("Can currently only handle diff ranges per seconds")
-        self._time_unit = time_unit
 
-    def diff_time_series(self, data):
+    def _diff_time_series(self, data):
         # TODO handle non-equidistant data
         time_diff = data.index.shift() - data.index
-        if any(time_diff == 0):
-            raise NonUniqueTimeStamps()
 
-        return data.diff() / time_diff.total_seconds()
+        return data.diff()
 
-    def fit(self, data):
-        super().validate(data)
-        data_diff = self.diff_time_series(data)
+    def _fit(self, data):
+        data_diff = self._diff_time_series(data)
 
         self._min = data_diff.min() if self._min is None else self._min
         self._max = data_diff.max() if self._max is None else self._max
         return self
 
-    def detect(self, data):
-        "Detect anomalies"
-        return super().detect(data.diff())
+    def _detect(self, data:pd.Series) -> pd.Series:
+        return super()._detect(data.diff())
 
 
 class RollingStandardDeviationDetector(BaseDetector):
@@ -200,12 +191,11 @@ class RollingStandardDeviationDetector(BaseDetector):
         self._window_size = window_size
         self._threshold = threshold
 
-    def fit(self, data):
-        super().validate(data)
+    def _fit(self, data):
+        
         return self
 
-    def detect(self, data):
-        super().validate(data)
+    def _detect(self, data: pd.Series) -> pd.Series:
         anomalies = data.rolling(self._window_size).std() > self._threshold
         anomalies = anomalies.astype(int).diff() > 0  # only take positive edges
         anomalies[0] = False  # first element cannot be determined by diff
@@ -226,12 +216,10 @@ class ConstantValueDetector(BaseDetector):
         self._threshold = threshold
         self._window_size = window_size
 
-    def fit(self, data):
-        super().validate(data)
+    def _fit(self, data):
         return self
 
-    def detect(self, data):
-        super().validate(data)
+    def _detect(self, data: pd.Series) -> pd.Series:
         rollmax = data.rolling(self._window_size).apply(np.nanmax)
         rollmin = data.rolling(self._window_size).apply(np.nanmin)
         anomalies = np.abs(rollmax - rollmin) < self._threshold
@@ -250,10 +238,9 @@ class ConstantGradientDetector(ConstantValueDetector):
     def __init__(self, window_size: int = 5):
         super().__init__(window_size=window_size)
 
-    def detect(self, data):
-        super().validate(data)
+    def _detect(self, data: pd.Series) -> pd.Series:
         gradient = self._gradient(data)
-        return super().detect(gradient)
+        return super()._detect(gradient)
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size})"
@@ -263,14 +250,13 @@ class MaxAbsGradientDetector(BaseDetector):
     def __init__(self, max_abs_gradient = np.inf):
         self._max_abs_gradient = max_abs_gradient
 
-    def fit(self, data: pd.Series):
+    def _fit(self, data: pd.Series):
         """ Set max absolute gradient based on data. """
-        self.validate(data)
+        
         self._max_abs_gradient = np.max(np.abs(self._gradient(data)))
         return self
 
-    def detect(self, data):
-        super().validate(data)
+    def _detect(self, data: pd.Series) -> pd.Series:
         gradient = self._gradient(data)
         return np.abs(gradient) > self._max_abs_gradient
 
