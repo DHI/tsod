@@ -2,14 +2,15 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from tsod.custom_exceptions import NoRangeDefinedError, WrongInputDataType
+from tsod.custom_exceptions import WrongInputDataType
 from tsod.detectors import (
     RangeDetector,
     DiffRangeDetector,
     AnomalyDetectionPipeline,
     RollingStandardDeviationDetector,
     ConstantValueDetector,
-    ConstantGradientDetector)
+    ConstantGradientDetector,
+    MaxAbsGradientDetector)
     
 from tsod.features import create_dataset
 from tsod.hampel import HampelDetector
@@ -234,6 +235,45 @@ def test_constant_gradient_detector(constant_gradient_data_series):
 
     assert len(anomalies) == len(abnormal_data)
     assert sum(anomalies) == 2
+
+def test_max_abs_gradient_detector_constant_gradient(constant_gradient_data_series):
+    good_data, _, _ = constant_gradient_data_series
+
+    detector = MaxAbsGradientDetector(1.0)
+    anomalies = detector.detect(good_data)
+
+    assert len(anomalies) == len(good_data)
+    assert sum(anomalies) == 0
+
+def test_max_abs_gradient_detector_sudden_jump():
+    
+    normal_data = np.array([-0.5, -0.6,  0.6,  0.6,  0.1,  0.6,  0.4,  0.8,  0.7,  1.5,  1.6,
+        1.1,  0.3,  2.1,  0.7,  0.3, -1.7, -0.3,  0. , -1. ])
+    abnormal_data = np.array([-0.5, -1.5,  1.5,  0.6,  0.1,  0.6,  0.4,  0.8,  0.7,  1.5,  1.6,
+        1.1,  0.3,  2.1,  0.7,  0.3, -1.7, -0.3,  0. , -1. ])
+
+    expected_anomalies = np.repeat(False,len(normal_data))
+    expected_anomalies[2] = True
+    time = pd.date_range(start="2020", periods=len(normal_data), freq="1H")
+    
+    normal_data =  pd.Series(normal_data, index=time)
+    abnormal_data  = pd.Series(abnormal_data, index=time)
+    
+    detector = MaxAbsGradientDetector()
+
+    anomalies = detector.detect(normal_data)
+    assert sum(anomalies) == 0
+
+    # Default is to accept any gradient
+    anomalies = detector.detect(abnormal_data)
+    assert sum(anomalies) == 0
+
+    # Max gradient 2.0/h
+    detector.fit(normal_data)
+    anomalies = detector.detect(abnormal_data)
+
+    assert sum(anomalies) == 1
+
 
 
 def test_create_dataset(data_series):

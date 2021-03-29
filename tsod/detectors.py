@@ -253,3 +253,20 @@ class ConstantGradientDetector(ConstantValueDetector):
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size})"
+
+class MaxAbsGradientDetector(BaseDetector):
+    """Detects abrupt changes"""
+    def __init__(self, max_abs_gradient = np.inf):
+        self._max_abs_gradient = max_abs_gradient
+
+    def fit(self, data: pd.Series):
+        """ Set max absolute gradient based on data. """
+        self.validate(data)
+        self._max_abs_gradient = np.max(np.abs(self._gradient(data)))
+        return self
+
+    def detect(self, data):
+        super().validate(data)
+        gradient = self._gradient(data)
+        return np.abs(gradient) > self._max_abs_gradient
+
