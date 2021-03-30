@@ -38,7 +38,7 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Data formats" href="formats.html" />
+    <link rel="next" title="Design philosophy" href="design.html" />
     <link rel="prev" title="tsod: Anomaly Detection for time series data." href="index.html" /> 
 </head>
 
@@ -87,11 +87,12 @@
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting started</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="formats.html">Data formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#saving-and-loading">Saving and loading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-formats">Data formats</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="design.html">Design philosophy</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
 </ul>
 
             
@@ -161,15 +162,40 @@
             
   <div class="section" id="getting-started">
 <span id="id1"></span><h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
-<p><cite>tsod</cite> is library for timeseries data. The format of a timeseries is always a <code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code> with a <code class="xref py py-class docutils literal notranslate"><span class="pre">DatetimeIndex</span></code></p>
+<p><cite>tsod</cite> is library for timeseries data. The format of a timeseries is always a <code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code> and in some cases with a <code class="xref py py-class docutils literal notranslate"><span class="pre">DatetimeIndex</span></code></p>
 <ol class="arabic simple">
-<li><p>Get data in the form of a a <code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code> with a <code class="xref py py-class docutils literal notranslate"><span class="pre">DatetimeIndex</span></code> (example <a class="reference internal" href="formats.html#formats"><span class="std std-ref">Data formats</span></a>)</p></li>
+<li><p>Get data in the form of a a <code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code> (see Data formats below)</p></li>
 <li><p>Select one or more detectors e.g. <code class="xref py py-class docutils literal notranslate"><span class="pre">RangeDetector</span></code> or <code class="xref py py-class docutils literal notranslate"><span class="pre">ConstantValueDetector</span></code></p></li>
 <li><p>Define parameters (e.g. min/max, max rate of change) or…</p></li>
 <li><p>Fit parameters based on normal data, i.e. without outliers</p></li>
 <li><p>Detect outliers in any dataset</p></li>
 </ol>
-<div class="toctree-wrapper compound">
+<div class="section" id="saving-and-loading">
+<h2>Saving and loading<a class="headerlink" href="#saving-and-loading" title="Permalink to this headline">¶</a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">cd</span> <span class="o">=</span> <span class="n">CombinedDetector</span><span class="p">([</span><span class="n">ConstantValueDetector</span><span class="p">(),</span> <span class="n">RangeDetector</span><span class="p">()])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cd</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">normal_data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cd</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;detector.joblib&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_detector</span> <span class="o">=</span> <span class="n">tsod</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;detector.joblib&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_detector</span><span class="o">.</span><span class="n">detect</span><span class="p">(</span><span class="n">some_data</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="data-formats">
+<h2>Data formats<a class="headerlink" href="#data-formats" title="Permalink to this headline">¶</a></h2>
+<p>Converting data to a <code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;mydata.csv&quot;</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_series</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;water_level&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mikeio</span> <span class="kn">import</span> <span class="n">Dfs0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dfs</span> <span class="o">=</span> <span class="n">Dfs0</span><span class="p">(</span><span class="s1">&#39;simple.dfs0&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">dfs</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_series_2</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;rainfall&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
 </div>
 </div>
 
@@ -179,7 +205,7 @@
           </div>
           <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="formats.html" class="btn btn-neutral float-right" title="Data formats" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="design.html" class="btn btn-neutral float-right" title="Design philosophy" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
         <a href="index.html" class="btn btn-neutral float-left" title="tsod: Anomaly Detection for time series data." accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 

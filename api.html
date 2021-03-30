@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>API Documentation &mdash; tsod 0.1.2 documentation</title>
+  <title>API Reference &mdash; tsod 0.1.2 documentation</title>
   
 
   
@@ -87,8 +87,8 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="design.html">Design philosophy</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">API Documentation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#module-tsod.detectors">Generic</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#generic">Generic</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#hampel">Hampel</a></li>
 </ul>
 </li>
@@ -140,7 +140,7 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>API Documentation</li>
+      <li>API Reference</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -159,99 +159,20 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="api-documentation">
-<span id="api"></span><h1>API Documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="module-tsod.detectors">
-<span id="generic"></span><h2>Generic<a class="headerlink" href="#module-tsod.detectors" title="Permalink to this headline">¶</a></h2>
-<dl class="py class">
-<dt id="tsod.detectors.BaseDetector">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">BaseDetector</span></code><a class="headerlink" href="#tsod.detectors.BaseDetector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Abstract base class for all detectors</p>
-<dl class="py method">
-<dt id="tsod.detectors.BaseDetector.detect">
-<code class="sig-name descname"><span class="pre">detect</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">pandas.core.series.Series</span><a class="headerlink" href="#tsod.detectors.BaseDetector.detect" title="Permalink to this definition">¶</a></dt>
-<dd><p>Detect anomalies</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="tsod.detectors.BaseDetector.fit">
-<code class="sig-name descname"><span class="pre">fit</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#tsod.detectors.BaseDetector" title="tsod.detectors.BaseDetector"><span class="pre">tsod.detectors.BaseDetector</span></a><a class="headerlink" href="#tsod.detectors.BaseDetector.fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Set detector parameters based on data.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt id="tsod.detectors.CombinedDetector">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">CombinedDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">detectors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.CombinedDetector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Combine detectors.</p>
-<p>It is possible to combine several anomaly detection strategies into a combined detector.</p>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">anomaly_detector</span> <span class="o">=</span> <span class="n">CombinedDetector</span><span class="p">([</span><span class="n">RangeDetector</span><span class="p">(),</span> <span class="n">DiffRangeDetector</span><span class="p">()])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">anomaly_detector</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">normal_data</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">detected_anomalies</span> <span class="o">=</span> <span class="n">anomaly_detector</span><span class="o">.</span><span class="n">detect</span><span class="p">(</span><span class="n">abnormal_data</span><span class="p">)</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py class">
-<dt id="tsod.detectors.ConstantGradientDetector">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">ConstantGradientDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.ConstantGradientDetector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Detect constant gradients.</p>
-<p>Typically caused by linear interpolation over a long interval.</p>
-</dd></dl>
-
-<dl class="py class">
-<dt id="tsod.detectors.ConstantValueDetector">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">ConstantValueDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">1e-07</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.ConstantValueDetector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Detect constant values over a longer period.</p>
-<p>Commonly caused by sensor failures, which get stuck at a constant level.</p>
-</dd></dl>
-
-<dl class="py class">
-<dt id="tsod.detectors.DiffRangeDetector">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">DiffRangeDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.DiffRangeDetector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Detect values outside diff or rate of change.</p>
-</dd></dl>
-
-<dl class="py class">
-<dt id="tsod.detectors.MaxAbsGradientDetector">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">MaxAbsGradientDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_abs_gradient</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">inf</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.MaxAbsGradientDetector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Detects abrupt changes</p>
-</dd></dl>
-
-<dl class="py class">
-<dt id="tsod.detectors.RangeDetector">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">RangeDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quantiles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.RangeDetector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Detect values outside range.</p>
-</dd></dl>
-
-<dl class="py class">
-<dt id="tsod.detectors.RollingStandardDeviationDetector">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.detectors.</span></code><code class="sig-name descname"><span class="pre">RollingStandardDeviationDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.detectors.RollingStandardDeviationDetector" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
+  <div class="section" id="api-reference">
+<span id="api"></span><h1>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">tsod.RangeDetector</span></code></p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">tsod.ConstantValueDetector</span></code></p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">tsod.ConstantGradientDetector</span></code></p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">tsod.MaxAbsGradientDetector</span></code></p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">tsod.CombinedDetector</span></code></p></li>
+</ul>
+<div class="section" id="generic">
+<h2>Generic<a class="headerlink" href="#generic" title="Permalink to this headline">¶</a></h2>
 </div>
 <div class="section" id="hampel">
 <h2>Hampel<a class="headerlink" href="#hampel" title="Permalink to this headline">¶</a></h2>
-<dl class="py class">
-<dt id="tsod.hampel.HampelDetector">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.hampel.</span></code><code class="sig-name descname"><span class="pre">HampelDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_numba</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.hampel.HampelDetector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Hampel filter implementation that works on numpy arrays, implemented with numba.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>window_size</strong> (<em>int</em>) – The window range is from [(i - window_size):(i + window_size)], so window_size is half of the
-window, counted in number of array elements (as opposed to specify a time span, which is not
-supported by this implementation)</p></li>
-<li><p><strong>threshold</strong> (<em>float</em>) – The threshold for marking an outlier. A low threshold “narrows” the band within which values are deemed as
-outliers. n_sigmas</p></li>
-<li><p><strong>use_numba</strong> (<em>bool</em>) – option to use numba for higher performance, default false</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
 </div>
 </div>
 
