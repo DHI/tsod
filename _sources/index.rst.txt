@@ -17,6 +17,7 @@ This package aims to provide examples and algorithms for detecting anomalies in 
    :caption: Contents:
    :hidden:
 
+   getting_started
    design
    api
 
