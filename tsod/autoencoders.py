@@ -1,16 +1,16 @@
 import pandas as pd
 from pyod.models.auto_encoder import AutoEncoder as AutoEncoderPyod
 
-from tsod.detectors import BaseDetector
+from tsod.detectors import Detector
 
 
-class AutoEncoder(BaseDetector):
+class AutoEncoder(Detector):
     def __init__(self, **kwargs):
         super().__init__()
         self._model = AutoEncoderPyod(**kwargs)
 
     def _fit(self, data):
-        
+
         self._model.fit(data)
 
         return self

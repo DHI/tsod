@@ -1,64 +1,16 @@
-from abc import ABC, abstractmethod
+from collections.abc import Sequence
 import pandas as pd
 import numpy as np
 
-from tsod.custom_exceptions import WrongInputDataType
+from .base import Detector
+from .custom_exceptions import WrongInputDataType
 
 
-class BaseDetector(ABC):
-    """Abstract base class for all detectors"""
-    def __init__(self):
-        pass
-
-    def fit(self, data: pd.Series) -> "BaseDetector":
-        """ Set detector parameters based on data. """
-        data = self.validate(data)
-        self._fit(data)
-        return self
-
-    def _fit(self, data: pd.Series):
-        # Default implementation is a NoOp
-        return self
-
-
-    def detect(self, data: pd.Series)  -> pd.Series:
-        "Detect anomalies"
-        data = self.validate(data)
-
-        pred = self._detect(data)
-        return self._postprocess(pred)
-
-    def _postprocess(self, pred: pd.Series) -> pd.Series:
-        # TODO implement
-        return pred
-
-    @abstractmethod
-    def _detect(self, data: pd.Series)  -> pd.Series:
-        "Detect anomalies"
-        NotImplementedError()
-
-    def validate(self, data):
-        if not isinstance(data, pd.Series):
-            raise WrongInputDataType()
-        return data
-
-    def _gradient(self, data: pd.Series):
-        dt = data.index.to_series().diff().dt.total_seconds()
-        if dt.min() < 1e-15:
-            raise ValueError("Input must be monotonic increasing")
-
-        gradient = data.diff() / dt
-        return gradient
-
-    def __str__(self):
-        return f"{self.__class__.__name__}"
-
-
-class CombinedDetector(BaseDetector):
-    """ Combine detectors. 
+class CombinedDetector(Detector, Sequence):
+    """Combine detectors.
 
     It is possible to combine several anomaly detection strategies into a combined detector.
-    
+
     Examples
     --------
     >>> anomaly_detector = CombinedDetector([RangeDetector(), DiffRangeDetector()])
@@ -68,6 +20,13 @@ class CombinedDetector(BaseDetector):
 
     def __init__(self, detectors):
         super().__init__()
+
+        for d in detectors:
+            if not isinstance(d, Detector):
+                raise ValueError(
+                    f"{d} is not a Detector. Did you forget to create an instance, e.g. ConstantValueDetector()?"
+                )
+
         self._detectors = detectors
 
     def _fit(self, data):
@@ -75,7 +34,7 @@ class CombinedDetector(BaseDetector):
             detector.fit(data)
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:   
+    def _detect(self, data: pd.Series) -> pd.Series:
         all_anomalies = []
         for detector in self._detectors:
             anom = detector.detect(data)
@@ -83,39 +42,44 @@ class CombinedDetector(BaseDetector):
         df = pd.DataFrame(all_anomalies).T
         return df.any(axis=1)
 
+    def __getitem__(self, index):
+        return self._detectors[index]
 
-class RangeDetector(BaseDetector):
-    """ Detect values outside range. """
+    def __len__(self):
+        return len(self._detectors)
+
+
+class RangeDetector(Detector):
+    """
+    Detect values outside range.
+
+    Parameters
+    ----------
+    min_value : float
+        Minimum value threshold.
+    max_value : float
+        Maximum value threshold.
+    quantiles : list[2]
+                Default quantiles [0, 1]. Same as min and max value.
+
+    Examples
+    ---------
+    >>> detector = RangeDetector(min_value=0.0, max_value=2.0)
+    >>> anomalies = detector.detect(data)
+
+    >>> detector = RangeDetector()
+    >>> detector.fit(normal_data) # min, max inferred from normal data
+    >>> anomalies = detector.detect(data)
+
+    >>> detector = RangeDetector(quantiles=[0.001,0.999])
+    >>> detector.fit(normal_data_with_some_outliers)
+    >>> anomalies = detector.detect(data)"""
+
     def __init__(self, min_value=-np.inf, max_value=np.inf, quantiles=None):
-        """ Set min or max manually. Optionally change quantiles used in fit().
-
-        Parameters
-        ----------
-        min_value : float
-            Minimum value threshold.
-        max_value : float
-            Maximum value threshold.
-        quantiles : list[2]
-                    Default quantiles [0, 1]. Same as min and max value.
-
-        Examples
-        --------
-        >>> detector = RangeDetector(min_value=0.0, max_value=2.0)
-        >>> anomalies = detector.detect(data)
-        >>>
-        >>> detector = RangeDetector()
-        >>> detector.fit(normal_data) # min, max inferred from normal data
-        >>> anomalies = detector.detect(data)
-        >>>
-        >>> detector = RangeDetector(quantiles=[0.001,0.999])
-        >>> detector.fit(normal_data_with_some_outliers)
-        >>> anomalies = detector.detect(data)
-        """
-
         super().__init__()
-        
+
         self._min = min_value
-        
+
         self._max = max_value
 
         if quantiles is None:
@@ -126,7 +90,7 @@ class RangeDetector(BaseDetector):
             self._quantiles = quantiles
 
     def _fit(self, data):
-        """ Set min and max based on data.
+        """Set min and max based on data.
 
         Parameters
         ----------
@@ -134,7 +98,7 @@ class RangeDetector(BaseDetector):
                 Normal time series data.
         """
         super().validate(data)
-        
+
         quantiles = np.quantile(data.dropna(), self._quantiles)
         self._min = quantiles.min()
         self._max = quantiles.max()
@@ -152,7 +116,6 @@ class RangeDetector(BaseDetector):
             return data > self._max
 
         return (data < self._min) | (data > self._max)
-
 
     def __str__(self):
 
@@ -181,18 +144,18 @@ class DiffRangeDetector(RangeDetector):
         self._max = data_diff.max() if self._max is None else self._max
         return self
 
-    def _detect(self, data:pd.Series) -> pd.Series:
+    def _detect(self, data: pd.Series) -> pd.Series:
         return super()._detect(data.diff())
 
 
-class RollingStandardDeviationDetector(BaseDetector):
+class RollingStandardDeviationDetector(Detector):
     def __init__(self, window_size=10, threshold=0.1):
         super().__init__()
         self._window_size = window_size
         self._threshold = threshold
 
     def _fit(self, data):
-        
+
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
@@ -205,12 +168,13 @@ class RollingStandardDeviationDetector(BaseDetector):
         return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
 
 
-class ConstantValueDetector(BaseDetector):
+class ConstantValueDetector(Detector):
     """
     Detect constant values over a longer period.
 
     Commonly caused by sensor failures, which get stuck at a constant level.
     """
+
     def __init__(self, window_size: int = 5, threshold: float = 1e-7):
         super().__init__()
         self._threshold = threshold
@@ -234,7 +198,13 @@ class ConstantGradientDetector(ConstantValueDetector):
     """Detect constant gradients.
 
     Typically caused by linear interpolation over a long interval.
+
+    Parameters
+    ==========
+    window_size: int
+        Minium window to consider as anomaly, default 5
     """
+
     def __init__(self, window_size: int = 5):
         super().__init__(window_size=window_size)
 
@@ -245,14 +215,22 @@ class ConstantGradientDetector(ConstantValueDetector):
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size})"
 
-class MaxAbsGradientDetector(BaseDetector):
-    """Detects abrupt changes"""
-    def __init__(self, max_abs_gradient = np.inf):
+
+class MaxAbsGradientDetector(Detector):
+    """Detects abrupt changes
+
+    Parameters
+    ==========
+    max_abs_gradient: float
+        Maximum rate of change per second, default np.inf
+    """
+
+    def __init__(self, max_abs_gradient=np.inf):
         self._max_abs_gradient = max_abs_gradient
 
     def _fit(self, data: pd.Series):
         """ Set max absolute gradient based on data. """
-        
+
         self._max_abs_gradient = np.max(np.abs(self._gradient(data)))
         return self
 
@@ -260,3 +238,6 @@ class MaxAbsGradientDetector(BaseDetector):
         gradient = self._gradient(data)
         return np.abs(gradient) > self._max_abs_gradient
 
+    def __str__(self):
+        max_grad_hr = self._max_abs_gradient * 3600.0
+        return f"{self.__class__.__name__}({max_grad_hr:.3f}/hr)"

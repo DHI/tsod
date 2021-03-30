@@ -1,3 +1,4 @@
+from tsod.base import Detector
 import pytest
 import numpy as np
 import pandas as pd
@@ -10,8 +11,9 @@ from tsod.detectors import (
     RollingStandardDeviationDetector,
     ConstantValueDetector,
     ConstantGradientDetector,
-    MaxAbsGradientDetector)
-    
+    MaxAbsGradientDetector,
+)
+
 from tsod.features import create_dataset
 from tsod.hampel import HampelDetector
 from tsod.autoencoders import AutoEncoder
@@ -39,7 +41,7 @@ def data_series():
 @pytest.fixture
 def range_data():
     normal_data = np.array([0, np.nan, 1, 0, 2, np.nan, 3.14, 4])
-    abnormal_data = np.array([-1, np.nan, 2, np.nan, 1, 0, 4, 10])
+    abnormal_data = np.array([-1.0, np.nan, 2.0, np.nan, 1.0, 0.0, 4.1, 10.0])
     expected_anomalies = np.array([True, False, False, False, False, False, True, True])
     assert len(expected_anomalies) == len(abnormal_data)
     return normal_data, abnormal_data, expected_anomalies
@@ -113,6 +115,30 @@ def test_range_detector_autoset(range_data_series):
     assert sum(anomalies) == 2
 
 
+def test_combined_fit(range_data_series):
+    normal_data, abnormal_data, labels = range_data_series
+    cd = CombinedDetector([ConstantValueDetector(), RangeDetector()])
+    cd.fit(normal_data)
+
+    anomalies = cd.detect(abnormal_data)
+    assert all(anomalies == labels)
+
+
+def test_combined_wrong_type():
+    with pytest.raises(ValueError):
+        CombinedDetector([ConstantValueDetector, RangeDetector()])  #
+
+
+def test_combined_access_items():
+
+    cd = CombinedDetector([ConstantValueDetector(), RangeDetector()])
+
+    assert isinstance(cd[0], Detector)
+    assert isinstance(cd[0], ConstantValueDetector)
+    assert isinstance(cd[1], RangeDetector)
+    assert isinstance(cd[-1], RangeDetector)
+
+
 def test_range_detector_quantile():
     np.random.seed(42)
     train = np.random.normal(size=1000)
@@ -133,7 +159,9 @@ def test_range_detector_quantile():
     assert sum(detected_anomalies) == 0
 
     # exclude extreme values
-    detector = RangeDetector(quantiles=[0.001, 0.999]).fit(normal_data_incl_two_outliers)
+    detector = RangeDetector(quantiles=[0.001, 0.999]).fit(
+        normal_data_incl_two_outliers
+    )
     detected_anomalies = detector.detect(test_data)
     assert sum(detected_anomalies) == 2
     assert detector._min > normal_data_incl_two_outliers.min()
@@ -150,14 +178,18 @@ def test_diff_range_detector_autoset(range_data_series):
 
 def test_combined_detector():
     df = pd.read_csv("tests/data/example.csv", parse_dates=True, index_col=0)
-    combined = CombinedDetector([ConstantValueDetector(),
-                                 RangeDetector(max_value=2.0),
-                                     ])
+    combined = CombinedDetector(
+        [
+            ConstantValueDetector(),
+            RangeDetector(max_value=2.0),
+        ]
+    )
 
     series = df.value
     res = combined.detect(series)
-    
+
     assert isinstance(res, pd.Series)
+
 
 def test_rollingstddev_detector(range_data_series):
     data, _, _ = range_data_series
@@ -186,7 +218,9 @@ def test_hampel_detector(data_series):
 
 def test_autoencoder_detector(data_series):
     data_with_anomalies, expected_anomalies_indices, normal_data = data_series
-    detector = AutoEncoder(hidden_neurons=[1, 1, 1, 1], epochs=1)  # TODO add lagged features to increase layer size
+    detector = AutoEncoder(
+        hidden_neurons=[1, 1, 1, 1], epochs=1
+    )  # TODO add lagged features to increase layer size
     detector.fit(normal_data)
     anomalies = detector.detect(data_with_anomalies)
     anomalies_indices = np.array(np.where(anomalies)).flatten()
@@ -234,6 +268,7 @@ def test_constant_gradient_detector(constant_gradient_data_series):
     assert len(anomalies) == len(abnormal_data)
     assert sum(anomalies) == 2
 
+
 def test_max_abs_gradient_detector_constant_gradient(constant_gradient_data_series):
     good_data, _, _ = constant_gradient_data_series
 
@@ -243,20 +278,65 @@ def test_max_abs_gradient_detector_constant_gradient(constant_gradient_data_seri
     assert len(anomalies) == len(good_data)
     assert sum(anomalies) == 0
 
-def test_max_abs_gradient_detector_sudden_jump():
-    
-    normal_data = np.array([-0.5, -0.6,  0.6,  0.6,  0.1,  0.6,  0.4,  0.8,  0.7,  1.5,  1.6,
-        1.1,  0.3,  2.1,  0.7,  0.3, -1.7, -0.3,  0. , -1. ])
-    abnormal_data = np.array([-0.5, -1.5,  1.5,  0.6,  0.1,  0.6,  0.4,  0.8,  0.7,  1.5,  1.6,
-        1.1,  0.3,  2.1,  0.7,  0.3, -1.7, -0.3,  0. , -1. ])
 
-    expected_anomalies = np.repeat(False,len(normal_data))
+def test_max_abs_gradient_detector_sudden_jump():
+
+    normal_data = np.array(
+        [
+            -0.5,
+            -0.6,
+            0.6,
+            0.6,
+            0.1,
+            0.6,
+            0.4,
+            0.8,
+            0.7,
+            1.5,
+            1.6,
+            1.1,
+            0.3,
+            2.1,
+            0.7,
+            0.3,
+            -1.7,
+            -0.3,
+            0.0,
+            -1.0,
+        ]
+    )
+    abnormal_data = np.array(
+        [
+            -0.5,
+            -1.5,
+            1.5,
+            0.6,
+            0.1,
+            0.6,
+            0.4,
+            0.8,
+            0.7,
+            1.5,
+            1.6,
+            1.1,
+            0.3,
+            2.1,
+            0.7,
+            0.3,
+            -1.7,
+            -0.3,
+            0.0,
+            -1.0,
+        ]
+    )
+
+    expected_anomalies = np.repeat(False, len(normal_data))
     expected_anomalies[2] = True
     time = pd.date_range(start="2020", periods=len(normal_data), freq="1H")
-    
-    normal_data =  pd.Series(normal_data, index=time)
-    abnormal_data  = pd.Series(abnormal_data, index=time)
-    
+
+    normal_data = pd.Series(normal_data, index=time)
+    abnormal_data = pd.Series(abnormal_data, index=time)
+
     detector = MaxAbsGradientDetector()
 
     anomalies = detector.detect(normal_data)
@@ -273,13 +353,12 @@ def test_max_abs_gradient_detector_sudden_jump():
     assert sum(anomalies) == 1
 
 
-
 def test_create_dataset(data_series):
     data_with_anomalies, _, _ = data_series
-    data_with_anomalies.name = 'y'
+    data_with_anomalies.name = "y"
     data = data_with_anomalies.to_frame()
     time_steps = 2
-    X, y = create_dataset(data[['y']], data.y, time_steps)
+    X, y = create_dataset(data[["y"]], data.y, time_steps)
     assert len(y) == len(data) - time_steps
     assert X.shape[0] == len(data) - time_steps
     assert X.shape[1] == time_steps

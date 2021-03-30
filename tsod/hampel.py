@@ -2,12 +2,12 @@ import numpy as np
 from numba import jit
 
 from tsod.custom_exceptions import NotInteger, InvalidArgument
-from tsod.detectors import BaseDetector
+from tsod.detectors import Detector
 
-'''
+"""
 GAUSSIAN_SCALE_FACTOR = k = 1/Phi^(-1)(3/4)
 Choosing 3/4 as argument makes +-MAD cover 50% of the standard normal cumulative distribution function.
-'''
+"""
 GAUSSIAN_SCALE_FACTOR = 1.4826
 
 
@@ -17,7 +17,7 @@ def median_absolute_deviation(x):
 
 
 def filter(time_series, window_size=5, threshold=3, k=GAUSSIAN_SCALE_FACTOR):
-    """ Detect and filter out outliers using the Hampel filter.
+    """Detect and filter out outliers using the Hampel filter.
         Based on https://github.com/MichaelisTrofficus/hampel_filter
 
     Parameters
@@ -34,7 +34,9 @@ def filter(time_series, window_size=5, threshold=3, k=GAUSSIAN_SCALE_FACTOR):
     validate_arguments(window_size, threshold)
 
     time_series_clean = time_series.copy()
-    is_outlier, outlier_indices, rolling_median = detect(time_series_clean, window_size, threshold, k)
+    is_outlier, outlier_indices, rolling_median = detect(
+        time_series_clean, window_size, threshold, k
+    )
     time_series_clean[list(outlier_indices)] = rolling_median[list(outlier_indices)]
 
     return is_outlier, outlier_indices, time_series_clean
@@ -43,8 +45,12 @@ def filter(time_series, window_size=5, threshold=3, k=GAUSSIAN_SCALE_FACTOR):
 def detect(time_series, window_size, threshold, k=GAUSSIAN_SCALE_FACTOR):
     """ Detect outliers using the Hampel filter. """
     rolling_ts = time_series.rolling(window_size * 2, center=True)
-    rolling_median = rolling_ts.median().fillna(method='bfill').fillna(method='ffill')
-    rolling_sigma = k * (rolling_ts.apply(median_absolute_deviation).fillna(method='bfill').fillna(method='ffill'))
+    rolling_median = rolling_ts.median().fillna(method="bfill").fillna(method="ffill")
+    rolling_sigma = k * (
+        rolling_ts.apply(median_absolute_deviation)
+        .fillna(method="bfill")
+        .fillna(method="ffill")
+    )
     is_outlier = np.abs(time_series - rolling_median) >= (threshold * rolling_sigma)
     outlier_indices = np.array(np.where(is_outlier)).flatten()
     return is_outlier, outlier_indices, rolling_median
@@ -88,7 +94,7 @@ def detect_using_numba(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_F
     is_outlier = [False] * len(time_series)
 
     for t in range(window_size, (len(time_series) - window_size)):
-        time_series_window = time_series[(t - window_size):(t + window_size)]
+        time_series_window = time_series[(t - window_size) : (t + window_size)]
         median_in_window = np.nanmedian(time_series_window)
         mad_in_window = k * np.nanmedian(np.abs(time_series_window - median_in_window))
         absolute_deviation_from_median = np.abs(time_series[t] - median_in_window)
@@ -100,7 +106,7 @@ def detect_using_numba(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_F
     return is_outlier, outlier_indices, time_series_clean
 
 
-class HampelDetector(BaseDetector):
+class HampelDetector(Detector):
     """
     Hampel filter implementation that works on numpy arrays, implemented with numba.
 
@@ -116,6 +122,7 @@ class HampelDetector(BaseDetector):
     use_numba: bool
         option to use numba for higher performance, default false
     """
+
     def __init__(self, window_size=5, threshold=3, use_numba=False):
         super().__init__()
         validate_arguments(window_size, threshold)
@@ -130,9 +137,7 @@ class HampelDetector(BaseDetector):
                 data.values, self._window_size, self._threshold
             )
         else:
-            anomalies, indices, _ = detect(
-                data, self._window_size, self._threshold
-            )
+            anomalies, indices, _ = detect(data, self._window_size, self._threshold)
 
         return anomalies
 

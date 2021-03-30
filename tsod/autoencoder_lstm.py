@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed
 
-from tsod.detectors import BaseDetector
+from tsod.detectors import Detector
 from tsod.features import create_dataset
 
 
@@ -11,28 +11,33 @@ def build_model(X_train, dropout_fraction=0.2, size=128):
     timesteps = X_train.shape[1]
     num_features = X_train.shape[2]
 
-    model = Sequential([
-        LSTM(size, input_shape=(timesteps, num_features)),
-        Dropout(dropout_fraction),
-        RepeatVector(timesteps),
-        LSTM(size, return_sequences=True),
-        Dropout(dropout_fraction),
-        TimeDistributed(Dense(num_features))
-    ])
+    model = Sequential(
+        [
+            LSTM(size, input_shape=(timesteps, num_features)),
+            Dropout(dropout_fraction),
+            RepeatVector(timesteps),
+            LSTM(size, return_sequences=True),
+            Dropout(dropout_fraction),
+            TimeDistributed(Dense(num_features)),
+        ]
+    )
 
-    model.compile(loss='mae', optimizer='adam')
+    model.compile(loss="mae", optimizer="adam")
     return model
 
 
 def fit(model, X_train, y_train=None):
-    early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, mode='min')
+    early_stopping = tf.keras.callbacks.EarlyStopping(
+        monitor="val_loss", patience=3, mode="min"
+    )
     history = model.fit(
-        X_train, y_train,
+        X_train,
+        y_train,
         epochs=100,
         batch_size=32,
         validation_split=0.1,
         callbacks=[early_stopping],
-        shuffle=False
+        shuffle=False,
     )
     return history
 
@@ -49,7 +54,7 @@ def detect(model, X, threshold=0.65):
     return is_anomaly
 
 
-class AutoEncoderLSTM(BaseDetector):
+class AutoEncoderLSTM(Detector):
     def __init__(self, time_steps=3, threshold=0.65, size=128, dropout_fraction=0.2):
         super().__init__()
         self._model = None
