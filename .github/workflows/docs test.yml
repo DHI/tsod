@@ -1,0 +1,32 @@
+name: Documentation test
+
+on:
+  pull-request:
+    branches: [main]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+        
+    - name: Install tsod
+      run: |
+        pip install .[dev]
+    
+    - name: Sphinx Build
+      run: |
+        cd doc
+        make html SPHINXOPTS="-W"
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: Documentation
+        path: ./doc/_build/html/
+    # ===============================
