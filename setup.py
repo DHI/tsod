@@ -5,10 +5,10 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tsod",
-    version='0.1.2',
-    install_requires=["pandas>=1.0.0", "numba"],
+    version="0.1.2",
+    install_requires=["pandas>=1.0.0", "numba", "joblib"],
     extras_require={
-        "dev": ["pytest>=6.2.1","sphinx","sphinx-rtd-theme"],
+        "dev": ["pytest>=6.2.1", "sphinx", "sphinx-rtd-theme"],
         "ml": ["pyod", "tensorflow"],
         "test": ["pytest>=6.2.1"],
     },
