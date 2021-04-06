@@ -11,29 +11,36 @@ Getting started
 4. Fit parameters based on normal data, i.e. without outliers
 5. Detect outliers in any dataset
 
+.. image:: https://colab.research.google.com/assets/colab-badge.svg
+  :target: http://colab.research.google.com/github/DHI/tsod/blob/main/notebooks/Getting%20started.ipynb
+
 
 Saving and loading
 ------------------
+.. code-block:: python
 
-    >>> cd = CombinedDetector([ConstantValueDetector(), RangeDetector()])
-    >>> cd.fit(normal_data)
-    >>> cd.save("detector.joblib")
+    # save a configured detector
+    cd = CombinedDetector([ConstantValueDetector(), RangeDetector()])
+    cd.fit(normal_data)
+    cd.save("detector.joblib")
 
-    >>> my_detector = tsod.load("detector.joblib")
-    >>> my_detector.detect(some_data)
+    # ... and then later load it from disk
+    my_detector = tsod.load("detector.joblib")
+    my_detector.detect(some_data)
 
 Data formats
 ------------
     
 Converting data to a :py:class:`~pandas.Series`
     
-    
-    >>> import pandas as pd
-    >>> df = pd.read_csv("mydata.csv", parse_dates=True, index_col=0)
-    >>> my_series = df['water_level']
+.. code-block:: python
 
-    >>> from mikeio import Dfs0
-    >>> dfs = Dfs0('simple.dfs0')
-    >>> df = dfs.to_dataframe()
-    >>> my_series_2 = df['rainfall']
+    import pandas as pd
+    df = pd.read_csv("mydata.csv", parse_dates=True, index_col=0)
+    my_series = df['water_level']
+
+    from mikeio import Dfs0
+    dfs = Dfs0('simple.dfs0')
+    df = dfs.to_dataframe()
+    my_series_2 = df['rainfall']
     

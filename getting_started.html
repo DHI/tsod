@@ -170,30 +170,31 @@
 <li><p>Fit parameters based on normal data, i.e. without outliers</p></li>
 <li><p>Detect outliers in any dataset</p></li>
 </ol>
+<a class="reference external image-reference" href="http://colab.research.google.com/github/DHI/tsod/blob/main/notebooks/Getting%20started.ipynb"><img alt="https://colab.research.google.com/assets/colab-badge.svg" src="https://colab.research.google.com/assets/colab-badge.svg" /></a>
 <div class="section" id="saving-and-loading">
 <h2>Saving and loading<a class="headerlink" href="#saving-and-loading" title="Permalink to this headline">¶</a></h2>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">cd</span> <span class="o">=</span> <span class="n">CombinedDetector</span><span class="p">([</span><span class="n">ConstantValueDetector</span><span class="p">(),</span> <span class="n">RangeDetector</span><span class="p">()])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">cd</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">normal_data</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">cd</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;detector.joblib&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_detector</span> <span class="o">=</span> <span class="n">tsod</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;detector.joblib&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">my_detector</span><span class="o">.</span><span class="n">detect</span><span class="p">(</span><span class="n">some_data</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># save a configured detector</span>
+<span class="n">cd</span> <span class="o">=</span> <span class="n">CombinedDetector</span><span class="p">([</span><span class="n">ConstantValueDetector</span><span class="p">(),</span> <span class="n">RangeDetector</span><span class="p">()])</span>
+<span class="n">cd</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">normal_data</span><span class="p">)</span>
+<span class="n">cd</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;detector.joblib&quot;</span><span class="p">)</span>
+
+<span class="c1"># ... and then later load it from disk</span>
+<span class="n">my_detector</span> <span class="o">=</span> <span class="n">tsod</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;detector.joblib&quot;</span><span class="p">)</span>
+<span class="n">my_detector</span><span class="o">.</span><span class="n">detect</span><span class="p">(</span><span class="n">some_data</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="data-formats">
 <h2>Data formats<a class="headerlink" href="#data-formats" title="Permalink to this headline">¶</a></h2>
 <p>Converting data to a <code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;mydata.csv&quot;</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">my_series</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;water_level&#39;</span><span class="p">]</span>
-</pre></div>
-</div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mikeio</span> <span class="kn">import</span> <span class="n">Dfs0</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dfs</span> <span class="o">=</span> <span class="n">Dfs0</span><span class="p">(</span><span class="s1">&#39;simple.dfs0&#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">dfs</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">my_series_2</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;rainfall&#39;</span><span class="p">]</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;mydata.csv&quot;</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">my_series</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;water_level&#39;</span><span class="p">]</span>
+
+<span class="kn">from</span> <span class="nn">mikeio</span> <span class="kn">import</span> <span class="n">Dfs0</span>
+<span class="n">dfs</span> <span class="o">=</span> <span class="n">Dfs0</span><span class="p">(</span><span class="s1">&#39;simple.dfs0&#39;</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">dfs</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span>
+<span class="n">my_series_2</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;rainfall&#39;</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
