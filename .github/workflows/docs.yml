@@ -24,7 +24,7 @@ jobs:
     - name: Sphinx Build
       run: |
         cd doc
-        make html
+        make html SPHINXOPTS="-W"
     
     - name: Commit documentation changes
       run: |
