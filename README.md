@@ -9,6 +9,10 @@ Sensors often provide faulty or missing observations. These anomalies must be de
 
 This package aims to provide examples and algorithms for detecting anomalies in time series data specifically tailored to DHI users and the water domain. It is simple to install and deploy operationally and is accessible to everyone (open-source).
 
+# Getting Started
+
+* [Documentation](https://dhi.github.io/tsod/getting_started.html)
+* [Notebook](https://github.com/DHI/tsod/blob/main/notebooks/Getting%20started.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](http://colab.research.google.com/github/DHI/tsod/blob/main/notebooks/Getting%20started.ipynb)
 
 
 # Installation
