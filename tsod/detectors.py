@@ -175,7 +175,7 @@ class ConstantValueDetector(Detector):
     Commonly caused by sensor failures, which get stuck at a constant level.
     """
 
-    def __init__(self, window_size: int = 5, threshold: float = 1e-7):
+    def __init__(self, window_size: int = 3, threshold: float = 1e-7):
         super().__init__()
         self._threshold = threshold
         self._window_size = window_size
@@ -184,10 +184,19 @@ class ConstantValueDetector(Detector):
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
-        rollmax = data.rolling(self._window_size).apply(np.nanmax)
-        rollmin = data.rolling(self._window_size).apply(np.nanmin)
+        rollmax = data.rolling(self._window_size, center=True).apply(np.nanmax)
+        rollmin = data.rolling(self._window_size, center=True).apply(np.nanmin)
         anomalies = np.abs(rollmax - rollmin) < self._threshold
         anomalies[0] = False  # first element cannot be determined
+        anomalies[-1] = False
+        idx = np.where(anomalies)[0]
+        if idx is not None:
+            # assuming window size = 3
+            # remove also points before and after each detected anomaly
+            anomalies[idx[idx > 0] - 1] = True
+            maxidx = len(anomalies) - 1
+            anomalies[idx[idx < maxidx] + 1] = True
+
         return anomalies
 
     def __str__(self):
@@ -202,15 +211,18 @@ class ConstantGradientDetector(ConstantValueDetector):
     Parameters
     ==========
     window_size: int
-        Minium window to consider as anomaly, default 5
+        Minium window to consider as anomaly, default 3
     """
 
-    def __init__(self, window_size: int = 5):
+    def __init__(self, window_size: int = 3):
         super().__init__(window_size=window_size)
 
     def _detect(self, data: pd.Series) -> pd.Series:
-        gradient = self._gradient(data)
-        return super()._detect(gradient)
+        gradient = self._gradient(data, periods=1)
+        s1 = super()._detect(gradient)
+        gradient = self._gradient(data, periods=-1)
+        s2 = super()._detect(gradient)
+        return s1 | s2
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size})"
