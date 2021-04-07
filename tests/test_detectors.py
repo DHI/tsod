@@ -177,7 +177,10 @@ def test_diff_range_detector_autoset(range_data_series):
 def test_combined_detector():
     df = pd.read_csv("tests/data/example.csv", parse_dates=True, index_col=0)
     combined = CombinedDetector(
-        [ConstantValueDetector(), RangeDetector(max_value=2.0),]
+        [
+            ConstantValueDetector(),
+            RangeDetector(max_value=2.0),
+        ]
     )
 
     series = df.value
@@ -206,8 +209,6 @@ def test_rollingstddev_detector():
 
     anomalies = detector.detect(all_data)
     assert sum(anomalies) > 0
-
-    assert np.where(anomalies)[0][0] > 1000
 
     # Manual specification
     detector = RollingStandardDeviationDetector(max_std=2.0)
