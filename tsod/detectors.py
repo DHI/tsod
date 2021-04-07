@@ -149,23 +149,34 @@ class DiffRangeDetector(RangeDetector):
 
 
 class RollingStandardDeviationDetector(Detector):
-    def __init__(self, window_size=10, threshold=0.1):
+    """Detect large variations
+
+    Parameters
+    ----------
+    window_size: int
+        Number of data points to evaluate over, default=10
+    max_std: float
+        Maximum standard deviation to accept as normal, default np.inf
+    """
+
+    def __init__(self, window_size=10, max_std=np.inf):
         super().__init__()
         self._window_size = window_size
-        self._threshold = threshold
+        self._max_std = max_std
 
     def _fit(self, data):
+        self._max_std = data.rolling(self._window_size).std().max()
 
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
-        anomalies = data.rolling(self._window_size).std() > self._threshold
-        anomalies = anomalies.astype(int).diff() > 0  # only take positive edges
+        anomalies = data.rolling(self._window_size).std() > self._max_std
+        # anomalies = anomalies.astype(int).diff() > 0  # only take positive edges
         anomalies[0] = False  # first element cannot be determined by diff
         return anomalies
 
     def __str__(self):
-        return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
+        return f"{self.__class__.__name__}(window_size:{self._window_size}, max_std:{self._max_std})"
 
 
 class ConstantValueDetector(Detector):

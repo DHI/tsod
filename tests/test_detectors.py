@@ -191,14 +191,36 @@ def test_combined_detector():
     assert isinstance(res, pd.Series)
 
 
-def test_rollingstddev_detector(range_data_series):
-    data, _, _ = range_data_series
+def test_rollingstddev_detector():
 
-    detector = RollingStandardDeviationDetector(3, 0.1)
-    anomalies = detector.detect(data)
+    np.random.seed(42)
+    normal_data = pd.Series(np.random.normal(scale=1.0, size=1000)) + 10.0 * np.sin(
+        np.linspace(0, 10, num=1000)
+    )
+    abnormal_data = pd.Series(np.random.normal(scale=2.0, size=100))
 
-    assert len(anomalies) == len(data)
-    assert sum(anomalies) == 1
+    all_data = pd.concat([normal_data, abnormal_data])
+
+    detector = RollingStandardDeviationDetector()
+    anomalies = detector.detect(normal_data)
+    assert sum(anomalies) == 0
+
+    detector.fit(normal_data)
+    anomalies = detector.detect(normal_data)
+    assert sum(anomalies) == 0
+
+    anomalies = detector.detect(all_data)
+    assert sum(anomalies) > 0
+
+    assert np.where(anomalies)[0][0] > 1000
+
+    # Manual specification
+    detector = RollingStandardDeviationDetector(max_std=2.0)
+    anomalies = detector.detect(normal_data)
+    assert sum(anomalies) == 0
+
+    anomalies = detector.detect(all_data)
+    assert sum(anomalies) > 0
 
 
 def test_hampel_detector(data_series):
