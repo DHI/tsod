@@ -125,44 +125,66 @@ class RangeDetector(Detector):
         return f"{self.__class__.__name__}(min: {self._min:.1e}, max: {self._max:.1e})"
 
 
-class DiffRangeDetector(RangeDetector):
-    """ Detect values outside diff or rate of change. """
+class DiffRangeDetector(Detector):
+    """Detect sudden shifts in data. Irrespective of time axis.
 
-    def __init__(self, min_value=None, max_value=None):
-        super().__init__(min_value, max_value)
+    Parameters
+    ----------
+    max_diff : float
+        Maximum change threshold.
+    direction: str
+        positive, negative or both, default='both'
 
-    def _diff_time_series(self, data):
-        # TODO handle non-equidistant data
-        time_diff = data.index.shift() - data.index
+    See also
+    --------
+    MaxAbsGradientDetector: similar functionality but considers actual time between data points
+    """
 
-        return data.diff()
+    def __init__(self, max_diff=np.inf, direction="both"):
+        super().__init__()
+        self._max_diff = max_diff
+
+        valid_directions = ("both", "positive", "negative")
+        if direction in valid_directions:
+            self._direction = direction
+        else:
+            raise ValueError(
+                f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
+            )
 
     def _fit(self, data):
-        data_diff = self._diff_time_series(data)
+        data_diff = data.diff()
 
-        self._min = data_diff.min() if self._min is None else self._min
-        self._max = data_diff.max() if self._max is None else self._max
+        self._max_diff = data_diff.max()
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
-        return super()._detect(data.diff())
+        if self._direction == "both":
+            return np.abs(data.diff()) > self._max_diff
+        elif self._direction == "positive":
+            return data.diff() > self._max_diff
+        else:
+            return data.diff() < -self._max_diff
 
 
 class RollingStandardDeviationDetector(Detector):
     """Detect large variations
 
-    Parameters
+
     ----------
     window_size: int
         Number of data points to evaluate over, default=10
     max_std: float
-        Maximum standard deviation to accept as normal, default np.inf
+        Maximum standard deviation to accept as normal, default=np.inf
+    center: bool
+        Center rolling window, default=True
     """
 
-    def __init__(self, window_size=10, max_std=np.inf):
+    def __init__(self, window_size=10, max_std=np.inf, center=True):
         super().__init__()
         self._window_size = window_size
         self._max_std = max_std
+        self._center = center
 
     def _fit(self, data):
         self._max_std = data.rolling(self._window_size).std().max()
@@ -170,7 +192,9 @@ class RollingStandardDeviationDetector(Detector):
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
-        anomalies = data.rolling(self._window_size).std() > self._max_std
+        anomalies = (
+            data.rolling(self._window_size, center=self._center).std() > self._max_std
+        )
         # anomalies = anomalies.astype(int).diff() > 0  # only take positive edges
         anomalies[0] = False  # first element cannot be determined by diff
         return anomalies
