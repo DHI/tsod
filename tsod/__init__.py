@@ -5,5 +5,6 @@ from .detectors import (
     MaxAbsGradientDetector,
     ConstantValueDetector,
     CombinedDetector,
+    RollingStandardDeviationDetector,
 )
 from .base import load
