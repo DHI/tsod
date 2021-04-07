@@ -78,12 +78,12 @@ class Detector(ABC):
             raise WrongInputDataType()
         return data
 
-    def _gradient(self, data: pd.Series) -> pd.Series:
+    def _gradient(self, data: pd.Series, periods: int = 1) -> pd.Series:
         dt = data.index.to_series().diff().dt.total_seconds()
         if dt.min() < 1e-15:
             raise ValueError("Input must be monotonic increasing")
 
-        gradient = data.diff() / dt
+        gradient = data.diff(periods=periods) / dt
         return gradient
 
     def __str__(self):
