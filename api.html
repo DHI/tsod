@@ -165,7 +165,8 @@
 <li><p><a class="reference internal" href="#tsod.RangeDetector" title="tsod.RangeDetector"><code class="xref py py-class docutils literal notranslate"><span class="pre">tsod.RangeDetector</span></code></a></p></li>
 <li><p><a class="reference internal" href="#tsod.ConstantValueDetector" title="tsod.ConstantValueDetector"><code class="xref py py-class docutils literal notranslate"><span class="pre">tsod.ConstantValueDetector</span></code></a></p></li>
 <li><p><a class="reference internal" href="#tsod.ConstantGradientDetector" title="tsod.ConstantGradientDetector"><code class="xref py py-class docutils literal notranslate"><span class="pre">tsod.ConstantGradientDetector</span></code></a></p></li>
-<li><p><a class="reference internal" href="#tsod.MaxAbsGradientDetector" title="tsod.MaxAbsGradientDetector"><code class="xref py py-class docutils literal notranslate"><span class="pre">tsod.MaxAbsGradientDetector</span></code></a></p></li>
+<li><p><a class="reference internal" href="#tsod.GradientDetector" title="tsod.GradientDetector"><code class="xref py py-class docutils literal notranslate"><span class="pre">tsod.GradientDetector</span></code></a></p></li>
+<li><p><a class="reference internal" href="#tsod.DiffDetector" title="tsod.DiffDetector"><code class="xref py py-class docutils literal notranslate"><span class="pre">tsod.DiffDetector</span></code></a></p></li>
 <li><p><a class="reference internal" href="#tsod.CombinedDetector" title="tsod.CombinedDetector"><code class="xref py py-class docutils literal notranslate"><span class="pre">tsod.CombinedDetector</span></code></a></p></li>
 </ul>
 <div class="section" id="generic">
@@ -355,17 +356,20 @@
 </dd></dl>
 
 <dl class="py class">
-<dt id="tsod.MaxAbsGradientDetector">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.</span></code><code class="sig-name descname"><span class="pre">MaxAbsGradientDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_abs_gradient</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">inf</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.MaxAbsGradientDetector" title="Permalink to this definition">¶</a></dt>
+<dt id="tsod.GradientDetector">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.</span></code><code class="sig-name descname"><span class="pre">GradientDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_gradient</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'both'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.GradientDetector" title="Permalink to this definition">¶</a></dt>
 <dd><p>Detects abrupt changes</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>max_abs_gradient</strong> (<em>float</em>) – Maximum rate of change per second, default np.inf</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>max_gradient</strong> (<em>float</em>) – Maximum rate of change per second, default np.inf</p></li>
+<li><p><strong>direction</strong> (<em>str</em>) – positive, negative or both, default=’both’</p></li>
+</ul>
 </dd>
 </dl>
 <dl class="py method">
-<dt id="tsod.MaxAbsGradientDetector.detect">
-<code class="sig-name descname"><span class="pre">detect</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">pandas.core.series.Series</span><a class="headerlink" href="#tsod.MaxAbsGradientDetector.detect" title="Permalink to this definition">¶</a></dt>
+<dt id="tsod.GradientDetector.detect">
+<code class="sig-name descname"><span class="pre">detect</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">pandas.core.series.Series</span><a class="headerlink" href="#tsod.GradientDetector.detect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Detect anomalies</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -381,8 +385,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="tsod.MaxAbsGradientDetector.fit">
-<code class="sig-name descname"><span class="pre">fit</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.MaxAbsGradientDetector.fit" title="Permalink to this definition">¶</a></dt>
+<dt id="tsod.GradientDetector.fit">
+<code class="sig-name descname"><span class="pre">fit</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.GradientDetector.fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set detector parameters based on data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -392,8 +396,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="tsod.MaxAbsGradientDetector.save">
-<code class="sig-name descname"><span class="pre">save</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">pathlib.Path</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="headerlink" href="#tsod.MaxAbsGradientDetector.save" title="Permalink to this definition">¶</a></dt>
+<dt id="tsod.GradientDetector.save">
+<code class="sig-name descname"><span class="pre">save</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">pathlib.Path</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="headerlink" href="#tsod.GradientDetector.save" title="Permalink to this definition">¶</a></dt>
 <dd><p>Save a detector for later use</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -403,8 +407,74 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="tsod.MaxAbsGradientDetector.validate">
-<code class="sig-name descname"><span class="pre">validate</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">pandas.core.series.Series</span><a class="headerlink" href="#tsod.MaxAbsGradientDetector.validate" title="Permalink to this definition">¶</a></dt>
+<dt id="tsod.GradientDetector.validate">
+<code class="sig-name descname"><span class="pre">validate</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">pandas.core.series.Series</span><a class="headerlink" href="#tsod.GradientDetector.validate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check that input data is in correct format and possibly adjust</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="tsod.DiffDetector">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.</span></code><code class="sig-name descname"><span class="pre">DiffDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_diff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'both'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.DiffDetector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Detect sudden shifts in data. Irrespective of time axis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>max_diff</strong> (<em>float</em>) – Maximum change threshold.</p></li>
+<li><p><strong>direction</strong> (<em>str</em>) – positive, negative or both, default=’both’</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="#tsod.GradientDetector" title="tsod.GradientDetector"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GradientDetector</span></code></a></dt><dd><p>similar functionality but considers actual time between data points</p>
+</dd>
+</dl>
+</div>
+<dl class="py method">
+<dt id="tsod.DiffDetector.detect">
+<code class="sig-name descname"><span class="pre">detect</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">pandas.core.series.Series</span><a class="headerlink" href="#tsod.DiffDetector.detect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Detect anomalies</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Time series with bools, True == anomaly</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="tsod.DiffDetector.fit">
+<code class="sig-name descname"><span class="pre">fit</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.DiffDetector.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set detector parameters based on data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Normal time series data.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="tsod.DiffDetector.save">
+<code class="sig-name descname"><span class="pre">save</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">pathlib.Path</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="headerlink" href="#tsod.DiffDetector.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save a detector for later use</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – file-like object to load detector from</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="tsod.DiffDetector.validate">
+<code class="sig-name descname"><span class="pre">validate</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">pandas.core.series.Series</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">pandas.core.series.Series</span><a class="headerlink" href="#tsod.DiffDetector.validate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check that input data is in correct format and possibly adjust</p>
 </dd></dl>
 
@@ -416,7 +486,7 @@
 <dd><p>Combine detectors.</p>
 <p>It is possible to combine several anomaly detection strategies into a combined detector.</p>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">anomaly_detector</span> <span class="o">=</span> <span class="n">CombinedDetector</span><span class="p">([</span><span class="n">RangeDetector</span><span class="p">(),</span> <span class="n">DiffRangeDetector</span><span class="p">()])</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">anomaly_detector</span> <span class="o">=</span> <span class="n">CombinedDetector</span><span class="p">([</span><span class="n">RangeDetector</span><span class="p">(),</span> <span class="n">DiffDetector</span><span class="p">()])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">anomaly_detector</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">normal_data</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">detected_anomalies</span> <span class="o">=</span> <span class="n">anomaly_detector</span><span class="o">.</span><span class="n">detect</span><span class="p">(</span><span class="n">abnormal_data</span><span class="p">)</span>
 </pre></div>
@@ -486,7 +556,7 @@ recommended.</p>
 <h2>Hampel<a class="headerlink" href="#hampel" title="Permalink to this headline">¶</a></h2>
 <dl class="py class">
 <dt id="tsod.hampel.HampelDetector">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.hampel.</span></code><code class="sig-name descname"><span class="pre">HampelDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_numba</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.hampel.HampelDetector" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">tsod.hampel.</span></code><code class="sig-name descname"><span class="pre">HampelDetector</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.hampel.HampelDetector" title="Permalink to this definition">¶</a></dt>
 <dd><p>Hampel filter implementation that works on numpy arrays, implemented with numba.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -495,8 +565,7 @@ recommended.</p>
 window, counted in number of array elements (as opposed to specify a time span, which is not
 supported by this implementation)</p></li>
 <li><p><strong>threshold</strong> (<em>float</em>) – The threshold for marking an outlier. A low threshold “narrows” the band within which values are deemed as
-outliers. n_sigmas</p></li>
-<li><p><strong>use_numba</strong> (<em>bool</em>) – option to use numba for higher performance, default false</p></li>
+outliers. n_sigmas, default=3.0</p></li>
 </ul>
 </dd>
 </dl>
