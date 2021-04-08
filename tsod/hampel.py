@@ -5,10 +5,10 @@ from numba import jit
 from tsod.custom_exceptions import NotInteger, InvalidArgument
 from tsod.detectors import Detector
 
-"""
-GAUSSIAN_SCALE_FACTOR = k = 1/Phi^(-1)(3/4)
-Choosing 3/4 as argument makes +-MAD cover 50% of the standard normal cumulative distribution function.
-"""
+
+# GAUSSIAN_SCALE_FACTOR = k = 1/Phi^(-1)(3/4)
+# Choosing 3/4 as argument makes +-MAD cover 50% of the standard normal cumulative distribution function.
+
 GAUSSIAN_SCALE_FACTOR = 1.4826
 
 

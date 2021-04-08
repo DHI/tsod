@@ -6,7 +6,8 @@ API Reference
 * :class:`tsod.RangeDetector`
 * :class:`tsod.ConstantValueDetector`
 * :class:`tsod.ConstantGradientDetector`
-* :class:`tsod.MaxAbsGradientDetector`
+* :class:`tsod.GradientDetector`
+* :class:`tsod.DiffDetector`
 * :class:`tsod.CombinedDetector`
 
 Generic
@@ -26,7 +27,12 @@ Generic
 	:undoc-members:
 	:inherited-members:
 
-.. autoclass:: tsod.MaxAbsGradientDetector
+.. autoclass:: tsod.GradientDetector
+	:members:
+	:undoc-members:
+	:inherited-members:
+
+.. autoclass:: tsod.DiffDetector
 	:members:
 	:undoc-members:
 	:inherited-members:
