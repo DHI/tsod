@@ -6,12 +6,12 @@ import pandas as pd
 from tsod.custom_exceptions import WrongInputDataType
 from tsod.detectors import (
     RangeDetector,
-    DiffRangeDetector,
+    DiffDetector,
     CombinedDetector,
     RollingStandardDeviationDetector,
     ConstantValueDetector,
     ConstantGradientDetector,
-    MaxAbsGradientDetector,
+    GradientDetector,
 )
 
 from tsod.features import create_dataset
@@ -166,10 +166,10 @@ def test_range_detector_quantile():
     assert detector._max < normal_data_incl_two_outliers.max()
 
 
-def test_diff_range_detector_autoset(range_data_series):
+def test_diff_detector_autoset(range_data_series):
     normal_data, abnormal_data, expected_anomalies = range_data_series
 
-    detector = DiffRangeDetector().fit(normal_data)
+    detector = DiffDetector().fit(normal_data)
     detected_anomalies = detector.detect(abnormal_data)
     assert sum(detected_anomalies) == 2
 
@@ -287,10 +287,10 @@ def test_constant_gradient_detector(constant_gradient_data_series):
     assert sum(anomalies) == 5
 
 
-def test_max_abs_gradient_detector_constant_gradient(constant_gradient_data_series):
+def test_gradient_detector_constant_gradient(constant_gradient_data_series):
     good_data, _, _ = constant_gradient_data_series
 
-    detector = MaxAbsGradientDetector(1.0)
+    detector = GradientDetector(1.0)
     anomalies = detector.detect(good_data)
 
     assert len(anomalies) == len(good_data)
@@ -355,7 +355,7 @@ def test_max_abs_gradient_detector_sudden_jump():
     normal_data = pd.Series(normal_data, index=time)
     abnormal_data = pd.Series(abnormal_data, index=time)
 
-    detector = MaxAbsGradientDetector()
+    detector = GradientDetector()
 
     anomalies = detector.detect(normal_data)
     assert sum(anomalies) == 0

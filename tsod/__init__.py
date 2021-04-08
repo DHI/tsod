@@ -1,8 +1,8 @@
 from .detectors import (
     RangeDetector,
-    DiffRangeDetector,
+    DiffDetector,
     ConstantGradientDetector,
-    MaxAbsGradientDetector,
+    GradientDetector,
     ConstantValueDetector,
     CombinedDetector,
     RollingStandardDeviationDetector,

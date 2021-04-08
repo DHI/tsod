@@ -13,7 +13,7 @@ class CombinedDetector(Detector, Sequence):
 
     Examples
     --------
-    >>> anomaly_detector = CombinedDetector([RangeDetector(), DiffRangeDetector()])
+    >>> anomaly_detector = CombinedDetector([RangeDetector(), DiffDetector()])
     >>> anomaly_detector.fit(normal_data)
     >>> detected_anomalies = anomaly_detector.detect(abnormal_data)
     """
@@ -125,7 +125,7 @@ class RangeDetector(Detector):
         return f"{self.__class__.__name__}(min: {self._min:.1e}, max: {self._max:.1e})"
 
 
-class DiffRangeDetector(Detector):
+class DiffDetector(Detector):
     """Detect sudden shifts in data. Irrespective of time axis.
 
     Parameters
@@ -137,7 +137,7 @@ class DiffRangeDetector(Detector):
 
     See also
     --------
-    MaxAbsGradientDetector: similar functionality but considers actual time between data points
+    GradientDetector: similar functionality but considers actual time between data points
     """
 
     def __init__(self, max_diff=np.inf, direction="both"):
@@ -165,6 +165,11 @@ class DiffRangeDetector(Detector):
             return data.diff() > self._max_diff
         else:
             return data.diff() < -self._max_diff
+
+    def __str__(self):
+        return (
+            f"{self.__class__.__name__}({self._max_diff}, direction:{self._direction})"
+        )
 
 
 class RollingStandardDeviationDetector(Detector):
@@ -263,28 +268,45 @@ class ConstantGradientDetector(ConstantValueDetector):
         return f"{self.__class__.__name__}({self._window_size})"
 
 
-class MaxAbsGradientDetector(Detector):
+class GradientDetector(Detector):
     """Detects abrupt changes
 
     Parameters
     ==========
-    max_abs_gradient: float
+    max_gradient: float
         Maximum rate of change per second, default np.inf
+    direction: str
+        positive, negative or both, default='both'
     """
 
-    def __init__(self, max_abs_gradient=np.inf):
-        self._max_abs_gradient = max_abs_gradient
+    def __init__(self, max_gradient=np.inf, direction="both"):
+        super().__init__()
+        self._max_gradient = max_gradient
+        valid_directions = ("both", "positive", "negative")
+        if direction in valid_directions:
+            self._direction = direction
+        else:
+            raise ValueError(
+                f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
+            )
 
     def _fit(self, data: pd.Series):
-        """ Set max absolute gradient based on data. """
+        """ Set max gradient based on data. """
 
-        self._max_abs_gradient = np.max(np.abs(self._gradient(data)))
+        self._max_gradient = np.max(np.abs(self._gradient(data)))
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
         gradient = self._gradient(data)
-        return np.abs(gradient) > self._max_abs_gradient
+        if self._direction == "negative":
+            return gradient < -self._max_gradient
+        elif self._direction == "positive":
+            return gradient > self._max_gradient
+        else:
+            return np.abs(gradient) > self._max_gradient
 
     def __str__(self):
-        max_grad_hr = self._max_abs_gradient * 3600.0
-        return f"{self.__class__.__name__}({max_grad_hr:.3f}/hr)"
+        max_grad_hr = self._max_gradient * 3600.0
+        return (
+            f"{self.__class__.__name__}({max_grad_hr}/hr, direction:{self._direction})"
+        )
