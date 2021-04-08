@@ -1,9 +1,10 @@
+"""Simple univariate anomaly detectors"""
+
 from collections.abc import Sequence
 import pandas as pd
 import numpy as np
 
 from .base import Detector
-from .custom_exceptions import WrongInputDataType
 
 
 class CombinedDetector(Detector, Sequence):
@@ -21,10 +22,11 @@ class CombinedDetector(Detector, Sequence):
     def __init__(self, detectors):
         super().__init__()
 
-        for d in detectors:
-            if not isinstance(d, Detector):
+        for detector in detectors:
+            if not isinstance(detector, Detector):
                 raise ValueError(
-                    f"{d} is not a Detector. Did you forget to create an instance, e.g. ConstantValueDetector()?"
+                    f"""{detector} is not a Detector.
+                     Did you forget to create an instance, e.g. ConstantValueDetector()?"""
                 )
 
         self._detectors = detectors
@@ -39,8 +41,8 @@ class CombinedDetector(Detector, Sequence):
         for detector in self._detectors:
             anom = detector.detect(data)
             all_anomalies.append(anom)
-        df = pd.DataFrame(all_anomalies).T
-        return df.any(axis=1)
+        data_frame = pd.DataFrame(all_anomalies).T
+        return data_frame.any(axis=1)
 
     def __getitem__(self, index):
         return self._detectors[index]
@@ -287,7 +289,8 @@ class GradientDetector(Detector):
             self._direction = direction
         else:
             raise ValueError(
-                f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
+                f"""Selected direction, '{direction}' is not a valid direction.
+                 Valid directions are: {valid_directions}"""
             )
 
     def _fit(self, data: pd.Series):
