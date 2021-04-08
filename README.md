@@ -24,6 +24,14 @@ Or development version:
 
 `pip install https://github.com/DHI/tsod/archive/main.zip`
 
+# Vision
+`tsod` will be actively developed during 2021.
+
+At the end of 2021 the library will have:
+* A simple and consistent API for anomaly detection of timeseries
+* The computational speed will be good for typical timeseries data found in the water domain, to support realtime detection
+* It will have a suite of different algorithms ranging from simple rule-based to more advanced based on e.g. neural networks
+
 # Definitions
 Note that we distinguish between [two types of anomaly detection](https://scikit-learn.org/stable/modules/outlier_detection.html)
 
