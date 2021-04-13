@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tsod",
-    version="0.1.2",
+    version="0.1.3",
     install_requires=["pandas>=1.0.0", "numba", "joblib"],
     extras_require={
         "dev": ["pytest>=6.2.1", "sphinx", "sphinx-rtd-theme"],
