@@ -14,6 +14,28 @@ Getting started
 .. image:: https://colab.research.google.com/assets/colab-badge.svg
   :target: http://colab.research.google.com/github/DHI/tsod/blob/main/notebooks/Getting%20started.ipynb
 
+Example
+-------
+
+>>> import pandas as pd
+>>> from tsod import RangeDetector
+>>> rd = RangeDetector(max_value=2.0)
+>>> data = pd.Series([0.0, 1.0, 3.0]) # 3.0 is out of range i.e. an anomaly
+>>> anom = rd.detect(data)
+>>> anom
+  0    False
+  1    False
+  2     True
+  dtype: bool
+>>> data[anom] # get anomalous data
+2    3.0
+dtype: float64
+>>> data[~anom] # get normal data
+0    0.0
+1    1.0
+dtype: float64
+>>> 
+
 
 Saving and loading
 ------------------
