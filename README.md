@@ -16,6 +16,9 @@ This package aims to provide examples and algorithms for detecting anomalies in 
 
 
 # Installation
+
+`tsod` is a pure Python library and runs on Windows, Linux and Mac.
+
 From PyPI:
 
 `pip install tsod`
