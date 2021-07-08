@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed
 
-from tsod.detectors import Detector
+from tsod.detectors import UnivariateDetector
 from tsod.features import create_dataset
 
 
@@ -43,7 +43,7 @@ def fit(model, X_train, y_train=None):
 
 
 def calculate_loss(X, X_pred):
-    """ Calculate loss used with threshold to detect anomaly. """
+    """Calculate loss used with threshold to detect anomaly."""
     mae_loss = np.mean(np.abs(X_pred - X), axis=1)
     return mae_loss
 
@@ -54,7 +54,7 @@ def detect(model, X, threshold=0.65):
     return is_anomaly
 
 
-class AutoEncoderLSTM(Detector):
+class AutoEncoderLSTM(UnivariateDetector):
     def __init__(self, time_steps=3, threshold=0.65, size=128, dropout_fraction=0.2):
         super().__init__()
         self._model = None

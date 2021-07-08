@@ -1,10 +1,10 @@
 import pandas as pd
 from pyod.models.auto_encoder import AutoEncoder as AutoEncoderPyod
 
-from tsod.detectors import Detector
+from tsod.detectors import UnivariateDetector
 
 
-class AutoEncoder(Detector):
+class AutoEncoder(UnivariateDetector):
     def __init__(self, **kwargs):
         super().__init__()
         self._model = AutoEncoderPyod(**kwargs)

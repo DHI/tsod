@@ -3,7 +3,7 @@ import numpy as np
 from numba import jit
 
 from tsod.custom_exceptions import NotInteger, InvalidArgument
-from tsod.detectors import Detector
+from tsod.detectors import UnivariateDetector
 
 
 # GAUSSIAN_SCALE_FACTOR = k = 1/Phi^(-1)(3/4)
@@ -59,7 +59,7 @@ def _detect(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_FACTOR):
     return is_outlier
 
 
-class HampelDetector(Detector):
+class HampelDetector(UnivariateDetector):
     """
     Hampel filter implementation that works on numpy arrays, implemented with numba.
 

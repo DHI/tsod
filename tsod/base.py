@@ -23,8 +23,8 @@ def load(path: Union[str, Path]):
     return joblib.load(path)
 
 
-class Detector(ABC):
-    """Abstract base class for all detectors"""
+class UnivariateDetector(ABC):
+    """Abstract base class for all univariate detectors"""
 
     def __init__(self):
         pass

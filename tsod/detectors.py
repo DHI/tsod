@@ -4,10 +4,10 @@ from collections.abc import Sequence
 import pandas as pd
 import numpy as np
 
-from .base import Detector
+from .base import UnivariateDetector
 
 
-class CombinedDetector(Detector, Sequence):
+class CombinedDetector(UnivariateDetector, Sequence):
     """Combine detectors.
 
     It is possible to combine several anomaly detection strategies into a combined detector.
@@ -23,9 +23,9 @@ class CombinedDetector(Detector, Sequence):
         super().__init__()
 
         for detector in detectors:
-            if not isinstance(detector, Detector):
+            if not isinstance(detector, UnivariateDetector):
                 raise ValueError(
-                    f"""{detector} is not a Detector.
+                    f"""{detector} is not a UnivariateDetector.
                      Did you forget to create an instance, e.g. ConstantValueDetector()?"""
                 )
 
@@ -51,7 +51,7 @@ class CombinedDetector(Detector, Sequence):
         return len(self._detectors)
 
 
-class RangeDetector(Detector):
+class RangeDetector(UnivariateDetector):
     """
     Detect values outside range.
 
@@ -127,7 +127,7 @@ class RangeDetector(Detector):
         return f"{self.__class__.__name__}(min: {self._min:.1e}, max: {self._max:.1e})"
 
 
-class DiffDetector(Detector):
+class DiffDetector(UnivariateDetector):
     """Detect sudden shifts in data. Irrespective of time axis.
 
     Parameters
@@ -174,7 +174,7 @@ class DiffDetector(Detector):
         )
 
 
-class RollingStandardDeviationDetector(Detector):
+class RollingStandardDeviationDetector(UnivariateDetector):
     """Detect large variations
 
 
@@ -210,7 +210,7 @@ class RollingStandardDeviationDetector(Detector):
         return f"{self.__class__.__name__}(window_size:{self._window_size}, max_std:{self._max_std})"
 
 
-class ConstantValueDetector(Detector):
+class ConstantValueDetector(UnivariateDetector):
     """
     Detect constant values over a longer period.
 
@@ -270,7 +270,7 @@ class ConstantGradientDetector(ConstantValueDetector):
         return f"{self.__class__.__name__}({self._window_size})"
 
 
-class GradientDetector(Detector):
+class GradientDetector(UnivariateDetector):
     """Detects abrupt changes
 
     Parameters
@@ -294,7 +294,7 @@ class GradientDetector(Detector):
             )
 
     def _fit(self, data: pd.Series):
-        """ Set max gradient based on data. """
+        """Set max gradient based on data."""
 
         self._max_gradient = np.max(np.abs(self._gradient(data)))
         return self
