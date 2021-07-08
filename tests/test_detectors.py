@@ -1,4 +1,3 @@
-from tsod.base import Detector
 import pytest
 import numpy as np
 import pandas as pd
@@ -131,7 +130,6 @@ def test_combined_access_items():
 
     cd = CombinedDetector([ConstantValueDetector(), RangeDetector()])
 
-    assert isinstance(cd[0], Detector)
     assert isinstance(cd[0], ConstantValueDetector)
     assert isinstance(cd[1], RangeDetector)
     assert isinstance(cd[-1], RangeDetector)
