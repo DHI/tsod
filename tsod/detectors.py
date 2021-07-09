@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 import pandas as pd
 import numpy as np
+from pandas.core.series import Series
 
 from .base import Detector
 
@@ -294,7 +295,7 @@ class GradientDetector(Detector):
             )
 
     def _fit(self, data: pd.Series):
-        """ Set max gradient based on data. """
+        """Set max gradient based on data."""
 
         self._max_gradient = np.max(np.abs(self._gradient(data)))
         return self
@@ -313,3 +314,35 @@ class GradientDetector(Detector):
         return (
             f"{self.__class__.__name__}({max_grad_hr}/hr, direction:{self._direction})"
         )
+
+
+class SeasonalDetector(Detector):
+    def __init__(self, threshold=-3.0):
+        """Seasonal distribution
+
+        Parameters
+        ==========
+        threshold, float: maximum log likelihood to accept as normal
+        """
+        self.threshold = threshold
+
+    def _fit(self, data: pd.Series):
+        import ngboost
+        from ngboost import NGBRegressor
+
+        self._model = NGBRegressor(Dist=ngboost.distns.Exponential)
+        X = data.index.dayofyear.values.reshape(-1, 1)
+        y = data
+        self._model.fit(X, y)
+
+    def _detect(self, data: pd.Series) -> pd.Series:
+
+        X = data.index.dayofyear.values.reshape(-1, 1)
+
+        loglik = self._model.pred_dist(X).logpdf(data)
+
+        anom = pd.Series((loglik < self.threshold))
+
+        anom.index = data.index
+
+        return anom
