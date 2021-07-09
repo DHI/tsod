@@ -45,7 +45,8 @@ The training data may contain outliers, i.e. observations far from most other ob
 The training data is considered "normal" and is not polluted by outliers. New test data observations can be categorized as an outlier and is in this context called a novelty.
 
 
-# Contributing guidelines
+# Contribute to `tsod`
+[![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/DHI/tsod)
 - Follow PEP8 code style. This is automatically checked during Pull Requests.
 
 - Raise custom exceptions. This makes it easier to catch and separate built-in errors from our own throws.
