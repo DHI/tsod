@@ -9,8 +9,12 @@ setuptools.setup(
     install_requires=["pandas>=1.0.0", "numba", "joblib"],
     extras_require={
         "dev": ["pytest>=6.2.1", "sphinx", "sphinx-rtd-theme"],
-        "ml": ["pyod", "tensorflow==2.4.1"], # Pin tensorflow version temporarily
-        "test": ["pytest>=6.2.1"],
+        "ml": [
+            "pyod",
+            "tensorflow==2.4.1",
+            "ngboost",
+        ],  # Pin tensorflow version temporarily
+        "test": ["pytest>=6.2.1", "ngboost"],
     },
     author="Henrik Andersson",
     author_email="jan@dhigroup.com",
