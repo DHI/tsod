@@ -22,7 +22,7 @@ copyright = '2021, Henrik Andersson, Rasmus Halvgaard, Laura Frøhlich, Jesper M
 author = 'Henrik Andersson, Rasmus Halvgaard, Laura Frøhlich, Jesper Mariegaard'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.2'
+release = ''
 
 
 # -- General configuration ---------------------------------------------------
