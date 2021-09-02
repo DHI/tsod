@@ -12,36 +12,22 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python 3.8
+    - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: 3.9
         
-    - name: Install tsod
+    - name: Install package
       run: |
         pip install .[dev]
     
     - name: Sphinx Build
       run: |
-        cd doc
-        make html SPHINXOPTS="-W"
+        cd docs
+        make html
     
-    - name: Commit documentation changes
-      run: |
-        git clone https://github.com/DHI/tsod.git --branch gh-pages --single-branch gh-pages
-        cp -r doc/_build/html/* gh-pages/
-        cd gh-pages
-        touch .nojekyll
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add .
-        git commit -m "Update documentation" -a || true
-        # The above command will fail if no changes were present, so we ignore
-        # that.
-    - name: Push changes
-      uses: ad-m/github-push-action@master
+    - name: Publish to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3.6.1
       with:
-        branch: gh-pages
-        directory: gh-pages
         github_token: ${{ secrets.GITHUB_TOKEN }}
-    # ===============================
+        publish_dir: docs/_build/html
