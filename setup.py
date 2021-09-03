@@ -6,10 +6,10 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="tsod",
     version="0.1.3",
-    install_requires=["pandas>=1.0.0", "numba", "joblib"],
+    install_requires=["pandas>=1.0.0", "numba", "joblib", "ngboost"],
     extras_require={
         "dev": ["pytest>=6.2.1", "sphinx", "sphinx-book-theme"],
-        "ml": ["pyod", "tensorflow==2.4.1"], # Pin tensorflow version temporarily
+        "ml": ["pyod", "tensorflow"],
         "test": ["pytest>=6.2.1"],
     },
     author="Henrik Andersson",
