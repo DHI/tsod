@@ -9,4 +9,4 @@ from .detectors import (
 )
 from .base import load
 
-__version__ == "0.1.4"
+__version__ = "0.1.4"
