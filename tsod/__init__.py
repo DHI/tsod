@@ -8,3 +8,5 @@ from .detectors import (
     RollingStandardDeviationDetector,
 )
 from .base import load
+
+__version__ = "0.1.4"
