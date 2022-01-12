@@ -5,11 +5,11 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tsod",
-    version="0.1.3",
+    version="0.1.4",
     install_requires=["pandas>=1.0.0", "numba", "joblib"],
     extras_require={
         "dev": ["pytest>=6.2.1", "sphinx", "sphinx-book-theme"],
-        "ml": ["pyod", "tensorflow==2.4.1"], # Pin tensorflow version temporarily
+        "ml": ["pyod", "tensorflow"], 
         "test": ["pytest>=6.2.1"],
     },
     author="Henrik Andersson",
@@ -27,9 +27,10 @@ setuptools.setup(
         "Intended Audience :: Science/Research",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering",
     ],
