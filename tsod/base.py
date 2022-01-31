@@ -5,7 +5,6 @@ from pathlib import Path
 import joblib
 
 import pandas as pd
-import numpy as np
 
 
 from .custom_exceptions import WrongInputDataType
@@ -81,7 +80,7 @@ class Detector(ABC):
     def _gradient(self, data: pd.Series, periods: int = 1) -> pd.Series:
         dt = data.index.to_series().diff().dt.total_seconds()
         if dt.min() < 1e-15:
-            raise ValueError("Input must be monotonic increasing")
+            raise ValueError("Index must be monotonically increasing")
 
         gradient = data.diff(periods=periods) / dt
         return gradient
