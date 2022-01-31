@@ -28,7 +28,7 @@ class Detector(ABC):
     def __init__(self):
         pass
 
-    def fit(self, data: pd.Series):
+    def fit(self, data: Union[pd.Series, pd.DataFrame]):
         """Set detector parameters based on data.
 
         Parameters
@@ -40,11 +40,11 @@ class Detector(ABC):
         self._fit(data)
         return self
 
-    def _fit(self, data: pd.Series):
+    def _fit(self, data: Union[pd.Series, pd.DataFrame]):
         # Default implementation is a NoOp
         return self
 
-    def detect(self, data: pd.Series) -> pd.Series:
+    def detect(self, data: Union[pd.Series, pd.DataFrame]) -> pd.Series:
         """Detect anomalies
 
         Parameters
@@ -62,22 +62,22 @@ class Detector(ABC):
         pred = self._detect(data)
         return self._postprocess(pred)
 
-    def _postprocess(self, pred: pd.Series) -> pd.Series:
+    def _postprocess(self, pred: Union[pd.Series, pd.DataFrame]) -> pd.Series:
         # TODO implement
         return pred
 
     @abstractmethod
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: Union[pd.Series, pd.DataFrame]) -> pd.Series:
         """Detect anomalies"""
         pass
 
-    def validate(self, data: pd.Series) -> pd.Series:
+    def validate(self, data: Union[pd.Series, pd.DataFrame]) -> Union[pd.Series, pd.DataFrame]:
         """Check that input data is in correct format and possibly adjust"""
-        if not isinstance(data, pd.Series):
+        if not (isinstance(data, pd.Series) or isinstance(data, pd.DataFrame)):
             raise WrongInputDataType()
         return data
 
-    def _gradient(self, data: pd.Series, periods: int = 1) -> pd.Series:
+    def _gradient(self, data: Union[pd.Series, pd.DataFrame], periods: int = 1) -> pd.Series:
         dt = data.index.to_series().diff().dt.total_seconds()
         if dt.min() < 1e-15:
             raise ValueError("Index must be monotonically increasing")
