@@ -68,8 +68,8 @@ class Detector(ABC):
 
     @abstractmethod
     def _detect(self, data: pd.Series) -> pd.Series:
-        "Detect anomalies"
-        NotImplementedError()
+        """Detect anomalies"""
+        pass
 
     def validate(self, data: pd.Series) -> pd.Series:
         """Check that input data is in correct format and possibly adjust"""
