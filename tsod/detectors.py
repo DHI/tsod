@@ -119,7 +119,7 @@ class RangeDetector(Detector):
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
-        "Detect anomalies outside range"
+        """Detect anomalies outside range"""
 
         if self._max is None:
             return data < self._min
