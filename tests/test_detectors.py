@@ -2,6 +2,7 @@ from tsod.base import Detector
 import pytest
 import numpy as np
 import pandas as pd
+import os
 
 from tsod.custom_exceptions import WrongInputDataType
 from tsod.detectors import (
@@ -175,7 +176,9 @@ def test_diff_detector_autoset(range_data_series):
 
 
 def test_combined_detector():
-    df = pd.read_csv("tests/data/example.csv", parse_dates=True, index_col=0)
+    path_to_tests_super_folder = os.path.abspath(__file__).split('tests')[0]
+    df = pd.read_csv(os.path.join(path_to_tests_super_folder, 'tests', 'data', 'example.csv'),
+                     parse_dates=True, index_col=0)
     combined = CombinedDetector(
         [
             ConstantValueDetector(),
