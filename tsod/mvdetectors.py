@@ -9,6 +9,9 @@ class MVRangeDetector(Detector):
     """
     Detect values outside range.
 
+    If one or more time series is out of range, is is detected as an anomaly. Note that this implies that the same range
+    is used for all time series.
+
     Parameters
     ----------
     min_value : float
