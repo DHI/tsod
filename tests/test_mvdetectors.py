@@ -10,6 +10,8 @@ def range_data():
     n_obs = 15
     normal_data = pd.DataFrame(np.random.uniform(size=[3, n_obs]))
     normal_data.iloc[2, [2, 8]] = np.nan
+    normal_data.iloc[2, [0]] = 1
+    normal_data.iloc[2, [1]] = 0
     abnormal_data = pd.DataFrame(np.random.uniform(size=[3, n_obs]))
     abnormal_data.iloc[0, [2, 3, 7]] = 5
     abnormal_data.iloc[1, [2, 12]] = -2
