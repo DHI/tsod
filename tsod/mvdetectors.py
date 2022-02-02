@@ -67,7 +67,7 @@ class MVRangeDetector(Detector):
         """
         super().validate(data)
 
-        quantiles = np.quantile(data.dropna(), self.quantile_prob_cut_offs)
+        quantiles = np.nanquantile(data, self.quantile_prob_cut_offs)
         self._min = quantiles[0]
         self._max = quantiles[1]
 
