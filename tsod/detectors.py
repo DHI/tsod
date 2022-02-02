@@ -111,7 +111,7 @@ class RangeDetector(Detector):
         """
         super().validate(data)
 
-        quantiles = np.quantile(data.dropna(), self._quantiles)
+        quantiles = np.nanquantile(data, self._quantiles)
         self._min = quantiles.min()
         self._max = quantiles.max()
 
