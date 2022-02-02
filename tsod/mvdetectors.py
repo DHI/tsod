@@ -18,7 +18,7 @@ class MVRangeDetector(Detector):
         Minimum value threshold.
     max_value : float
         Maximum value threshold.
-    quantiles : list[2]
+    quantile_prob_cut_offs : list[2]
                 Default quantiles [0, 1]. Same as min and max value.
 
     Examples
@@ -37,23 +37,25 @@ class MVRangeDetector(Detector):
     >>> detector.fit(normal_data) # min, max inferred from normal data
     >>> anomalies = detector.detect(abnormal_data)
 
-    >>> detector = MVRangeDetector(quantiles=[0.001,0.999])
+    >>> detector = MVRangeDetector(quantile_prob_cut_offs=[0.001,0.999])
     >>> detector.fit(normal_data_with_some_outliers)
     >>> anomalies = detector.detect(normal_data_with_some_outliers)"""
 
-    def __init__(self, min_value=-np.inf, max_value=np.inf, quantiles=None):
+    def __init__(self, min_value=-np.inf, max_value=np.inf, quantile_prob_cut_offs=None):
         super().__init__()
 
         self._min = min_value
 
         self._max = max_value
 
-        if quantiles is None:
-            self._quantiles = [0.0, 1.0]
+        assert self._min <= self._max
+
+        if quantile_prob_cut_offs is None:
+            self.quantile_prob_cut_offs = [0.0, 1.0]
         else:
-            assert 0.0 <= quantiles[0] <= 1.0
-            assert 0.0 <= quantiles[1] <= 1.0
-            self._quantiles = quantiles
+            assert 0.0 <= quantile_prob_cut_offs[0] <= 1.0
+            assert 0.0 <= quantile_prob_cut_offs[1] <= 1.0
+            self.quantile_prob_cut_offs = [np.min(quantile_prob_cut_offs), np.max(quantile_prob_cut_offs)]
 
     def _fit(self, data):
         """Set min and max based on data.
@@ -65,11 +67,10 @@ class MVRangeDetector(Detector):
         """
         super().validate(data)
 
-        quantiles = np.quantile(data.dropna(), self._quantiles)
-        self._min = quantiles.min()
-        self._max = quantiles.max()
+        quantiles = np.quantile(data.dropna(), self.quantile_prob_cut_offs)
+        self._min = quantiles[0]
+        self._max = quantiles[1]
 
-        assert self._max >= self._min
         return self
 
     def _detect(self, data: Union[pd.Series, pd.DataFrame]) -> pd.Series:
