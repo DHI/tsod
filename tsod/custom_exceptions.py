@@ -30,3 +30,7 @@ class NonUniqueTimeStamps(Exception):
     def __init__(self, message="Found multiple values at the same time stamp."):
         self.message = message
         super().__init__(self.message)
+
+
+class WrongInputSize(ValueError):
+    pass
