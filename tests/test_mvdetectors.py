@@ -158,4 +158,4 @@ def test_invalid_argument_raised_min_max(min_value, max_value):
                          ])
 def test_invalid_argument_raised_quantiles(quantile_prob_cut_offs):
     with pytest.raises(InvalidArgumentError):
-        MVRangeDetector(quantile_prob_cut_offs=quantile_prob_cut_offs)
+        MVRangeDetector(quantiles=quantile_prob_cut_offs)
