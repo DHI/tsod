@@ -7,7 +7,7 @@ import joblib
 import pandas as pd
 
 
-from .custom_exceptions import WrongInputDataType
+from .custom_exceptions import WrongInputDataTypeError
 
 
 def load(path: Union[str, Path]):
@@ -74,7 +74,7 @@ class Detector(ABC):
     def validate(self, data: Union[pd.Series, pd.DataFrame]) -> Union[pd.Series, pd.DataFrame]:
         """Check that input data is in correct format and possibly adjust"""
         if not (isinstance(data, pd.Series) or isinstance(data, pd.DataFrame)):
-            raise WrongInputDataType()
+            raise WrongInputDataTypeError()
         return data
 
     def _gradient(self, data: Union[pd.Series, pd.DataFrame], periods: int = 1) -> pd.Series:

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import os
 
-from tsod.custom_exceptions import WrongInputDataType
+from tsod.custom_exceptions import WrongInputDataTypeError
 from tsod.detectors import (
     RangeDetector,
     DiffDetector,
@@ -90,7 +90,7 @@ def test_base_detector_exceptions(range_data, range_data_series):
     data_series, _, _ = range_data_series
 
     detector = RangeDetector()
-    pytest.raises(WrongInputDataType, detector.fit, data)
+    pytest.raises(WrongInputDataTypeError, detector.fit, data)
 
 
 def test_range_detector(range_data_series):

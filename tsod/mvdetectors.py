@@ -3,14 +3,14 @@ import numpy as np
 import typing
 
 from .base import Detector
-from .custom_exceptions import NoRangeDefinedError, WrongInputSize, InvalidArgument
+from .custom_exceptions import NoRangeDefinedError, WrongInputSizeError, InvalidArgumentError
 
 
 def make_vector_broadcastable(function_input, n_data_rows):
     if function_input is not None:
         if len(function_input.shape) > 0:
             if len(function_input) != n_data_rows:
-                raise WrongInputSize(
+                raise WrongInputSizeError(
                     "The number of rows in the input data must match the number of "
                     "values specified for min and max if more than one value is given for min/max.")
     min_comparison = function_input
@@ -59,14 +59,14 @@ class MVRangeDetector(Detector):
 
         min_value = np.array(min_value)
         if len(min_value.shape) > 1:
-            raise InvalidArgument('min_value ', ' a float or 1D array_like.')
+            raise InvalidArgumentError('min_value ', ' a float or 1D array_like.')
 
         max_value = np.array(max_value)
         if len(max_value.shape) > 1:
-            raise InvalidArgument('max_value ', ' a float or 1D array_like.')
+            raise InvalidArgumentError('max_value ', ' a float or 1D array_like.')
 
         if np.array([min_value > max_value]).any():
-            raise InvalidArgument('For all values in min_value and max_value ', ' the min must be less than max.')
+            raise InvalidArgumentError('For all values in min_value and max_value ', ' the min must be less than max.')
 
         self._min = min_value
 
@@ -76,9 +76,9 @@ class MVRangeDetector(Detector):
             self.quantile_prob_cut_offs = [0.0, 1.0]
         else:
             if not (0.0 <= quantile_prob_cut_offs[0] <= 1.0):
-                raise InvalidArgument('Values in quantile_prob_cut_offs', ' between 0 and 1, both inclusive.')
+                raise InvalidArgumentError('Values in quantile_prob_cut_offs', ' between 0 and 1, both inclusive.')
             if not (0.0 <= quantile_prob_cut_offs[1] <= 1.0):
-                raise InvalidArgument('Values in quantile_prob_cut_offs', ' between 0 and 1, both inclusive.')
+                raise InvalidArgumentError('Values in quantile_prob_cut_offs', ' between 0 and 1, both inclusive.')
 
     def _fit(self, data):
         """Set min and max based on data.

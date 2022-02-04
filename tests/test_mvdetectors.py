@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from tsod.custom_exceptions import InvalidArgument
+from tsod.custom_exceptions import InvalidArgumentError
 from tsod.mvdetectors import MVRangeDetector
 
 
@@ -148,7 +148,7 @@ def test_multiple_ranges_detector_fitting(range_data_time_series_specific_ranges
                              (3, 2), ([0, 0, 3], 2), ([[0], [0], [0]], 1), (-1, [[0], [0], [0]])
                          ])
 def test_invalid_argument_raised_min_max(min_value, max_value):
-    with pytest.raises(InvalidArgument):
+    with pytest.raises(InvalidArgumentError):
         MVRangeDetector(min_value=min_value, max_value=max_value)
 
 
@@ -157,5 +157,5 @@ def test_invalid_argument_raised_min_max(min_value, max_value):
                              ([0.5, 1.1]), ([-0.5, 1.1]), ([-0.5, 0.9])
                          ])
 def test_invalid_argument_raised_quantiles(quantile_prob_cut_offs):
-    with pytest.raises(InvalidArgument):
+    with pytest.raises(InvalidArgumentError):
         MVRangeDetector(quantile_prob_cut_offs=quantile_prob_cut_offs)

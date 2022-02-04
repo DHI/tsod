@@ -1,4 +1,4 @@
-class WrongInputDataType(Exception):
+class WrongInputDataTypeError(Exception):
     def __init__(self, message="Input data must be a pandas.Series."):
         self.message = message
         super().__init__(self.message)
@@ -15,22 +15,22 @@ class NoRangeDefinedError(NotFittedError):
         super().__init__(message)
 
 
-class InvalidArgument(Exception):
+class InvalidArgumentError(Exception):
     def __init__(self, argument_name, requirement):
         self.message = f"{argument_name} must be {requirement}."
         super().__init__(self.message)
 
 
-class NotInteger(InvalidArgument):
+class NotIntegerError(InvalidArgumentError):
     def __init__(self, argument_name):
         super().__init__(argument_name, "an integer")
 
 
-class NonUniqueTimeStamps(Exception):
+class NonUniqueTimeStampsError(Exception):
     def __init__(self, message="Found multiple values at the same time stamp."):
         self.message = message
         super().__init__(self.message)
 
 
-class WrongInputSize(ValueError):
+class WrongInputSizeError(ValueError):
     pass
