@@ -44,7 +44,7 @@ class Detector(ABC):
         # Default implementation is a NoOp
         return self
 
-    def detect(self, data: Union[pd.Series, pd.DataFrame]) -> pd.Series:
+    def detect(self, data: Union[pd.Series, pd.DataFrame]) -> Union[pd.Series, pd.DataFrame]:
         """Detect anomalies
 
         Parameters
