@@ -3,7 +3,7 @@ import numpy as np
 import typing
 
 from .base import Detector
-from .custom_exceptions import NoRangeDefinedError, WrongInputSize
+from .custom_exceptions import NoRangeDefinedError, WrongInputSize, InvalidArgument
 
 
 def make_vector_broadcastable(function_input, n_data_rows):
@@ -58,12 +58,15 @@ class MVRangeDetector(Detector):
         super().__init__()
 
         min_value = np.array(min_value)
-        assert len(min_value.shape) <= 1
+        if len(min_value.shape) > 1:
+            raise InvalidArgument('min_value ', ' a float or 1D array_like.')
 
         max_value = np.array(max_value)
-        assert len(max_value.shape) <= 1
+        if len(max_value.shape) > 1:
+            raise InvalidArgument('max_value ', ' a float or 1D array_like.')
 
-        assert np.array([min_value <= max_value]).all()
+        if np.array([min_value > max_value]).any():
+            raise InvalidArgument('For all values in min_value and max_value ', ' the min must be less than max.')
 
         self._min = min_value
 
@@ -72,9 +75,10 @@ class MVRangeDetector(Detector):
         if quantile_prob_cut_offs is None:
             self.quantile_prob_cut_offs = [0.0, 1.0]
         else:
-            assert 0.0 <= quantile_prob_cut_offs[0] <= 1.0
-            assert 0.0 <= quantile_prob_cut_offs[1] <= 1.0
-            self.quantile_prob_cut_offs = [np.min(quantile_prob_cut_offs), np.max(quantile_prob_cut_offs)]
+            if not (0.0 <= quantile_prob_cut_offs[0] <= 1.0):
+                raise InvalidArgument('Values in quantile_prob_cut_offs', ' between 0 and 1, both inclusive.')
+            if not (0.0 <= quantile_prob_cut_offs[1] <= 1.0):
+                raise InvalidArgument('Values in quantile_prob_cut_offs', ' between 0 and 1, both inclusive.')
 
     def _fit(self, data):
         """Set min and max based on data.
