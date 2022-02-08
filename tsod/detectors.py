@@ -14,6 +14,10 @@ class CombinedDetector(Detector, Sequence):
 
     Examples
     --------
+    >>> normal_data = pd.Series(np.random.normal(size=100))
+    >>> abnormal_data = pd.Series(np.random.normal(size=100))
+    >>> abnormal_data[[2, 6, 15, 57, 60, 73]] = 5
+
     >>> anomaly_detector = CombinedDetector([RangeDetector(), DiffDetector()])
     >>> anomaly_detector.fit(normal_data)
     >>> detected_anomalies = anomaly_detector.detect(abnormal_data)
@@ -66,16 +70,22 @@ class RangeDetector(Detector):
 
     Examples
     ---------
+    >>> normal_data = pd.Series(np.random.normal(size=100))
+    >>> abnormal_data = pd.Series(np.random.normal(size=100))
+    >>> abnormal_data[[2, 6, 15, 57, 60, 73]] = 5
+    >>> normal_data_with_some_outliers = pd.Series(np.random.normal(size=100))
+    >>> normal_data_with_some_outliers[[12, 13, 20, 90]] = 7
+
     >>> detector = RangeDetector(min_value=0.0, max_value=2.0)
-    >>> anomalies = detector.detect(data)
+    >>> anomalies = detector.detect(abnormal_data)
 
     >>> detector = RangeDetector()
     >>> detector.fit(normal_data) # min, max inferred from normal data
-    >>> anomalies = detector.detect(data)
+    >>> anomalies = detector.detect(abnormal_data)
 
     >>> detector = RangeDetector(quantiles=[0.001,0.999])
     >>> detector.fit(normal_data_with_some_outliers)
-    >>> anomalies = detector.detect(data)"""
+    >>> anomalies = detector.detect(abnormal_data)"""
 
     def __init__(self, min_value=-np.inf, max_value=np.inf, quantiles=None):
         super().__init__()
@@ -101,7 +111,7 @@ class RangeDetector(Detector):
         """
         super().validate(data)
 
-        quantiles = np.quantile(data.dropna(), self._quantiles)
+        quantiles = np.nanquantile(data, self._quantiles)
         self._min = quantiles.min()
         self._max = quantiles.max()
 
@@ -109,7 +119,7 @@ class RangeDetector(Detector):
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
-        "Detect anomalies outside range"
+        """Detect anomalies outside range"""
 
         if self._max is None:
             return data < self._min

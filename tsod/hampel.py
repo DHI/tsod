@@ -2,7 +2,7 @@
 import numpy as np
 from numba import jit
 
-from tsod.custom_exceptions import NotInteger, InvalidArgument
+from tsod.custom_exceptions import NotIntegerError, InvalidArgumentError
 from tsod.detectors import Detector
 
 
@@ -14,13 +14,13 @@ GAUSSIAN_SCALE_FACTOR = 1.4826
 
 def _validate_arguments(window_size, threshold):
     if not isinstance(window_size, int):
-        raise NotInteger("window_size")
+        raise NotIntegerError("window_size")
     else:
         if window_size <= 0:
-            raise InvalidArgument("window_size", "nonnegative")
+            raise InvalidArgumentError("window_size", "nonnegative")
 
     if threshold < 0:
-        raise InvalidArgument("threshold", "positive")
+        raise InvalidArgumentError("threshold", "positive")
 
 
 @jit(nopython=True)
