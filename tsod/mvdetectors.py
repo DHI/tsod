@@ -1,3 +1,5 @@
+from typing import Union
+
 import pandas as pd
 import numpy as np
 import typing
@@ -125,3 +127,16 @@ class MVRangeDetector(Detector):
 
     def __repr__(self):
         return f"{self.__class__.__name__}(min: {self._min:.1e}, max: {self._max:.1e})"
+
+
+class MVCorrelationDetector(Detector):
+    def __init__(self):
+        super().__init__()
+
+    def _fit(self, data):
+        super().validate(data)
+        return self
+
+    def _detect(self, data: Union[pd.Series, pd.DataFrame]) -> pd.Series:
+
+        pass
