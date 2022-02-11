@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 from tsod.custom_exceptions import InvalidArgumentError
-from tsod.mvdetectors import MVRangeDetector
+from tsod.mvdetectors import MVRangeDetector, MVCorrelationDetector
 
 
 @pytest.fixture
@@ -36,6 +36,17 @@ def range_data_time_series_specific_ranges():
     abnormal_data.iloc[0, [8]] = np.nan
     abnormal_data.iloc[2, [8, 9]] = np.nan
     return normal_data, abnormal_data
+
+
+class TestMVCorrelationDetector:
+    @pytest.fixture(autouse=True)
+    def _setup(self, range_data, range_data_time_series_specific_ranges):
+        self.normal_data, self.abnormal_data = range_data
+        self.ts_specific_normal_data, self.ts_specific_abnormal_data = range_data_time_series_specific_ranges
+
+    def test_subsequence(self):
+        detector = MVCorrelationDetector()
+        detector.detect(self.abnormal_data)
 
 
 @pytest.mark.parametrize("detector, expected_anomalies_list", [
