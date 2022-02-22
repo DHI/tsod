@@ -38,15 +38,29 @@ def range_data_time_series_specific_ranges():
     return normal_data, abnormal_data
 
 
+@pytest.fixture
+def subsequence_data():
+    n_obs = 100
+    normal_data = pd.DataFrame(np.random.normal(size=[3, n_obs], loc=2.0, scale=0.1))
+    normal_data.iloc[0, :] = 3*normal_data.iloc[1, :] + normal_data.iloc[2, :]
+    abnormal_data = pd.DataFrame(np.random.normal(size=[3, n_obs], loc=2.0, scale=0.1))
+    abnormal_data.iloc[0, :] = 3*abnormal_data.iloc[1, :] + abnormal_data.iloc[2, :]
+    abnormal_data.iloc[0, 20:35] = np.random.normal(size=[1, 15], loc=2.0, scale=0.1)
+    return normal_data, abnormal_data
+
+
 class TestMVCorrelationDetector:
     @pytest.fixture(autouse=True)
-    def _setup(self, range_data, range_data_time_series_specific_ranges):
-        self.normal_data, self.abnormal_data = range_data
-        self.ts_specific_normal_data, self.ts_specific_abnormal_data = range_data_time_series_specific_ranges
+    def _setup(self, subsequence_data):
+        self.normal_data, self.abnormal_data = subsequence_data
 
     def test_subsequence(self):
-        detector = MVCorrelationDetector()
-        detector.detect(self.abnormal_data)
+        detector = MVCorrelationDetector(window_size=15)
+        detector.fit(self.normal_data)
+        detected_anomalies = detector.detect(self.abnormal_data)
+        detected_row_indices = np.where(detected_anomalies)[0]
+
+        assert all([val in detected_row_indices for val in np.arange(20, 35)])
 
 
 @pytest.mark.parametrize("detector, expected_anomalies_list", [
