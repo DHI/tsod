@@ -7,6 +7,11 @@ from .detectors import (
     CombinedDetector,
     RollingStandardDeviationDetector,
 )
+
+from .mvdetectors import (
+    MVRangeDetector,
+    MVCorrelationDetector)
+
 from .base import load
 
 __version__ = "0.1.4"
