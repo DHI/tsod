@@ -8,17 +8,18 @@ from .base import Detector
 from .custom_exceptions import NoRangeDefinedError, WrongInputSizeError, InvalidArgumentError
 
 
-def make_vector_broadcastable(function_input, n_data_rows):
-    if function_input is not None:
-        if len(function_input.shape) > 0:
-            if len(function_input) != n_data_rows:
-                raise WrongInputSizeError(
-                    "The number of rows in the input data must match the number of "
-                    "values specified for min and max if more than one value is given for min/max.")
-    min_comparison = function_input
-    if len(function_input.shape) == 1:
-        min_comparison = function_input[..., np.newaxis]
-    return min_comparison
+def make_vector_broadcastable(value, n_data_rows):
+    if value is None:
+        return None
+    if len(value.shape) > 0:
+        if len(value) != n_data_rows:
+            raise WrongInputSizeError(
+                "The number of rows in the input data must match the number of "
+                "values specified for min and max if more than one value is given for min/max.")
+    broadcastable_value = value
+    if len(value.shape) == 1:
+        broadcastable_value = value[..., np.newaxis]
+    return broadcastable_value
 
 
 class MVRangeDetector(Detector):
@@ -59,16 +60,20 @@ class MVRangeDetector(Detector):
     def __init__(self, min_value=-np.inf, max_value=np.inf, quantiles=None):
         super().__init__()
 
-        min_value = np.array(min_value)
-        if len(min_value.shape) > 1:
-            raise InvalidArgumentError('min_value ', ' a float or 1D array_like.')
+        if min_value is not None:
+            min_value = np.array(min_value)
+            if len(min_value.shape) > 1:
+                raise InvalidArgumentError('min_value ', ' a float or 1D array_like.')
 
-        max_value = np.array(max_value)
-        if len(max_value.shape) > 1:
-            raise InvalidArgumentError('max_value ', ' a float or 1D array_like.')
+        if max_value is not None:
+            max_value = np.array(max_value)
+            if len(max_value.shape) > 1:
+                raise InvalidArgumentError('max_value ', ' a float or 1D array_like.')
 
-        if np.array([min_value > max_value]).any():
-            raise InvalidArgumentError('For all values in min_value and max_value ', ' the min must be less than max.')
+        if (min_value is not None) and (max_value is not None):
+            if np.array([min_value > max_value]).any():
+                raise InvalidArgumentError('For all values in min_value and max_value ',
+                                           ' the min must be less than max.')
 
         self._min = min_value
 
@@ -93,7 +98,11 @@ class MVRangeDetector(Detector):
         """
         super().validate(data)
 
-        values_at_quantiles = np.nanquantile(data, self.quantiles, axis=1)
+        if isinstance(data, pd.Series):
+            values_at_quantiles = np.nanquantile(data, self.quantiles)
+        else:
+            values_at_quantiles = np.nanquantile(data, self.quantiles, axis=1)
+
         self._min = values_at_quantiles[0]
         self._max = values_at_quantiles[1]
 
@@ -122,8 +131,7 @@ class MVRangeDetector(Detector):
         return (data < min_comparison) | (data > max_comparison)
 
     def __str__(self):
-
-        return f"{super.__str__(self)}{self._min}, {self._max})"
+        return f"{super.__str__(self)}"
 
     def __repr__(self):
         return f"{self.__class__.__name__}(min: {self._min:.1e}, max: {self._max:.1e})"

@@ -2,7 +2,9 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from tsod.custom_exceptions import InvalidArgumentError
+
+
+from tsod.custom_exceptions import InvalidArgumentError, WrongInputSizeError, NoRangeDefinedError
 from tsod.mvdetectors import MVRangeDetector, MVCorrelationDetector
 
 
@@ -140,6 +142,14 @@ def test_multi_range_detector_detection(range_data, detector, expected_anomalies
     (MVRangeDetector(min_value=[-1, -0.5, 0]),
      [[False, False, False, False, False, False, False, False, False, False, False, False, False, False, False],
      [False, False, True, False, False, False, False, False, False, False, False, False, True, False, False],
+     [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]]),
+    (MVRangeDetector(max_value=[2, 3, 4], min_value=None),
+     [[False, False, True, True, False, False, False, True, False, False, False, False, False, False, False],
+     [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False],
+     [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]]),
+    (MVRangeDetector(min_value=[-1, -0.5, 0], max_value=None),
+     [[False, False, False, False, False, False, False, False, False, False, False, False, False, False, False],
+     [False, False, True, False, False, False, False, False, False, False, False, False, True, False, False],
      [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]])
 ])
 def test_multiple_ranges_detector_detection(range_data_time_series_specific_ranges, detector, expected_anomalies_list):
@@ -184,3 +194,62 @@ def test_invalid_argument_raised_min_max(min_value, max_value):
 def test_invalid_argument_raised_quantiles(quantile_prob_cut_offs):
     with pytest.raises(InvalidArgumentError):
         MVRangeDetector(quantiles=quantile_prob_cut_offs)
+
+
+def test_invalid_argument_raised_wrong_input(range_data):
+    normal_data, abnormal_data = range_data
+    detector = MVRangeDetector([0., 0.], [1., 1.])
+    with pytest.raises(WrongInputSizeError):
+        detector.detect(normal_data)
+
+
+@pytest.mark.parametrize("detector, expected_anomalies_list", [
+    (MVRangeDetector(quantiles=[0., 1.]),
+     [[False, False, True, True, False, False, False, True, False, False, False, False, False, False, False],
+     [False, False, True, False, False, False, False, False, False, False, False, False, True, False, False],
+     [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]])
+])
+def test_multiple_ranges_quantile_detector_detection(range_data_time_series_specific_ranges, detector,
+                                                     expected_anomalies_list):
+    normal_data, abnormal_data = range_data_time_series_specific_ranges
+    detector.fit(normal_data)
+    detected_anomalies = detector.detect(abnormal_data)
+    expected_anomalies = pd.DataFrame(expected_anomalies_list, columns=abnormal_data.columns, index=abnormal_data.index)
+    pd.testing.assert_frame_equal(expected_anomalies, detected_anomalies)
+
+    detected_anomalies = detector.detect(normal_data)
+    assert not detected_anomalies.to_numpy().any()
+
+
+@pytest.mark.parametrize("detector, expected_anomalies_list", [
+    (MVRangeDetector(quantiles=[0., 1.]),
+     [False, False, True, True, False, False, False, True, False, False, False, False, False, False, False])
+])
+def test_multiple_ranges_quantile_single_ts_detection(range_data_time_series_specific_ranges, detector,
+                                                      expected_anomalies_list):
+    normal_data, abnormal_data = range_data_time_series_specific_ranges
+    normal_data = normal_data.iloc[0, :]
+    abnormal_data = abnormal_data.iloc[0, :]
+
+    detector.fit(normal_data)
+    detected_anomalies = detector.detect(abnormal_data)
+    expected_anomalies = pd.Series(expected_anomalies_list, index=abnormal_data.index, name=abnormal_data.name)
+    pd.testing.assert_series_equal(expected_anomalies, detected_anomalies)
+
+    detected_anomalies = detector.detect(normal_data)
+    assert not detected_anomalies.to_numpy().any()
+
+
+def test_no_range_defined_raised(range_data):
+    normal_data, abnormal_data = range_data
+    detector = MVRangeDetector(min_value=None, max_value=None)
+    with pytest.raises(NoRangeDefinedError):
+        detector.detect(normal_data)
+
+
+def test_mv_range_detector_str():
+    detector = MVRangeDetector(min_value=0, max_value=1)
+    assert str(detector) == 'MVRangeDetector(min: 0, max: 1)'
+
+    detector = MVRangeDetector(min_value=0, max_value=[1.1, 1.0])
+    assert str(detector) == 'MVRangeDetector(min: 0, max: [1.1 1. ])'
