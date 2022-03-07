@@ -1,7 +1,9 @@
 import numpy as np
 
 
-def create_random_walk_with_outliers(n_steps, t0=0, outlier_fraction=0.1, outlier_scale=10, seed=42):
+def create_random_walk_with_outliers(
+    n_steps, t0=0, outlier_fraction=0.1, outlier_scale=10, seed=42
+):
     """
     Generate a random walk time series with random outlier peaks.
 
@@ -37,6 +39,8 @@ def create_random_walk_with_outliers(n_steps, t0=0, outlier_fraction=0.1, outlie
     # Add outliers
     random_walk_with_outliers = random_walk.copy()
     outlier_indices = np.random.randint(0, n_steps, n_outliers)
-    random_walk_with_outliers[outlier_indices] += random_steps[outlier_indices] * outlier_scale
+    random_walk_with_outliers[outlier_indices] += (
+        random_steps[outlier_indices] * outlier_scale
+    )
 
     return random_walk_with_outliers, sorted(outlier_indices), random_walk

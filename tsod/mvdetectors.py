@@ -5,7 +5,11 @@ import numpy as np
 import typing
 
 from .base import Detector
-from .custom_exceptions import NoRangeDefinedError, WrongInputSizeError, InvalidArgumentError
+from .custom_exceptions import (
+    NoRangeDefinedError,
+    WrongInputSizeError,
+    InvalidArgumentError,
+)
 
 
 def make_vector_broadcastable(value, n_data_rows):
@@ -15,7 +19,8 @@ def make_vector_broadcastable(value, n_data_rows):
         if len(value) != n_data_rows:
             raise WrongInputSizeError(
                 "The number of rows in the input data must match the number of "
-                "values specified for min and max if more than one value is given for min/max.")
+                "values specified for min and max if more than one value is given for min/max."
+            )
     broadcastable_value = value
     if len(value.shape) == 1:
         broadcastable_value = value[..., np.newaxis]
@@ -63,17 +68,19 @@ class MVRangeDetector(Detector):
         if min_value is not None:
             min_value = np.array(min_value)
             if len(min_value.shape) > 1:
-                raise InvalidArgumentError('min_value ', ' a float or 1D array_like.')
+                raise InvalidArgumentError("min_value ", " a float or 1D array_like.")
 
         if max_value is not None:
             max_value = np.array(max_value)
             if len(max_value.shape) > 1:
-                raise InvalidArgumentError('max_value ', ' a float or 1D array_like.')
+                raise InvalidArgumentError("max_value ", " a float or 1D array_like.")
 
         if (min_value is not None) and (max_value is not None):
             if np.array([min_value > max_value]).any():
-                raise InvalidArgumentError('For all values in min_value and max_value ',
-                                           ' the min must be less than max.')
+                raise InvalidArgumentError(
+                    "For all values in min_value and max_value ",
+                    " the min must be less than max.",
+                )
 
         self._min = min_value
 
@@ -83,9 +90,15 @@ class MVRangeDetector(Detector):
             self.quantiles = [0.0, 1.0]
         else:
             if not (0.0 <= quantiles[0] <= 1.0):
-                raise InvalidArgumentError('Values in quantile_prob_cut_offs', ' between 0 and 1, both inclusive.')
+                raise InvalidArgumentError(
+                    "Values in quantile_prob_cut_offs",
+                    " between 0 and 1, both inclusive.",
+                )
             if not (0.0 <= quantiles[1] <= 1.0):
-                raise InvalidArgumentError('Values in quantile_prob_cut_offs', ' between 0 and 1, both inclusive.')
+                raise InvalidArgumentError(
+                    "Values in quantile_prob_cut_offs",
+                    " between 0 and 1, both inclusive.",
+                )
             self.quantiles = [np.min(quantiles), np.max(quantiles)]
 
     def _fit(self, data):
@@ -112,7 +125,9 @@ class MVRangeDetector(Detector):
         """Detect anomalies outside range"""
 
         if (self._min is None) and (self._max is None):
-            raise NoRangeDefinedError("Both min and max are None. At least one of them must be set.")
+            raise NoRangeDefinedError(
+                "Both min and max are None. At least one of them must be set."
+            )
 
         if len(data.shape) == 1:
             n_data_rows = 1
@@ -147,11 +162,12 @@ class MVCorrelationDetector(Detector):
 
         if self.window_size < 4:
             raise InvalidArgumentError(
-                'window_size', ' must be at least 4 to avoid infinite correlation standard deviation calculation.')
+                "window_size",
+                " must be at least 4 to avoid infinite correlation standard deviation calculation.",
+            )
 
         if self.z_value < 0:
-            raise InvalidArgumentError(
-                'z_value', ' must be positive.')
+            raise InvalidArgumentError("z_value", " must be positive.")
 
     def _fit(self, data):
         super().validate(data)
@@ -161,7 +177,9 @@ class MVCorrelationDetector(Detector):
         corrs = np.corrcoef(data)
 
         upper_triangle_corrs = self.extract_upper_triangle_no_diag(corrs)
-        lower, upper = self.calculate_correlation_confidence_intervals(upper_triangle_corrs, n_obs)
+        lower, upper = self.calculate_correlation_confidence_intervals(
+            upper_triangle_corrs, n_obs
+        )
 
         self._lower = lower
         self._upper = upper
@@ -171,8 +189,12 @@ class MVCorrelationDetector(Detector):
         # https://www.statskingdom.com/correlation-confidence-interval-calculator.html#:~:text=The%20correlation%20confidence%20interval%20is,exact%20value%20of%20the%20correlation.
         corr_transformed_space = np.arctanh(corrs)
         std_transformed_space = 1 / np.sqrt(n_obs - 3)
-        lower_transformed_space = corr_transformed_space - self.z_value * std_transformed_space
-        upper_transformed_space = corr_transformed_space + self.z_value * std_transformed_space
+        lower_transformed_space = (
+            corr_transformed_space - self.z_value * std_transformed_space
+        )
+        upper_transformed_space = (
+            corr_transformed_space + self.z_value * std_transformed_space
+        )
         lower = np.tanh(lower_transformed_space)
         upper = np.tanh(upper_transformed_space)
         return lower, upper
@@ -180,7 +202,9 @@ class MVCorrelationDetector(Detector):
     def _detect(self, data: Union[pd.Series, pd.DataFrame]) -> pd.DataFrame:
         np_rolling_corr_without_ones = self.get_rolling_correlation(data)
 
-        lower, upper = self.calculate_correlation_confidence_intervals(np_rolling_corr_without_ones, self.window_size)
+        lower, upper = self.calculate_correlation_confidence_intervals(
+            np_rolling_corr_without_ones, self.window_size
+        )
 
         is_outside_expected_interval = (upper < self._lower) | (lower > self._upper)
         return pd.DataFrame(is_outside_expected_interval)
@@ -188,8 +212,12 @@ class MVCorrelationDetector(Detector):
     def get_rolling_correlation(self, data):
         _, n_obs = data.shape
         standard_rolling_corr = data.T.rolling(self.window_size, center=False).corr()
-        np_rolling_corr = np.array(standard_rolling_corr).reshape((n_obs, self.n_ts, self.n_ts))
-        np_rolling_corr_without_ones = self.extract_upper_triangle_no_diag(np_rolling_corr)
+        np_rolling_corr = np.array(standard_rolling_corr).reshape(
+            (n_obs, self.n_ts, self.n_ts)
+        )
+        np_rolling_corr_without_ones = self.extract_upper_triangle_no_diag(
+            np_rolling_corr
+        )
         return np_rolling_corr_without_ones
 
     def extract_upper_triangle_no_diag(self, np_rolling_corr):

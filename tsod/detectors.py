@@ -304,7 +304,7 @@ class GradientDetector(Detector):
             )
 
     def _fit(self, data: pd.Series):
-        """ Set max gradient based on data. """
+        """Set max gradient based on data."""
 
         self._max_gradient = np.max(np.abs(self._gradient(data)))
         return self

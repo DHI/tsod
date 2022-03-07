@@ -21,8 +21,10 @@ def test_save_and_load(tmp_path):
 
 
 def test_load():
-    path_to_tests_super_folder = os.path.abspath(__file__).split('tests')[0]
-    filename = os.path.join(path_to_tests_super_folder, "tests", "data", "combined.joblib")
+    path_to_tests_super_folder = os.path.abspath(__file__).split("tests")[0]
+    filename = os.path.join(
+        path_to_tests_super_folder, "tests", "data", "combined.joblib"
+    )
 
     loaded = tsod.load(filename)
 

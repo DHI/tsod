@@ -8,9 +8,7 @@ from .detectors import (
     RollingStandardDeviationDetector,
 )
 
-from .mvdetectors import (
-    MVRangeDetector,
-    MVCorrelationDetector)
+from .mvdetectors import MVRangeDetector, MVCorrelationDetector
 
 from .base import load
 

@@ -43,7 +43,7 @@ def fit(model, X_train, y_train=None):
 
 
 def calculate_loss(X, X_pred):
-    """ Calculate loss used with threshold to detect anomaly. """
+    """Calculate loss used with threshold to detect anomaly."""
     mae_loss = np.mean(np.abs(X_pred - X), axis=1)
     return mae_loss
 

@@ -176,9 +176,12 @@ def test_diff_detector_autoset(range_data_series):
 
 
 def test_combined_detector():
-    path_to_tests_super_folder = os.path.abspath(__file__).split('tests')[0]
-    df = pd.read_csv(os.path.join(path_to_tests_super_folder, 'tests', 'data', 'example.csv'),
-                     parse_dates=True, index_col=0)
+    path_to_tests_super_folder = os.path.abspath(__file__).split("tests")[0]
+    df = pd.read_csv(
+        os.path.join(path_to_tests_super_folder, "tests", "data", "example.csv"),
+        parse_dates=True,
+        index_col=0,
+    )
     combined = CombinedDetector(
         [
             ConstantValueDetector(),
@@ -242,7 +245,10 @@ def test_auto_encoder_detector(data_series):
     anomalies_indices = np.array(np.where(anomalies)).flatten()
     # Validate if the found anomalies are also in the expected anomaly set
     # NB Not necessarily all of them
-    assert np.mean(np.array([i in expected_anomalies_indices for i in anomalies_indices])) > 0.4
+    assert (
+        np.mean(np.array([i in expected_anomalies_indices for i in anomalies_indices]))
+        > 0.4
+    )
 
 
 def test_auto_encoder_lstm_detector(data_series):
@@ -251,7 +257,10 @@ def test_auto_encoder_lstm_detector(data_series):
     detector.fit(data_with_anomalies)
     anomalies = detector.detect(data_with_anomalies)
     anomalies_indices = np.array(np.where(anomalies)).flatten()
-    assert np.mean(np.array([i in expected_anomalies_indices for i in anomalies_indices])) > 0.01
+    assert (
+        np.mean(np.array([i in expected_anomalies_indices for i in anomalies_indices]))
+        > 0.01
+    )
 
 
 def test_constant_value_detector(constant_data_series):
