@@ -43,10 +43,8 @@ The training data is considered "normal" and is not polluted by outliers. New te
 
 
 # Contribute to `tsod`
-[![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/DHI/tsod)
+[Open in Visual Studio Code](https://open.vscode.dev/DHI/tsod)
 - Follow PEP8 code style. This is automatically checked during Pull Requests.
-
-- Raise custom exceptions. This makes it easier to catch and separate built-in errors from our own throws.
 
 - If citing or re-using other code please make sure their license is also consistent with our policy.
 
