@@ -133,3 +133,5 @@ dmypy.json
 
 # Sphinx
 /doc/_build/
+
+data/

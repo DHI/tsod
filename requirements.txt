@@ -1,0 +1,10 @@
+pandas>=1.0.0
+numba
+joblib
+streamlit
+pytest>=6.2.1
+plotly
+streamlit-plotly-events
+streamlit-echarts
+pyecharts-javascripthon
+ipykernel
