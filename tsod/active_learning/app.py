@@ -49,6 +49,8 @@ def prepare_session_state():
     if "marked_normal" not in st.session_state:
         st.session_state.marked_normal = set()
 
+    if "df_selected" not in st.session_state:
+        st.session_state.df_selected = pd.DataFrame()
     if "df_marked_out" not in st.session_state:
         st.session_state.df_marked_out = pd.DataFrame()
     if "df_marked_not_out" not in st.session_state:
@@ -59,6 +61,7 @@ def prepare_session_state():
 
 def clear_selection():
     st.session_state.selected_points = set()
+    st.session_state.df_selected = pd.DataFrame()
 
 
 def mark_selected_outlier():
@@ -71,6 +74,11 @@ def mark_selected_outlier():
 
     if not to_add.issubset(st.session_state.marked_outlier):
         st.session_state.marked_outlier.update(to_add)
+        plot_data = st.session_state["df_plot"]
+        st.session_state["df_marked_out"] = plot_data[
+            plot_data.index.isin(st.session_state.marked_outlier)
+        ]
+
         clear_selection()
 
 
@@ -84,6 +92,11 @@ def mark_selected_not_outlier():
 
     if not to_add.issubset(st.session_state.marked_normal):
         st.session_state.marked_normal.update(to_add)
+        plot_data = st.session_state["df_plot"]
+        st.session_state["df_marked_not_out"] = plot_data[
+            plot_data.index.isin(st.session_state.marked_normal)
+        ]
+
         clear_selection()
 
 
@@ -95,7 +108,12 @@ def update_selected_points(selection: set):
                 st.session_state.selected_points.add(datetime.datetime.fromtimestamp(s / 1000))
             else:
                 st.session_state.selected_points.add(s)
-        st.session_state.selected_points.update(selection)
+        # st.session_state.selected_points.update(selection)
+        plot_data = st.session_state["df_plot"]
+        st.session_state["df_selected"] = plot_data[
+            plot_data.index.isin(st.session_state.selected_points)
+        ]
+
         st.experimental_rerun()
 
 
@@ -121,40 +139,41 @@ def create_annotation_plot(plot_data: pd.DataFrame, base_obj=None) -> go.Figure:
 
     fig = create_cachable_line_plot(st.session_state.start_time, st.session_state.end_time)
 
-    df_selected = plot_data[plot_data.index.isin(st.session_state.selected_points)]
-    df_marked_out = plot_data[plot_data.index.isin(st.session_state.marked_outlier)]
-    df_marked_not_out = plot_data[plot_data.index.isin(st.session_state.marked_normal)]
+    df_selected = st.session_state["df_selected"]
+    df_marked_out = st.session_state["df_marked_out"]
+    df_marked_not_out = st.session_state["df_marked_not_out"]
 
-    st.session_state["df_marked_out"] = df_marked_out
-    st.session_state["df_marked_not_out"] = df_marked_not_out
+    if not df_selected.empty:
+        fig.add_trace(
+            go.Scatter(
+                mode="markers",
+                x=df_selected.index,
+                y=df_selected["Water Level"],
+                name="Selected",
+                marker=dict(color="Purple", size=8, line=dict(color="Black", width=1)),
+            )
+        )
 
-    fig.add_trace(
-        go.Scatter(
-            mode="markers",
-            x=df_selected.index,
-            y=df_selected["Water Level"],
-            name="Selected",
-            marker=dict(color="Purple", size=8, line=dict(color="Black", width=1)),
+    if not df_marked_out.empty:
+        fig.add_trace(
+            go.Scatter(
+                mode="markers",
+                x=df_marked_out.index,
+                y=df_marked_out["Water Level"],
+                name="Marked Outlier",
+                marker=dict(color="Red", size=12, line=dict(color="Black", width=1)),
+            )
         )
-    )
-    fig.add_trace(
-        go.Scatter(
-            mode="markers",
-            x=df_marked_out.index,
-            y=df_marked_out["Water Level"],
-            name="Marked Outlier",
-            marker=dict(color="Red", size=12, line=dict(color="Black", width=1)),
+    if not df_marked_not_out.empty:
+        fig.add_trace(
+            go.Scatter(
+                mode="markers",
+                x=df_marked_not_out.index,
+                y=df_marked_not_out["Water Level"],
+                name="Marked Not Outlier",
+                marker=dict(color="Green", size=10, line=dict(color="Black", width=0.5)),
+            )
         )
-    )
-    fig.add_trace(
-        go.Scatter(
-            mode="markers",
-            x=df_marked_not_out.index,
-            y=df_marked_not_out["Water Level"],
-            name="Marked Not Outlier",
-            marker=dict(color="Green", size=10, line=dict(color="Black", width=0.5)),
-        )
-    )
 
     fig.update_layout(dragmode=SELECT_OPTIONS[selection_method])
     fig.update_layout(
@@ -237,14 +256,41 @@ def create_plot_buttons(base_obj=None):
     obj.markdown("***")
 
 
+@st.cache(persist=True)
+def validate_file_contents(file_name: str):
+    uploaded_file = st.session_state["current_uploaded_file"]
+    data = pickle.loads(uploaded_file.getvalue())
+    if data["outliers"].empty:
+        outlier_data_match, outlier_index_match = True, True
+    else:
+        outlier_data_match = (
+            data["outliers"]["Water Level"]
+            .astype(float)
+            .isin(st.session_state["df_full"]["Water Level"].values)
+            .all()
+        )
+        outlier_index_match = data["outliers"].index.isin(st.session_state["df_full"].index).all()
+    if data["normal"].empty:
+        normal_data_match, normal_index_match = True, True
+    else:
+        normal_data_match = (
+            data["normal"]["Water Level"]
+            .astype(float)
+            .isin(st.session_state["df_full"]["Water Level"].values)
+            .all()
+        )
+        normal_index_match = data["normal"].index.isin(st.session_state["df_full"].index).all()
+
+    if outlier_data_match and outlier_index_match and normal_data_match and normal_index_match:
+        return True
+
+    else:
+        return False
+
+
 def create_save_load_buttons(base_obj=None):
-    if st.session_state.df_marked_out.empty:
-        return
-
     obj = base_obj or st
-
     obj.subheader("Save / load previous")
-
     c_1, c_2 = obj.columns(2)
 
     to_save = prepare_download(
@@ -253,6 +299,25 @@ def create_save_load_buttons(base_obj=None):
     file_name = f"Annotations_{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M')}.bin"
 
     c_1.download_button("Save annotations to disk", to_save, file_name=file_name)
+
+    uploaded_file = c_2.file_uploader("Load annotations from disk", key="current_uploaded_file")
+
+    if uploaded_file:
+        data = pickle.loads(uploaded_file.getvalue())
+        if validate_file_contents(uploaded_file.name):
+            st.session_state["marked_outlier"].update(set(data["outliers"].index.to_list()))
+            st.session_state["marked_normal"].update(set(data["normal"].index.to_list()))
+            df_plot = st.session_state["df_plot"]
+            st.session_state["df_marked_out"] = df_plot[
+                df_plot.index.isin(st.session_state.marked_outlier)
+            ]
+            st.session_state["df_marked_not_out"] = df_plot[
+                df_plot.index.isin(st.session_state.marked_normal)
+            ]
+
+            obj.success("Loaded annotations", icon="✅")
+        else:
+            obj.error("The loaded annotation data points do not all match the loaded data.")
 
     obj.markdown("***")
 
