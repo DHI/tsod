@@ -8,10 +8,15 @@ import numpy as np
 from pyecharts.charts import Line
 import datetime
 import plotly.express as px
+import pickle
 
 from pyecharts import options as opts
 from streamlit_plotly_events import plotly_events
 import plotly.graph_objs as go
+
+from tsod.active_learning.data_prep import construct_training_data
+from streamlit_profiler import Profiler
+from contextlib import nullcontext
 
 
 SELECT_OPTIONS = {"Point": "zoom", "Box": "select", "Lasso": "lasso"}
@@ -43,6 +48,13 @@ def prepare_session_state():
         st.session_state.marked_outlier = set()
     if "marked_normal" not in st.session_state:
         st.session_state.marked_normal = set()
+
+    if "df_marked_out" not in st.session_state:
+        st.session_state.df_marked_out = pd.DataFrame()
+    if "df_marked_not_out" not in st.session_state:
+        st.session_state.df_marked_not_out = pd.DataFrame()
+    if "df_plot" not in st.session_state:
+        st.session_state.df_plot = pd.DataFrame()
 
 
 def clear_selection():
@@ -87,57 +99,34 @@ def update_selected_points(selection: set):
         st.experimental_rerun()
 
 
-def main():
-    st.set_page_config(layout="wide")
-    prepare_session_state()
-    data = load_data()
-    tab1, tab2 = st.tabs(["Outlier annotation", "Model prediction"])
-    inp_col_1, inp_col_2, inp_col_3 = tab1.columns([2, 2, 10], gap="medium")
-
-    start_date = inp_col_1.date_input(
-        "Graph range start date",
-        value=data.index.max().date() - datetime.timedelta(days=7),
-        min_value=data.index.min(),
-        max_value=data.index.max(),
-    )
-    end_date = inp_col_2.date_input(
-        "Graph range end date",
-        value=data.index.max().date(),
-        min_value=data.index.min(),
-        max_value=data.index.max(),
-    )
-
-    start_time = inp_col_1.time_input("Start time", value=datetime.time(0, 0, 0))
-    end_time = inp_col_2.time_input("End time", value=datetime.time(23, 59, 59))
-
-    inp_col_1.markdown("***")
-    inp_col_2.markdown("***")
-    selection_method = inp_col_1.selectbox("Data Selection Method", list(SELECT_OPTIONS.keys()))
-    inp_col_2.info(SELECT_INFO[selection_method])
-    button_cols = tab1.columns([1, 1, 1, 7])
-
-    button_cols[0].button("Clear selection", on_click=clear_selection)
-    button_cols[1].button("Mark selected outlier", on_click=mark_selected_outlier)
-    button_cols[2].button("Mark selected not outlier", on_click=mark_selected_not_outlier)
-
-    start_dt = datetime.datetime.combine(start_date, start_time)
-    end_dt = datetime.datetime.combine(end_date, end_time)
-
-    plot_data = filter_on_date(data, start_dt, end_dt)
-
+@st.experimental_memo(persist="disk")
+def create_cachable_line_plot(start_time, end_time, file_identifier: str = "TODO") -> go.Figure:
+    plot_data = st.session_state.df_plot
     timestamps = plot_data.index.to_list()
-    fig = px.line(
+
+    return px.line(
         plot_data,
         x=timestamps,
         y="Water Level",
         markers=True,
-        width=1200,
-        height=700,
     )
+
+
+def create_annotation_plot(plot_data: pd.DataFrame, base_obj=None) -> go.Figure:
+    obj = base_obj or st
+    obj.subheader("Data selection options")
+    selection_method = obj.selectbox("Data Selection Method", list(SELECT_OPTIONS.keys()))
+    obj.info(SELECT_INFO[selection_method])
+    obj.markdown("***")
+
+    fig = create_cachable_line_plot(st.session_state.start_time, st.session_state.end_time)
 
     df_selected = plot_data[plot_data.index.isin(st.session_state.selected_points)]
     df_marked_out = plot_data[plot_data.index.isin(st.session_state.marked_outlier)]
     df_marked_not_out = plot_data[plot_data.index.isin(st.session_state.marked_normal)]
+
+    st.session_state["df_marked_out"] = df_marked_out
+    st.session_state["df_marked_not_out"] = df_marked_not_out
 
     fig.add_trace(
         go.Scatter(
@@ -185,12 +174,115 @@ def main():
             type="date",
         )
     )
-    with tab1:
-        selection = plotly_events(fig, select_event=True, override_height=700)
-    selection = {e["x"] for e in selection}
-    selection
 
-    update_selected_points(selection)
+    return fig
+
+
+def filter_data(data: pd.DataFrame, base_obj=None) -> pd.DataFrame:
+    obj = base_obj or st
+    obj.subheader("Time range selection")
+    inp_col_1, inp_col_2 = obj.columns(2)
+    # inp_col_1, inp_col_2, inp_col_3 = obj.columns([2, 2, 10], gap="medium")
+
+    start_date = inp_col_1.date_input(
+        "Graph range start date",
+        value=data.index.max().date() - datetime.timedelta(days=7),
+        min_value=data.index.min(),
+        max_value=data.index.max(),
+    )
+    end_date = inp_col_2.date_input(
+        "Graph range end date",
+        value=data.index.max().date(),
+        min_value=data.index.min(),
+        max_value=data.index.max(),
+    )
+
+    start_time = inp_col_1.time_input("Start time", value=datetime.time(0, 0, 0))
+    end_time = inp_col_2.time_input("End time", value=datetime.time(23, 59, 59))
+
+    obj.markdown("***")
+
+    start_dt = datetime.datetime.combine(start_date, start_time)
+    end_dt = datetime.datetime.combine(end_date, end_time)
+
+    st.session_state.start_time = start_dt
+    st.session_state.end_time = end_dt
+
+    df_plot = filter_on_date(data, start_dt, end_dt)
+
+    st.session_state["df_plot"] = df_plot
+
+    return df_plot
+
+
+@st.cache(persist=True)
+def prepare_download(outliers: pd.DataFrame, normal: pd.DataFrame):
+    return pickle.dumps(
+        {
+            "outliers": outliers,
+            "normal": normal,
+        }
+    )
+
+
+def create_plot_buttons(base_obj=None):
+    obj = base_obj or st
+
+    obj.subheader("Annotation actions")
+    obj.button("Clear selection", on_click=clear_selection)
+
+    c_1, c_2 = obj.columns(2)
+    c_1.button("Mark selection Outlier", on_click=mark_selected_outlier)
+    c_2.button("Mark selection not Outlier", on_click=mark_selected_not_outlier)
+    obj.markdown("***")
+
+
+def create_save_load_buttons(base_obj=None):
+    if st.session_state.df_marked_out.empty:
+        return
+
+    obj = base_obj or st
+
+    obj.subheader("Save / load previous")
+
+    c_1, c_2 = obj.columns(2)
+
+    to_save = prepare_download(
+        st.session_state["df_marked_out"], st.session_state["df_marked_not_out"]
+    )
+    file_name = f"Annotations_{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M')}.bin"
+
+    c_1.download_button("Save annotations to disk", to_save, file_name=file_name)
+
+    obj.markdown("***")
+
+
+def main():
+    st.set_page_config(layout="wide")
+    st.sidebar.title("Controls")
+    profile = st.sidebar.checkbox("Profile Code", value=False)
+
+    with Profiler() if profile else nullcontext():
+
+        prepare_session_state()
+        data = load_data()
+        st.session_state["df_full"] = data
+
+        tab1, tab2 = st.tabs(["Outlier annotation", "Model prediction"])
+        create_plot_buttons(st.sidebar)
+        create_save_load_buttons(st.sidebar)
+        plot_data = filter_data(data, st.sidebar)
+
+        fig = create_annotation_plot(plot_data, st.sidebar)
+
+        with tab1:
+            selection = plotly_events(fig, select_event=True, override_height=1000)
+        selection = {e["x"] for e in selection}
+
+        update_selected_points(selection)
+
+        with st.spinner("Constructing features..."):
+            construct_training_data()
 
     # st.write(st.session_state.selected_points)
 
