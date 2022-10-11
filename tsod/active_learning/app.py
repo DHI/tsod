@@ -1,4 +1,5 @@
 from typing import List
+from matplotlib.pyplot import show
 import streamlit as st
 
 from streamlit_echarts import st_echarts
@@ -14,7 +15,11 @@ from pyecharts import options as opts
 from streamlit_plotly_events import plotly_events
 import plotly.graph_objs as go
 
-from tsod.active_learning.data_prep import construct_training_data
+from tsod.active_learning.modelling import (
+    construct_training_data,
+    train_random_forest_classifier,
+    show_post_training_info,
+)
 from streamlit_profiler import Profiler
 from contextlib import nullcontext
 
@@ -42,6 +47,7 @@ def filter_on_date(df, start, end):
 
 
 def prepare_session_state():
+    # sets of date indices
     if "selected_points" not in st.session_state:
         st.session_state.selected_points = set()
     if "marked_outlier" not in st.session_state:
@@ -49,12 +55,19 @@ def prepare_session_state():
     if "marked_normal" not in st.session_state:
         st.session_state.marked_normal = set()
 
+    # all selected points, in and outside of plot area
     if "df_selected" not in st.session_state:
         st.session_state.df_selected = pd.DataFrame()
+
+    # all outlier points, in and outside of plot area
     if "df_marked_out" not in st.session_state:
         st.session_state.df_marked_out = pd.DataFrame()
+
+    # all normal points, in and outside of plot area
     if "df_marked_not_out" not in st.session_state:
         st.session_state.df_marked_not_out = pd.DataFrame()
+
+    # base data in plot area
     if "df_plot" not in st.session_state:
         st.session_state.df_plot = pd.DataFrame()
 
@@ -74,10 +87,8 @@ def mark_selected_outlier():
 
     if not to_add.issubset(st.session_state.marked_outlier):
         st.session_state.marked_outlier.update(to_add)
-        plot_data = st.session_state["df_plot"]
-        st.session_state["df_marked_out"] = plot_data[
-            plot_data.index.isin(st.session_state.marked_outlier)
-        ]
+        df = st.session_state["df_full"]
+        st.session_state["df_marked_out"] = df[df.index.isin(st.session_state.marked_outlier)]
 
         clear_selection()
 
@@ -92,10 +103,8 @@ def mark_selected_not_outlier():
 
     if not to_add.issubset(st.session_state.marked_normal):
         st.session_state.marked_normal.update(to_add)
-        plot_data = st.session_state["df_plot"]
-        st.session_state["df_marked_not_out"] = plot_data[
-            plot_data.index.isin(st.session_state.marked_normal)
-        ]
+        df = st.session_state["df_full"]
+        st.session_state["df_marked_not_out"] = df[df.index.isin(st.session_state.marked_normal)]
 
         clear_selection()
 
@@ -109,16 +118,16 @@ def update_selected_points(selection: set):
             else:
                 st.session_state.selected_points.add(s)
         # st.session_state.selected_points.update(selection)
-        plot_data = st.session_state["df_plot"]
-        st.session_state["df_selected"] = plot_data[
-            plot_data.index.isin(st.session_state.selected_points)
-        ]
+        df = st.session_state["df_full"]
+        st.session_state["df_selected"] = df[df.index.isin(st.session_state.selected_points)]
 
         st.experimental_rerun()
 
 
 @st.experimental_memo(persist="disk")
-def create_cachable_line_plot(start_time, end_time, file_identifier: str = "TODO") -> go.Figure:
+def create_cachable_line_plot(
+    start_time, end_time, data_file_identifier: str = "TODO"
+) -> go.Figure:
     plot_data = st.session_state.df_plot
     timestamps = plot_data.index.to_list()
 
@@ -130,7 +139,7 @@ def create_cachable_line_plot(start_time, end_time, file_identifier: str = "TODO
     )
 
 
-def create_annotation_plot(plot_data: pd.DataFrame, base_obj=None) -> go.Figure:
+def create_annotation_plot(base_obj=None) -> go.Figure:
     obj = base_obj or st
     obj.subheader("Data selection options")
     selection_method = obj.selectbox("Data Selection Method", list(SELECT_OPTIONS.keys()))
@@ -139,9 +148,11 @@ def create_annotation_plot(plot_data: pd.DataFrame, base_obj=None) -> go.Figure:
 
     fig = create_cachable_line_plot(st.session_state.start_time, st.session_state.end_time)
 
-    df_selected = st.session_state["df_selected"]
-    df_marked_out = st.session_state["df_marked_out"]
-    df_marked_not_out = st.session_state["df_marked_not_out"]
+    df_plot = st.session_state["df_plot"]
+
+    df_selected = df_plot[df_plot.index.isin(st.session_state["selected_points"])]
+    df_marked_out = df_plot[df_plot.index.isin(st.session_state["marked_outlier"])]
+    df_marked_not_out = df_plot[df_plot.index.isin(st.session_state["marked_normal"])]
 
     if not df_selected.empty:
         fig.add_trace(
@@ -201,7 +212,6 @@ def filter_data(data: pd.DataFrame, base_obj=None) -> pd.DataFrame:
     obj = base_obj or st
     obj.subheader("Time range selection")
     inp_col_1, inp_col_2 = obj.columns(2)
-    # inp_col_1, inp_col_2, inp_col_3 = obj.columns([2, 2, 10], gap="medium")
 
     start_date = inp_col_1.date_input(
         "Graph range start date",
@@ -257,7 +267,7 @@ def create_plot_buttons(base_obj=None):
 
 
 @st.cache(persist=True)
-def validate_file_contents(file_name: str):
+def validate_file_contents(file_name: str, data_file_identifier: str = "TODO"):
     uploaded_file = st.session_state["current_uploaded_file"]
     data = pickle.loads(uploaded_file.getvalue())
     if data["outliers"].empty:
@@ -300,19 +310,19 @@ def create_save_load_buttons(base_obj=None):
 
     c_1.download_button("Save annotations to disk", to_save, file_name=file_name)
 
-    uploaded_file = c_2.file_uploader("Load annotations from disk", key="current_uploaded_file")
+    uploaded_file = c_2.file_uploader(
+        "Load annotations from disk", key="current_uploaded_file", type="bin"
+    )
 
     if uploaded_file:
         data = pickle.loads(uploaded_file.getvalue())
         if validate_file_contents(uploaded_file.name):
             st.session_state["marked_outlier"].update(set(data["outliers"].index.to_list()))
             st.session_state["marked_normal"].update(set(data["normal"].index.to_list()))
-            df_plot = st.session_state["df_plot"]
-            st.session_state["df_marked_out"] = df_plot[
-                df_plot.index.isin(st.session_state.marked_outlier)
-            ]
-            st.session_state["df_marked_not_out"] = df_plot[
-                df_plot.index.isin(st.session_state.marked_normal)
+            df = st.session_state["df_full"]
+            st.session_state["df_marked_out"] = df[df.index.isin(st.session_state.marked_outlier)]
+            st.session_state["df_marked_not_out"] = df[
+                df.index.isin(st.session_state.marked_normal)
             ]
 
             obj.success("Loaded annotations", icon="✅")
@@ -320,6 +330,29 @@ def create_save_load_buttons(base_obj=None):
             obj.error("The loaded annotation data points do not all match the loaded data.")
 
     obj.markdown("***")
+
+
+def show_info(base_obj=None):
+    obj = base_obj or st
+    info = {
+        "Number of labelled outliers": [len(st.session_state["df_marked_out"])],
+        "Number of labelled normal points": [len(st.session_state["df_marked_not_out"])],
+    }
+    obj.table(info)
+
+
+def train_options(base_obj=None):
+    obj = base_obj or st
+
+    train_button = obj.button("Train Random Forest Model")
+
+    if train_button:
+        with st.spinner("Constructing features..."):
+            construct_training_data()
+        with st.spinner("Training Model..."):
+            train_random_forest_classifier()
+        obj.success("Finished training.")
+        show_post_training_info(obj)
 
 
 def main():
@@ -333,12 +366,14 @@ def main():
         data = load_data()
         st.session_state["df_full"] = data
 
-        tab1, tab2 = st.tabs(["Outlier annotation", "Model prediction"])
+        tab1, tab2, tab3 = st.tabs(["Outlier annotation", "Model training", "Model prediction"])
         create_plot_buttons(st.sidebar)
-        create_save_load_buttons(st.sidebar)
         plot_data = filter_data(data, st.sidebar)
+        plot_time_ph = st.sidebar.container()
 
-        fig = create_annotation_plot(plot_data, st.sidebar)
+        create_save_load_buttons(st.sidebar)
+
+        fig = create_annotation_plot(plot_time_ph)
 
         with tab1:
             selection = plotly_events(fig, select_event=True, override_height=1000)
@@ -346,8 +381,11 @@ def main():
 
         update_selected_points(selection)
 
-        with st.spinner("Constructing features..."):
-            construct_training_data()
+        with tab2:
+            col_1, col_2 = st.columns([1, 3])
+
+            show_info(col_1)
+            train_options(col_1)
 
     # st.write(st.session_state.selected_points)
 
