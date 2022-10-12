@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
+from tsod.active_learning.data_structures import AnnotationState
 
 
 def get_neighboring_points(
@@ -42,10 +43,11 @@ def get_neighboring_points(
 
 
 def construct_training_data(window_size: int = 10):
-    outliers: pd.DataFrame = st.session_state["df_marked_out"]
+    state: AnnotationState = st.session_state.AS
+    outliers = state.df_outlier
     if outliers.empty:
         return
-    normal: pd.DataFrame = st.session_state["df_marked_not_out"]
+    normal = state.df_normal
 
     features = []
     labels = []
@@ -67,6 +69,9 @@ def construct_training_data(window_size: int = 10):
 
 
 def train_random_forest_classifier():
+    if "features" not in st.session_state:
+        st.warning("No features were created, not training a model.")
+        return
     X = st.session_state["features"]
     y = st.session_state["labels"]
 
@@ -85,9 +90,8 @@ def show_post_training_info(base_obj=None):
             [
                 {"Feature": feat, "Feature importance": imp}
                 for feat, imp in zip(clf.feature_names_in_, clf.feature_importances_)
-                if imp > 0.05
             ],
             key=lambda x: x["Feature importance"],
             reverse=True,
-        )
+        )[:10]
     )
