@@ -34,6 +34,10 @@ SELECT_INFO = {
 }
 
 
+def get_as() -> AnnotationState:
+    return st.session_state.AS
+
+
 @st.cache(allow_output_mutation=True)
 def load_data(file_name: str = "TODO"):
     df = pd.read_csv("data/Elev_NW1.csv", index_col=0, parse_dates=True)
@@ -45,15 +49,18 @@ def prepare_session_state():
     if "AS" not in st.session_state:
         st.session_state.AS = AnnotationState(st.session_state["df_full"])
 
-    if "loaded_from_file" not in st.session_state:
-        st.session_state.loaded_from_file = False
+    if "uploaded_annotation_data" not in st.session_state:
+        st.session_state.uploaded_annotation_data = {}
+
+    if "current_files_in_AS" not in st.session_state:
+        st.session_state.current_files_in_AS = set()
 
 
 @st.experimental_memo(persist="disk")
 def create_cachable_line_plot(
     start_time, end_time, data_file_identifier: str = "TODO"
 ) -> go.Figure:
-    plot_data = st.session_state.AS.df_plot
+    plot_data = get_as().df_plot
     timestamps = plot_data.index.to_list()
 
     return px.line(
@@ -70,7 +77,7 @@ def create_annotation_plot(base_obj=None) -> go.Figure:
     selection_method = obj.selectbox("Data Selection Method", list(SELECT_OPTIONS.keys()))
     obj.info(SELECT_INFO[selection_method])
     obj.markdown("***")
-    state: AnnotationState = st.session_state.AS
+    state = get_as()
 
     fig = create_cachable_line_plot(state.start, state.end)
 
@@ -160,7 +167,7 @@ def filter_data(data: pd.DataFrame, base_obj=None) -> pd.DataFrame:
     start_dt = datetime.datetime.combine(start_date, start_time)
     end_dt = datetime.datetime.combine(end_date, end_time)
 
-    state: AnnotationState = st.session_state.AS
+    state = get_as()
 
     state.update_plot(start_dt, end_dt)
 
@@ -178,7 +185,7 @@ def prepare_download(outliers: pd.DataFrame, normal: pd.DataFrame):
 def create_plot_buttons(base_obj=None):
     obj = base_obj or st
 
-    state: AnnotationState = st.session_state.AS
+    state = get_as()
 
     obj.subheader("Annotation actions")
 
@@ -191,69 +198,73 @@ def create_plot_buttons(base_obj=None):
     obj.markdown("***")
 
 
-# @st.cache(persist=True)
-def validate_file_contents(file_name: str, data_file_identifier: str = "TODO"):
+def validate_uploaded_file_contents():
     uploaded_file = st.session_state["current_uploaded_file"]
     data = pickle.loads(uploaded_file.getvalue())
+    state = get_as()
     if data["outliers"].empty:
         outlier_data_match, outlier_index_match = True, True
     else:
         outlier_data_match = (
-            data["outliers"]["Water Level"]
-            .astype(float)
-            .isin(st.session_state["df_full"]["Water Level"].values)
-            .all()
+            data["outliers"]["Water Level"].astype(float).isin(state.df["Water Level"].values).all()
         )
-        outlier_index_match = data["outliers"].index.isin(st.session_state["df_full"].index).all()
+        outlier_index_match = data["outliers"].index.isin(state.df.index).all()
     if data["normal"].empty:
         normal_data_match, normal_index_match = True, True
     else:
         normal_data_match = (
-            data["normal"]["Water Level"]
-            .astype(float)
-            .isin(st.session_state["df_full"]["Water Level"].values)
-            .all()
+            data["normal"]["Water Level"].astype(float).isin(state.df["Water Level"].values).all()
         )
-        normal_index_match = data["normal"].index.isin(st.session_state["df_full"].index).all()
+        normal_index_match = data["normal"].index.isin(state.df.index).all()
 
     if outlier_data_match and outlier_index_match and normal_data_match and normal_index_match:
+        st.session_state.uploaded_annotation_data[uploaded_file.name] = data
         return True
     return False
+
+
+def annotation_file_upload_callback(base_obj=None):
+    obj = base_obj or st
+
+    if validate_uploaded_file_contents():
+        obj.info("Validation passed")
+    else:
+        obj.error("The loaded annotation data points do not all match the loaded data.")
+        return
+
+    state = get_as()
+    file_name = st.session_state.current_uploaded_file.name
+    data = st.session_state.uploaded_annotation_data[file_name]
+
+    state.update_outliers(data["outliers"].index.to_list())
+    state.update_normal(data["normal"].index.to_list())
+    obj.success("Loaded annotations", icon="✅")
 
 
 def create_save_load_buttons(base_obj=None):
     obj = base_obj or st
     obj.subheader("Save / load previous")
     c_1, c_2 = obj.columns(2)
-    state: AnnotationState = st.session_state.AS
+    state = get_as()
 
     to_save = prepare_download(state.df_outlier, state.df_normal)
     file_name = f"Annotations_{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M')}.bin"
 
     c_1.download_button("Save annotations to disk", to_save, file_name=file_name)
 
-    uploaded_file = c_2.file_uploader(
-        "Load annotations from disk", key="current_uploaded_file", type="bin"
+    c_2.file_uploader(
+        "Load annotations from disk",
+        key="current_uploaded_file",
+        type="bin",
+        on_change=annotation_file_upload_callback,
+        args=(obj,),
     )
-    if uploaded_file and not st.session_state.loaded_from_file:
-        data = pickle.loads(uploaded_file.getvalue())
-        if validate_file_contents(uploaded_file.name):
-
-            obj.info("Validation passed")
-
-            state.update_outliers(data["outliers"].index.to_list())
-            state.update_normal(data["normal"].index.to_list())
-            obj.success("Loaded annotations", icon="✅")
-        else:
-            obj.error("The loaded annotation data points do not all match the loaded data.")
-
-        st.session_state.loaded_from_file = True
     obj.markdown("***")
 
 
 def show_info(base_obj=None):
     obj = base_obj or st
-    state: AnnotationState = st.session_state.AS
+    state = get_as()
     obj.subheader("Annotation summary")
     info = {
         "Total number of labelled outliers": [len(state.outlier)],
@@ -285,17 +296,21 @@ def main():
     dev_col_1, dev_col_2 = st.sidebar.columns(2)
     profile = dev_col_1.checkbox("Profile Code", value=False)
     show_ss = dev_col_2.button("Show Session State")
+    show_as = dev_col_2.button("Show Annotation State")
     if show_ss:
         st.write(st.session_state)
+    if show_as:
+        st.write(get_as().data)
     #############################################################
 
     with Profiler() if profile else nullcontext():
 
         data = load_data()
 
-        st.session_state["df_full"] = data
+        if "df_full" not in st.session_state:
+            st.session_state["df_full"] = data
         prepare_session_state()
-        state: AnnotationState = st.session_state.AS
+        state = get_as()
 
         tab1, tab2, tab3 = st.tabs(["Outlier annotation", "Model training", "Model prediction"])
         create_plot_buttons(st.sidebar)

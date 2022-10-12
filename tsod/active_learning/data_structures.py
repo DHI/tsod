@@ -12,6 +12,7 @@ class AnnotationState:
         self.df_selected = pd.DataFrame()
         self.df_outlier = pd.DataFrame()
         self.df_normal = pd.DataFrame()
+        self.df_plot = pd.DataFrame()
         self.start = None
         self.end = None
 
