@@ -1,6 +1,8 @@
+import pickle
 from typing import List
 import streamlit as st
 import pandas as pd
+import datetime
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from tsod.active_learning.data_structures import AnnotationState
@@ -64,11 +66,16 @@ def construct_training_data(window_size: int = 10):
     features = pd.DataFrame(features, columns=class_labels)
     labels = np.array(labels)
 
+    # with open("data.pcl", "wb") as f:
+    # pickle.dump({"features": features, "labels": labels}, f)
+
     st.session_state["features"] = features
     st.session_state["labels"] = labels
 
 
-def train_random_forest_classifier():
+def train_random_forest_classifier(base_obj=None):
+    obj = base_obj or st
+
     if "features" not in st.session_state:
         st.warning("No features were created, not training a model.")
         return
@@ -79,10 +86,17 @@ def train_random_forest_classifier():
     clf.fit(X, y)
 
     st.session_state["classifier"] = clf
+    st.session_state[
+        "last_model_name"
+    ] = f"Model ({datetime.datetime.now().strftime('%Y-%m-%d %H:%M')})"
+    obj.success("Finished training.")
 
 
-def show_post_training_info(base_obj=None):
+def post_training_options(base_obj=None):
     obj = base_obj or st
+    if "classifier" not in st.session_state:
+        return
+
     clf = st.session_state["classifier"]
 
     obj.table(
@@ -94,4 +108,8 @@ def show_post_training_info(base_obj=None):
             key=lambda x: x["Feature importance"],
             reverse=True,
         )[:10]
+    )
+
+    obj.download_button(
+        "Download model", pickle.dumps(clf), f"{st.session_state.last_model_name}.pkl"
     )
