@@ -1,22 +1,27 @@
 import pickle
-from typing import List
+from typing import Dict, List
 import streamlit as st
 import pandas as pd
 import datetime
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import RandomizedSearchCV
 from tsod.active_learning.data_structures import AnnotationState
+from tsod.active_learning.utils import get_as
 
 
 def get_neighboring_points(
-    indices: List, number_neighbors: int, column_for_normalization: str | None = None
+    indices: List,
+    number_neighbors: int,
+    full_df: pd.DataFrame,
+    column_for_normalization: str | None = None,
 ):
     """
     Given a list of datetime indices, returns the number_neighbors points before and
     after each point (from df_full).
     If column_for_normalization is set, every neighbor's value is divided by this columns value at the corresponding index.
     """
-    df: pd.DataFrame = st.session_state["df_full"].reset_index(names="date")
+    df: pd.DataFrame = full_df.reset_index(names="date")
 
     if column_for_normalization and (column_for_normalization not in df.columns):
         raise ValueError(f"Column {column_for_normalization} not found.")
@@ -45,7 +50,7 @@ def get_neighboring_points(
 
 
 def construct_training_data(window_size: int = 10):
-    state: AnnotationState = st.session_state.AS
+    state: AnnotationState = get_as()
     outliers = state.df_outlier
     if outliers.empty:
         return
@@ -54,8 +59,12 @@ def construct_training_data(window_size: int = 10):
     features = []
     labels = []
 
-    features.extend(get_neighboring_points(outliers.index.to_list(), window_size, "Water Level"))
-    features.extend(get_neighboring_points(normal.index.to_list(), window_size, "Water Level"))
+    features.extend(
+        get_neighboring_points(outliers.index.to_list(), window_size, state.df, "Water Level")
+    )
+    features.extend(
+        get_neighboring_points(normal.index.to_list(), window_size, state.df, "Water Level")
+    )
 
     labels.extend([1] * len(outliers))
     labels.extend([0] * len(normal))
@@ -82,10 +91,22 @@ def train_random_forest_classifier(base_obj=None):
     X = st.session_state["features"]
     y = st.session_state["labels"]
 
-    clf = RandomForestClassifier()
+    rfc = RandomForestClassifier()
+
+    forest_params = {
+        "max_depth": [int(x) for x in np.linspace(10, 30, num=3)] + [None],
+        "max_features": ["sqrt", "log2"],
+        "n_estimators": [int(x) for x in np.linspace(start=100, stop=1000, num=10)],
+        "min_samples_split": [2, 4],
+        "bootstrap": [True, False],
+    }
+    clf = RandomizedSearchCV(
+        estimator=rfc, param_distributions=forest_params, cv=3, n_iter=10, n_jobs=-1, verbose=0
+    )
+
     clf.fit(X, y)
 
-    st.session_state["classifier"] = clf
+    st.session_state["classifier"] = clf.best_estimator_
     st.session_state[
         "last_model_name"
     ] = f"Model ({datetime.datetime.now().strftime('%Y-%m-%d %H:%M')})"
@@ -113,3 +134,29 @@ def post_training_options(base_obj=None):
     obj.download_button(
         "Download model", pickle.dumps(clf), f"{st.session_state.last_model_name}.pkl"
     )
+
+
+def get_model_predictions(
+    window_size: int = 10, column_for_normalization: str | None = None, base_obj=None
+):
+    obj = base_obj or st
+    models: Dict[str, RandomForestClassifier] = st.session_state["prediction_models"]
+    datasets: Dict[str, pd.DataFrame] = st.session_state["prediction_data"]
+
+    if (not models) or (not datasets):
+        obj.error("Please add at least one model and one data file.")
+        return
+
+    for dataset_name, ds in datasets.items():
+        try:
+            features = st.session_state["uploaded_ds_features"][dataset_name]
+        except KeyError:
+            features = get_neighboring_points(ds.index, window_size, ds, column_for_normalization)
+            st.session_state["uploaded_ds_features"][dataset_name] = features
+
+        for model_name, model in models.items():
+            if model_name not in st.session_state["inference_results"][dataset_name]:
+                st.session_state["inference_results"][dataset_name][model_name] = model.predict(
+                    features
+                )
+    # obj.write(st.session_state["inference_results"])
