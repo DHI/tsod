@@ -170,10 +170,10 @@ def dev_options(base_obj=None):
         profile = dev_col_1.checkbox("Profile Code", value=False)
         show_ss = dev_col_2.button("Show Session State")
         show_as = dev_col_2.button("Show Annotation State")
-        if show_ss:
-            st.write(st.session_state)
-        if show_as:
-            st.write(get_as().data)
+    if show_ss:
+        st.write(st.session_state)
+    if show_as:
+        st.write(get_as().data)
 
     return profile
 
@@ -233,7 +233,7 @@ def add_annotation_to_pred_data(base_obj=None):
         obj.error("No annotation data has been loaded in this session.")
         return
 
-    st.session_state.prediction_data["Annotation Data"] = get_as().df
+    st.session_state.prediction_data["Annotation Data"] = get_as().df.copy(deep=True)
 
 
 def add_most_recent_model(base_obj=None):
@@ -249,14 +249,15 @@ def add_uploaded_model(base_obj=None):
     obj = base_obj or st
     if not st.session_state.current_uploaded_model:
         return
-    clf = pickle.loads(st.session_state.current_uploaded_model.read())
-    if not hasattr(clf, "predict"):
-        obj.error(
-            "The uploaded object can not be used for prediction (does not implement 'predict' method."
-        )
-        return
+    for model in st.session_state.current_uploaded_model:
+        clf = pickle.loads(model.read())
+        if not hasattr(clf, "predict"):
+            obj.error(
+                "The uploaded object can not be used for prediction (does not implement 'predict' method."
+            )
+            continue
 
-    st.session_state.prediction_models[st.session_state.current_uploaded_model.name] = clf
+        st.session_state.prediction_models[model.name] = clf
 
 
 def prediction_options(base_obj=None):
@@ -273,12 +274,11 @@ def prediction_options(base_obj=None):
         on_change=add_uploaded_model,
         key="current_uploaded_model",
         args=(obj,),
+        accept_multiple_files=True,
     )
 
-    # obj.markdown("***")
-
     obj.subheader("Selected models:")
-    obj.write(list(st.session_state.prediction_models.keys()))
+    obj.json(list(st.session_state.prediction_models.keys()))
     if st.session_state.prediction_models:
         obj.button(
             "Clear selection", on_click=set_session_state_items, args=("prediction_models", {})
@@ -289,10 +289,9 @@ def prediction_options(base_obj=None):
     obj.info("Use 'Add Annotation Data' to add the same data that was loaded in for annotation.")
     c1, c2 = obj.columns(2)
     c1.button("Add Annotation Data", on_click=add_annotation_to_pred_data)
-    obj.markdown("***")
 
     obj.subheader("Selected Files:")
-    obj.write(list(st.session_state.prediction_data.keys()))
+    obj.json(list(st.session_state.prediction_data.keys()))
     if st.session_state.prediction_data:
         obj.button(
             "Clear selection",
