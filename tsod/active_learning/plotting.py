@@ -1,3 +1,5 @@
+from collections import defaultdict
+import datetime
 from typing import List
 import numpy as np
 import pandas as pd
@@ -5,10 +7,9 @@ import plotly.express as px
 import plotly.graph_objs as go
 import streamlit as st
 from pyecharts import options as opts
-from pyecharts.charts import Line
+from pyecharts.charts import Line, Bar
 from streamlit_echarts import st_echarts, st_pyecharts
 from streamlit_plotly_events import plotly_events
-from streamlit_profiler import Profiler
 from tsod.active_learning.utils import SELECT_INFO, SELECT_OPTIONS, get_as
 
 
@@ -101,45 +102,130 @@ def create_annotation_plot(base_obj=None) -> go.Figure:
 def make_prediction_plot_for_dataset(dataset_name: str, base_obj=None):
     obj = base_obj or st
     obj.subheader(dataset_name)
-    c1, c2, c3 = obj.columns(3)
 
     colors = ["red", "green", "blue"]
+    symbols = ["pin", "arrow", "diamond"]
 
-    model_names = list(st.session_state["inference_results"][dataset_name].keys())
+    dataset: pd.DataFrame = st.session_state["prediction_data"][dataset_name]
 
-    markers = []
-    dataset = st.session_state["prediction_data"][dataset_name]
-    x_data = dataset.index.to_list()
-    y_data = dataset["Water Level"].to_list()
+    model_predictions = st.session_state["inference_results"][dataset_name]
+    MODEL_NAMES = list(model_predictions.keys())
 
-    info_table = []
+    predicted_outliers = {
+        model_name: model_predictions[model_name].nonzero()[0].tolist()
+        for model_name in MODEL_NAMES
+    }
 
-    for model_number, model_name in enumerate(model_names):
-        model_predictions = st.session_state["inference_results"][dataset_name][model_name]
+    for model_name, model_preds in model_predictions.items():
+        dataset[model_name] = model_preds
 
-        outliers_idc = np.random.choice(model_predictions.nonzero()[0], 10)
-        info_table.append(
-            {
-                "Model Name": model_name,
-                "Predicted Outliers": outliers_idc.shape[0],
-                "Predicted Normal": len(dataset) - outliers_idc.shape[0],
-            }
-        )
+    dataset["outlier_group"] = dataset[MODEL_NAMES].sum(axis=1).cumsum() // 10
 
-        df_marker: pd.DataFrame = dataset.iloc[outliers_idc].sort_index()
+    ts = []
+    outlier_counts = defaultdict(list)
+    for i, (_, group) in enumerate(dataset.groupby("outlier_group")):
+        for model in MODEL_NAMES:
+            outlier_counts[model].append(group[model].sum().item())
+        if i > 0:
+            ts.append(group.index[0])
 
-        for i, (idx, row) in enumerate(df_marker.iterrows()):
-            markers.append(
-                opts.MarkPointItem(
-                    name=f"Outlier {i+1} {model_name}",
-                    coord=[idx, row["Water Level"].item()],
-                    symbol="pin",
-                    itemstyle_opts=opts.ItemStyleOpts(color=colors[model_number]),
-                    value=i + 1,
-                )
-            )
+        if i == 5:
+            break
+
+    ts.insert(0, dataset.index.min())
+    # ts.append(dataset.index.max())
+
+    ranges = [f"{ts[i]} - {ts[i+1]}" for i in range(len(ts) - 1)]
+
+    info_table = [
+        {
+            "Model Name": model_name,
+            "Predicted Outliers": len(outliers),
+            "Predicted Normal": len(dataset) - len(outliers),
+        }
+        for model_name, outliers in predicted_outliers.items()
+    ]
 
     obj.table(info_table)
+
+    bar = (
+        Bar()
+        .add_xaxis(ranges)
+        .set_global_opts(
+            title_opts=opts.TitleOpts(
+                title="Distribution of outliers per model",
+                subtitle="Click on bar to isolate time range",
+            ),
+            xaxis_opts=opts.AxisOpts(
+                is_scale=True, name="Time Range", name_location="middle", name_gap=30
+            ),
+            yaxis_opts=opts.AxisOpts(
+                type_="value",
+                name="Number of outliers",
+                name_rotate=90,
+                name_location="middle",
+                name_gap=50,
+            ),
+        )
+    )
+
+    for i, model in enumerate(MODEL_NAMES):
+        bar = bar.add_yaxis(
+            model,
+            outlier_counts[model],
+            stack=True,
+            label_opts=opts.LabelOpts(is_show=False),
+            color=colors[i],
+        )
+
+    clicked_range = st_pyecharts(
+        bar,
+        height="500px",
+        theme="dark",
+        events={"click": "function(params) { return params.name }"},
+    )
+
+    def _get_start_and_end_date(clicked_range: str):
+        start_str, end_str = clicked_range.split(" - ")
+
+        start_time = datetime.datetime.strptime(start_str, "%Y-%m-%d %H:%M:%S")
+        end_time = datetime.datetime.strptime(end_str, "%Y-%m-%d %H:%M:%S")
+
+        return start_time, end_time
+
+    if not clicked_range:
+        return
+
+    start_time, end_time = _get_start_and_end_date(clicked_range)
+    df_plot = dataset[dataset.index.to_series().between(start_time, end_time)]
+    x_data = df_plot.index.to_list()
+    y_data = df_plot["Water Level"].to_list()
+
+    st.write(df_plot)
+
+    # return
+    markers = []
+
+    for model_number, model_name in enumerate(MODEL_NAMES):
+
+        # outliers_idc = sorted(np.random.choice(model_predictions.nonzero()[0], 20).tolist())
+        counter = 1
+        for i, row in df_plot.iterrows():
+            # for i, int_index in enumerate(outliers_idc):
+            if row[model_name] == 1:
+                markers.append(
+                    opts.MarkPointItem(
+                        name=f"Outlier {counter} {model_name}",
+                        coord=[i, row["Water Level"].item()],
+                        # coord=[x_data[int_index], y_data[int_index]],
+                        symbol=symbols[model_number],
+                        # symbol="pin",
+                        itemstyle_opts=opts.ItemStyleOpts(color=colors[model_number]),
+                        value=counter,
+                    )
+                )
+                counter += 1
+
     line = (
         Line()
         .add_xaxis(x_data)
@@ -149,20 +235,7 @@ def make_prediction_plot_for_dataset(dataset_name: str, base_obj=None):
             y_data,
             color="yellow",
             label_opts=opts.LabelOpts(is_show=False),
-            # markpoint_opts=opts.MarkPointOpts(
-            # data=[{"coord": [x_data[10], y_data[10]], "name": "TESTER"}]
-            # )
-            markpoint_opts=opts.MarkPointOpts(
-                data=markers,
-                # data=[
-                #     opts.MarkPointItem(
-                #         name="Outlier 1 Model 1",
-                #         coord=[x_data[300], y_data[300]],
-                #         symbol="pin",
-                #         itemstyle_opts=opts.ItemStyleOpts(color="red"),
-                #     )
-                # ]
-            ),
+            markpoint_opts=opts.MarkPointOpts(data=markers),
         )
         .set_global_opts(
             xaxis_opts=opts.AxisOpts(type_="time", is_scale=True, name="Date & Time"),
@@ -171,7 +244,7 @@ def make_prediction_plot_for_dataset(dataset_name: str, base_obj=None):
                 opts.DataZoomOpts(
                     type_="slider",
                     range_start=0,
-                    range_end=70,
+                    range_end=100,
                 ),
                 opts.DataZoomOpts(
                     type_="inside",
