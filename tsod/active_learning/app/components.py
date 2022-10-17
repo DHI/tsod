@@ -163,6 +163,21 @@ def annotation_file_upload_callback(base_obj=None):
     obj.success("Loaded annotations", icon="✅")
 
 
+def dev_options(base_obj=None):
+    obj = base_obj or st
+    with obj.expander("Dev Options"):
+        dev_col_1, dev_col_2 = st.columns(2)
+        profile = dev_col_1.checkbox("Profile Code", value=False)
+        show_ss = dev_col_2.button("Show Session State")
+        show_as = dev_col_2.button("Show Annotation State")
+        if show_ss:
+            st.write(st.session_state)
+        if show_as:
+            st.write(get_as().data)
+
+    return profile
+
+
 def create_save_load_buttons(base_obj=None):
     obj = base_obj or st
     obj.subheader("Save / load previous")

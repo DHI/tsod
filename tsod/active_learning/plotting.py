@@ -90,7 +90,7 @@ def create_annotation_plot(base_obj=None) -> go.Figure:
                     ]
                 )
             ),
-            rangeslider=dict(visible=True, autorange=True),
+            # rangeslider=dict(visible=True, autorange=True),
             type="date",
         ),
     )
