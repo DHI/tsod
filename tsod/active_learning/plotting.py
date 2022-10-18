@@ -102,21 +102,29 @@ def make_outlier_distribution_plot(dataset_name: str, base_obj=None):
     obj = base_obj or st
     dataset: pd.DataFrame = st.session_state["prediction_data"][dataset_name]
 
-    number_of_outliers = sum(
-        [n for n in st.session_state["number_outliers"][dataset_name].values()]
+    model_predictions = st.session_state["inference_results"][dataset_name]
+    model_names = st.session_state["models_to_visualize"][dataset_name]
+    if not model_names:
+        return None, None
+    for model_name, model_preds in model_predictions.items():
+        dataset[model_name] = model_preds.astype(np.int8)
+
+    number_of_outliers_to_visualize = sum(
+        [
+            v
+            for k, v in st.session_state["number_outliers"][dataset_name].items()
+            if k in model_names
+        ]
     )
 
-    if number_of_outliers < 200:
+    if number_of_outliers_to_visualize < 200:
         return dataset.index.min(), dataset.index.max()
-
-    model_predictions = st.session_state["inference_results"][dataset_name]
-    model_names = list(model_predictions.keys())
 
     form = obj.form(
         f"form_{dataset_name}",
     )
     form.info(
-        "A large number of outliers was found. Click on a bar in the distribution plot to view all outliers \
+        "A large number of outliers is about to be visualized. Click on a bar in the distribution plot to view all outliers \
         in that time period. Each time period is chosen so it contains the same number of total outliers. \
         That number can be adjusted here."
     )
@@ -143,7 +151,6 @@ def make_outlier_distribution_plot(dataset_name: str, base_obj=None):
     outlier_counts = defaultdict(list)
     for i, (_, group) in enumerate(dataset.groupby("outlier_group")):
         for model in model_names:
-            # st.write(f"{model}: adding {group[model].sum().item()}")
             outlier_counts[model].append(group[model].sum().item())
         if i > 0:
             ts.append(group.index[0])
@@ -221,12 +228,13 @@ def make_outlier_distribution_plot(dataset_name: str, base_obj=None):
 
 
 def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
-    symbols = ["pin", "arrow", "diamond"]
+    symbols = ["pin", "arrow", "diamond", "triangle"]
 
     dataset: pd.DataFrame = st.session_state["prediction_data"][dataset_name]
 
     model_predictions = st.session_state["inference_results"][dataset_name]
-    model_names = list(model_predictions.keys())
+    model_names = st.session_state["models_to_visualize"][dataset_name]
+    # model_names = list(model_predictions.keys())
 
     df_plot = dataset[dataset.index.to_series().between(start_time, end_time)]
     x_data = df_plot.index.to_list()
@@ -263,7 +271,7 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
         )
         .set_global_opts(
             title_opts=opts.TitleOpts(
-                title=f"Water Level {start_time} - {end_time}",
+                title=f"Outliers {start_time} - {end_time}",
                 # subtitle="Click on bar to isolate time range",
             ),
             yaxis_opts=opts.AxisOpts(
@@ -292,7 +300,7 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
                     range_end=100,
                 ),
             ],
-            # toolbox_opts=opts.TooltipOpts(axis_pointer_type="cross", trigger="axis"),
+            tooltip_opts=opts.TooltipOpts(axis_pointer_type="line", trigger="axis"),
         )
     )
     st_pyecharts(line, height="500px", theme="dark")

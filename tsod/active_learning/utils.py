@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, List
+from typing import Any, Dict, List
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -68,7 +68,8 @@ def init_session_state():
     )
     _add_to_ss_if_not_in_it("plot_end_date", st.session_state["df_full"].index.max().date())
     _add_to_ss_if_not_in_it("date_shift_buttons_used", False)
-    _add_to_ss_if_not_in_it("get_predictions_clicked", False)
+    _add_to_ss_if_not_in_it("hide_choice_menus", False)
+    _add_to_ss_if_not_in_it("models_to_visualize", defaultdict(set))
 
 
 def set_session_state_items(key: str | List[str], value: Any | List[Any]):
@@ -82,3 +83,14 @@ def set_session_state_items(key: str | List[str], value: Any | List[Any]):
 
     else:
         st.session_state[key] = value
+
+
+def recursive_length_count(data: Dict) -> int:
+    total = 0
+    for v in data.values():
+        if isinstance(v, (set, list)):
+            total += len(v)
+        elif isinstance(v, dict):
+            total += recursive_length_count(v)
+
+    return total

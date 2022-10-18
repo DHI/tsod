@@ -151,13 +151,18 @@ def get_model_predictions(
         try:
             features = st.session_state["uploaded_ds_features"][dataset_name]
         except KeyError:
-            features = get_neighboring_points(ds.index, window_size, ds, column_for_normalization)
-            st.session_state["uploaded_ds_features"][dataset_name] = features
-
-        for model_name, model in models.items():
-            if model_name not in st.session_state["inference_results"][dataset_name]:
-                results = model.predict(features)
-                st.session_state["inference_results"][dataset_name][model_name] = results
-                st.session_state["number_outliers"][dataset_name][model_name] = len(
-                    results.nonzero()[0].tolist()
+            with st.spinner("Constructing dataset features..."):
+                features = get_neighboring_points(
+                    ds.index, window_size, ds, column_for_normalization
                 )
+                st.session_state["uploaded_ds_features"][dataset_name] = features
+
+        with st.spinner("Getting model results..."):
+            for model_name, model in models.items():
+                st.session_state["models_to_visualize"][dataset_name].update([model_name])
+                if model_name not in st.session_state["inference_results"][dataset_name]:
+                    results = model.predict(features)
+                    st.session_state["inference_results"][dataset_name][model_name] = results
+                    st.session_state["number_outliers"][dataset_name][model_name] = len(
+                        results.nonzero()[0].tolist()
+                    )
