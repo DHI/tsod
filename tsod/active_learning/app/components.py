@@ -8,7 +8,7 @@ from tsod.active_learning.modelling import (
     post_training_options,
     train_random_forest_classifier,
 )
-from tsod.active_learning.utils import get_as, set_session_state_items
+from tsod.active_learning.utils import get_as, set_session_state_items, custom_text
 from tsod.active_learning.modelling import get_model_predictions
 
 
@@ -221,7 +221,8 @@ def train_options(base_obj=None):
         post_training_options(obj)
 
 
-def start_button_click_callback(obj=None):
+def get_predictions_callback(obj=None):
+    set_session_state_items("get_predictions_clicked", True)
     with st.spinner("Getting model results..."):
         get_model_predictions(base_obj=obj)
 
@@ -263,42 +264,91 @@ def add_uploaded_model(base_obj=None):
 def prediction_options(base_obj=None):
     obj = base_obj or st
     _, c, _ = obj.columns([2, 5, 2])
-    c.button("Get Predictions", on_click=start_button_click_callback, args=(obj,))
+    c.button("Get Predictions", on_click=get_predictions_callback, args=(obj,))
 
-    obj.subheader("Choose Models")
-    c1, c2 = obj.columns(2)
-    c1.button("Add most recently trained model", on_click=add_most_recent_model, args=(obj,))
-    c2.file_uploader(
-        "Select model from disk",
-        type="pkl",
-        on_change=add_uploaded_model,
-        key="current_uploaded_model",
-        args=(obj,),
-        accept_multiple_files=True,
-    )
-
-    obj.subheader("Selected models:")
-    obj.json(list(st.session_state.prediction_models.keys()))
-    if st.session_state.prediction_models:
-        obj.button(
-            "Clear selection", on_click=set_session_state_items, args=("prediction_models", {})
+    with obj.expander("Model Choice", expanded=not st.session_state["get_predictions_clicked"]):
+        st.subheader("Choose Models")
+        st.info("Add models with which to generate predictions.")
+        c1, c2 = st.columns(2)
+        c1.button("Add most recently trained model", on_click=add_most_recent_model, args=(obj,))
+        c2.file_uploader(
+            "Select model from disk",
+            type="pkl",
+            on_change=add_uploaded_model,
+            key="current_uploaded_model",
+            args=(obj,),
+            accept_multiple_files=True,
         )
-    obj.markdown("***")
 
-    obj.subheader("Select Data")
-    obj.info("Use 'Add Annotation Data' to add the same data that was loaded in for annotation.")
-    c1, c2 = obj.columns(2)
-    c1.button("Add Annotation Data", on_click=add_annotation_to_pred_data)
-
-    obj.subheader("Selected Files:")
-    obj.json(list(st.session_state.prediction_data.keys()))
-    if st.session_state.prediction_data:
-        obj.button(
-            "Clear selection",
-            on_click=set_session_state_items,
-            args=("prediction_data", {}),
-            key="data_clear",
-        )
-    obj.markdown("***")
+        st.subheader("Selected models:")
+        st.json(list(st.session_state.prediction_models.keys()))
+        if st.session_state.prediction_models:
+            st.button(
+                "Clear selection", on_click=set_session_state_items, args=("prediction_models", {})
+            )
+    with obj.expander("Data Choice", expanded=not st.session_state["get_predictions_clicked"]):
+        st.subheader("Select Data")
+        st.info("Add datasets for outlier evaluation.")
+        c1, c2 = st.columns(2)
+        c1.button("Add Annotation Data", on_click=add_annotation_to_pred_data)
+        add_annotation_to_pred_data()
+        st.subheader("Selected Files:")
+        st.json(list(st.session_state.prediction_data.keys()))
+        if st.session_state.prediction_data:
+            st.button(
+                "Clear selection",
+                on_click=set_session_state_items,
+                args=("prediction_data", {}),
+                key="data_clear",
+            )
     _, c, _ = obj.columns([2, 5, 2])
-    c.button("Get Predictions", on_click=start_button_click_callback, args=(obj,), key="pred_btn_2")
+    c.button("Get Predictions", on_click=get_predictions_callback, args=(obj,), key="pred_btn_2")
+
+
+def prediction_summary_table(dataset_name: str, base_obj=None):
+    obj = base_obj or st
+    obj.subheader(dataset_name)
+
+    DEFAULT_COLORS = ["#f11a1a", "#2ada49", "#1e11e6", "#40e0d3"]
+
+    model_predictions = st.session_state["inference_results"].get(dataset_name)
+    if not model_predictions:
+        return
+
+    model_names = list(model_predictions.keys())
+
+    if len(model_names) > len(DEFAULT_COLORS):
+        obj.error(
+            f"Currently max. number of models is {len(DEFAULT_COLORS)}, got {len(model_names)}"
+        )
+        return
+
+    c1, c2, c3, c4 = obj.columns([3, 2, 2, 1])
+    custom_text("Model Name", base_obj=c1, font_size=20, centered=False)
+    custom_text("Predicted Outliers", base_obj=c2, font_size=20, centered=False)
+    custom_text("Predicted Normal", base_obj=c3, font_size=20, centered=False)
+    custom_text("Choose Plot Color", base_obj=c4, font_size=20, centered=False)
+
+    obj.markdown("***")
+
+    for i, model in enumerate(model_names):
+        _local_obj = obj.container()
+        c1, c2, c3, c4 = _local_obj.columns([5, 3, 3, 1])
+        custom_text(model, base_obj=c1, font_size=15, centered=False)
+        custom_text(
+            st.session_state["number_outliers"][dataset_name][model],
+            base_obj=c2,
+            font_size=20,
+            centered=False,
+        )
+        custom_text(
+            len(st.session_state["prediction_data"][dataset_name])
+            - st.session_state["number_outliers"][dataset_name][model],
+            base_obj=c3,
+            font_size=20,
+            centered=False,
+        )
+        c4.color_picker(
+            model, key=f"color_{model}", label_visibility="collapsed", value=DEFAULT_COLORS[i]
+        )
+        obj.markdown("***")

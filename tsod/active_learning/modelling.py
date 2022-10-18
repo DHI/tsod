@@ -156,7 +156,8 @@ def get_model_predictions(
 
         for model_name, model in models.items():
             if model_name not in st.session_state["inference_results"][dataset_name]:
-                st.session_state["inference_results"][dataset_name][model_name] = model.predict(
-                    features
+                results = model.predict(features)
+                st.session_state["inference_results"][dataset_name][model_name] = results
+                st.session_state["number_outliers"][dataset_name][model_name] = len(
+                    results.nonzero()[0].tolist()
                 )
-    # obj.write(st.session_state["inference_results"])

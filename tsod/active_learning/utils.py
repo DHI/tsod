@@ -15,6 +15,24 @@ SELECT_INFO = {
 }
 
 
+def custom_text(
+    text: str,
+    font_size: int = 30,
+    centered: bool = True,
+    font: str = "sans-serif",
+    vertical_align: str = "baseline",
+    base_obj=None,
+):
+    obj = base_obj or st
+    if centered:
+        text_align = "center"
+    else:
+        text_align = "left"
+    md = f'<p style="text-align: {text_align}; vertical-align: {vertical_align}; font-family:{font}; font-size: {font_size}px;">{text}</p>'
+
+    return obj.markdown(md, unsafe_allow_html=True)
+
+
 @st.cache(allow_output_mutation=True)
 def load_data(file_name: str = "TODO"):
     df = pd.read_csv("data/Elev_NW1.csv", index_col=0, parse_dates=True)
@@ -42,6 +60,7 @@ def init_session_state():
     _add_to_ss_if_not_in_it("last_model_name", None)
     _add_to_ss_if_not_in_it("use_date_picker", True)
     _add_to_ss_if_not_in_it("inference_results", defaultdict(dict))
+    _add_to_ss_if_not_in_it("number_outliers", defaultdict(dict))
     _add_to_ss_if_not_in_it("uploaded_ds_features", {})
     _add_to_ss_if_not_in_it(
         "plot_start_date",
@@ -49,6 +68,7 @@ def init_session_state():
     )
     _add_to_ss_if_not_in_it("plot_end_date", st.session_state["df_full"].index.max().date())
     _add_to_ss_if_not_in_it("date_shift_buttons_used", False)
+    _add_to_ss_if_not_in_it("get_predictions_clicked", False)
 
 
 def set_session_state_items(key: str | List[str], value: Any | List[Any]):
