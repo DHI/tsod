@@ -1,5 +1,6 @@
 from collections import defaultdict
 import datetime
+import pickle
 from typing import Sequence
 import pandas as pd
 import streamlit as st
@@ -12,9 +13,12 @@ class AnnotationState:
         self.df_selected = pd.DataFrame()
         self.df_outlier = pd.DataFrame()
         self.df_normal = pd.DataFrame()
+        self.df_test_outlier = pd.DataFrame()
+        self.df_test_normal = pd.DataFrame()
         self.df_plot = pd.DataFrame()
         self.start = None
         self.end = None
+        self._download_data = {}
 
     @classmethod
     def from_other_state(cls, other):
@@ -22,6 +26,10 @@ class AnnotationState:
         state.__dict__ = other.__dict__
 
         return state
+
+    @property
+    def download_data(self):
+        return pickle.dumps(self._download_data)
 
     @property
     def selection(self):
@@ -35,52 +43,44 @@ class AnnotationState:
     def normal(self):
         return self.data["normal"]
 
+    @property
+    def test_outlier(self):
+        return self.data["test_outlier"]
+
+    @property
+    def test_normal(self):
+        return self.data["test_normal"]
+
     def update_selected(self, data: Sequence):
         to_add = {self.value_as_datetime(e) for e in set(data)}
         if not to_add.issubset(self.data["selected"]):
             self.data["selected"].update(to_add)
-            self.df_selected = self._filter_df("selected")
+            self._update_df("selected")
+            self._update_plot_df("selected")
             st.experimental_rerun()
 
-    def update_outliers(self, data_to_add: Sequence | None = None, base_obj=None):
-        """
-        Updates outliers either from passed data or from stored selected data.
-        """
+    def update_data(self, key: str, data_to_add: Sequence | None = None, base_obj=None):
         obj = base_obj or st
 
         _data = (
             {self.value_as_datetime(e) for e in set(data_to_add)} if data_to_add else self.selection
         )
 
-        if _data.intersection(self.data["normal"]):
-            obj.warning(
-                "Some of the selected points have already been marked as normal and were overwritten."
-            )
-            self.data["normal"] = self.data["normal"] - _data
-        if not _data.issubset(self.outlier):
-            self.data["outlier"].update(_data)
-            self.df_outlier = self._filter_df("outlier")
-            if not data_to_add:
-                self.clear_selection()
+        for k, stored_data in self.data.items():
+            if (k == key) or (k == "selected"):
+                continue
+            if _data.intersection(stored_data):
+                obj.warning(
+                    f"Some of the selected points have already been marked as {k} and were overwritten."
+                )
+                self.data[k] = self.data[k] - _data
+                self._update_df(k)
+                self._update_plot_df(k)
 
-    def update_normal(self, data_to_add: Sequence | None = None, base_obj=None):
-        """
-        Updates normal points either from passed data or from stored selected data.
-        """
-        obj = base_obj or st
-
-        _data = (
-            {self.value_as_datetime(e) for e in set(data_to_add)} if data_to_add else self.selection
-        )
-
-        if _data.intersection(self.data["outlier"]):
-            obj.warning(
-                "Some of the selected points have already been marked as outliers and were overwritten."
-            )
-            self.data["outlier"] = self.data["outlier"] - _data
-        if not _data.issubset(self.normal):
-            self.data["normal"].update(_data)
-            self.df_normal = self._filter_df("normal")
+        if not _data.issubset(self.data[key]):
+            self.data[key].update(_data)
+            self._update_df(key)
+            self._update_plot_df(key)
             if not data_to_add:
                 self.clear_selection()
 
@@ -94,19 +94,34 @@ class AnnotationState:
             self.start = start_time
             self.end = end_time
 
-    def clear_selection(self):
-        self.data["selected"].clear()
+            for key in self.data:
+                self._update_plot_df(key)
 
-    def clear_all(self):
-        self.clear_selection()
-        self.data["outlier"].clear()
-        self.data["normal"].clear()
-
-    def _filter_df(self, key: str):
+    def _update_plot_df(self, key: str):
         if key not in self.data:
             raise ValueError(f"Key {key} not found.")
 
-        return self.df[self.df.index.isin(self.data[key])]
+        setattr(self, f"df_plot_{key}", self.df_plot[self.df_plot.index.isin(self.data[key])])
+
+    def clear_selection(self):
+        self.data["selected"].clear()
+        self._update_df("selected")
+        self._update_plot_df("selected")
+
+    def clear_all(self):
+        for key in self.data:
+            self.data[key].clear()
+            self._update_df(key)
+            self._update_plot_df(key)
+
+    def _update_df(self, key: str):
+        if key not in self.data:
+            raise ValueError(f"Key {key} not found.")
+
+        new_df = self.df[self.df.index.isin(self.data[key])]
+
+        setattr(self, f"df_{key}", new_df)
+        self._download_data[key] = new_df
 
     @staticmethod
     def value_as_datetime(value: str | int | datetime.datetime) -> datetime.datetime:

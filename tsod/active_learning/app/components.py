@@ -1,3 +1,4 @@
+from ast import arg
 import datetime
 import pickle
 
@@ -102,70 +103,78 @@ def create_plot_buttons(base_obj=None):
 
     obj.subheader("Actions")
 
+    custom_text("Training Data", 15, True, base_obj=obj)
     c_1, c_2 = obj.columns(2)
-    c_1.button("Mark selection Outlier", on_click=state.update_outliers)
-    c_2.button("Mark selection not Outlier", on_click=state.update_normal)
+    c_1.button("Mark selection Outlier", on_click=state.update_data, args=("outlier",))
+    c_2.button("Mark selection not Outlier", on_click=state.update_data, args=("normal",))
+    custom_text("Test Data", 15, True, base_obj=obj)
+    c_1, c_2 = obj.columns(2)
+    c_1.button(
+        "Mark selection Outlier",
+        on_click=state.update_data,
+        args=("test_outlier",),
+        key="mark_test_outlier",
+    )
+    c_2.button(
+        "Mark selection not Outlier",
+        on_click=state.update_data,
+        args=("test_normal",),
+        key="mark_test_normal",
+    )
     c_1.button("Clear Selection", on_click=state.clear_selection)
     c_2.button("Clear All", on_click=state.clear_all)
 
     obj.markdown("***")
 
 
-@st.cache(persist=True)
-def prepare_download(outliers: pd.DataFrame, normal: pd.DataFrame):
-    return pickle.dumps(
-        {
-            "outliers": outliers,
-            "normal": normal,
-        }
-    )
+def validate_uploaded_file_contents(base_obj=None):
+    obj = base_obj or st
+    uploaded_files = st.session_state["uploaded_annotation_files"]
+    if not uploaded_files:
+        return
+    for uploaded_file in uploaded_files:
+        file_failed = False
+        data = pickle.loads(uploaded_file.getvalue())
+        state = get_as()
+        for df in data.values():
+            if df.empty or file_failed:
+                continue
 
+            values_match = (
+                df["Water Level"].astype(float).isin(state.df["Water Level"].values).all()
+            )
+            index_match = df.index.isin(state.df.index).all()
 
-def validate_uploaded_file_contents():
-    uploaded_file = st.session_state["current_uploaded_file"]
-    if not uploaded_file:
-        return None
-    data = pickle.loads(uploaded_file.getvalue())
-    state = get_as()
-    if data["outliers"].empty:
-        outlier_data_match, outlier_index_match = True, True
-    else:
-        outlier_data_match = (
-            data["outliers"]["Water Level"].astype(float).isin(state.df["Water Level"].values).all()
-        )
-        outlier_index_match = data["outliers"].index.isin(state.df.index).all()
-    if data["normal"].empty:
-        normal_data_match, normal_index_match = True, True
-    else:
-        normal_data_match = (
-            data["normal"]["Water Level"].astype(float).isin(state.df["Water Level"].values).all()
-        )
-        normal_index_match = data["normal"].index.isin(state.df.index).all()
-
-    if outlier_data_match and outlier_index_match and normal_data_match and normal_index_match:
-        st.session_state.uploaded_annotation_data[uploaded_file.name] = data
-        return True
-    return False
+            if (not values_match) or (not index_match):
+                file_failed = True
+        if file_failed:
+            obj.error(f"{uploaded_file.name}: Did not pass validation for loaded dataset.")
+        else:
+            st.session_state.uploaded_annotation_data[uploaded_file.name] = data
+            obj.success(f"{uploaded_file.name}: Loaded.", icon="✅")
 
 
 def annotation_file_upload_callback(base_obj=None):
     obj = base_obj or st
-    file_val_results = validate_uploaded_file_contents()
-    if file_val_results:
-        obj.info("Validation passed")
-    elif file_val_results is None:
-        return
-    else:
-        obj.error("The loaded annotation data points do not all match the loaded data.")
-        return
+    validate_uploaded_file_contents(obj)
+    # if file_val_results:
+    # obj.info("Validation passed")
+    # elif file_val_results is None:
+    # return
+    # else:
+    # obj.error("The loaded annotation data points do not all match the loaded data.")
+    # return
 
     state = get_as()
-    file_name = st.session_state.current_uploaded_file.name
-    data = st.session_state.uploaded_annotation_data[file_name]
+    # file_name = st.session_state.current_uploaded_file.name
+    # data = st.session_state.uploaded_annotation_data[file_name]
 
-    state.update_outliers(data["outliers"].index.to_list())
-    state.update_normal(data["normal"].index.to_list())
-    obj.success("Loaded annotations", icon="✅")
+    for data in st.session_state.uploaded_annotation_data.values():
+        for key, df in data.items():
+            state.update_data(key, df.index.to_list())
+
+    # state.update_data("outlier", data["outliers"].index.to_list())
+    # state.update_data("normal", data["normal"].index.to_list())
 
 
 def dev_options(base_obj=None):
@@ -178,7 +187,7 @@ def dev_options(base_obj=None):
     if show_ss:
         st.write(st.session_state)
     if show_as:
-        st.write(get_as().data)
+        st.write(get_as().__dict__)
 
     return profile
 
@@ -189,17 +198,18 @@ def create_save_load_buttons(base_obj=None):
     c_1, c_2 = obj.columns(2)
     state = get_as()
 
-    to_save = prepare_download(state.df_outlier, state.df_normal)
     file_name = f"Annotations_{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M')}.bin"
 
-    c_1.download_button("Save annotations to disk", to_save, file_name=file_name)
+    if state._download_data:
+        c_1.download_button("Save annotations to disk", state.download_data, file_name=file_name)
 
     c_2.file_uploader(
         "Load annotations from disk",
-        key="current_uploaded_file",
+        key="uploaded_annotation_files",
         type="bin",
         on_change=annotation_file_upload_callback,
         args=(obj,),
+        accept_multiple_files=True,
     )
     obj.markdown("***")
 
@@ -208,9 +218,15 @@ def show_info(base_obj=None):
     obj = base_obj or st
     state = get_as()
     obj.subheader("Annotation summary")
+    c1, c2, c3 = obj.columns([1, 1, 2])
 
-    obj.metric("Total number of labelled outliers", len(state.outlier))
-    obj.metric("Total number of labelled normal points", len(state.normal))
+    custom_text("Training Data", 15, base_obj=c1)
+    custom_text("Test Data", 15, base_obj=c2)
+
+    c1.metric("Total number of labelled outliers", len(state.outlier))
+    c1.metric("Total number of labelled normal points", len(state.normal))
+    c2.metric("Total number of labelled outliers", len(state.test_outlier))
+    c2.metric("Total number of labelled normal points", len(state.test_normal))
 
 
 def train_options(base_obj=None):

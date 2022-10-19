@@ -12,8 +12,8 @@ def main():
     profile = dev_options(st.sidebar)
 
     with Profiler() if profile else nullcontext():
+        show_info()
         col_1, col_2 = st.columns([1, 2])
-        show_info(col_1)
         train_options(col_1)
 
 

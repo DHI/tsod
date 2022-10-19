@@ -10,6 +10,15 @@ from pyecharts.charts import Line, Bar
 from streamlit_echarts import st_pyecharts
 from tsod.active_learning.utils import SELECT_INFO, SELECT_OPTIONS, get_as
 
+ANNOTATION_COLORS = {
+    "selected": "Purple",
+    "outlier": "Red",
+    "normal": "Green",
+    "test_outlier": "Pink",
+    "test_normal": "Brown",
+}
+MARKER_SIZES = {"selected": 10, "outlier": 12, "normal": 12, "test_outlier": 12, "test_normal": 12}
+
 
 @st.experimental_memo(persist="disk", show_spinner=False)
 def create_cachable_line_plot(
@@ -37,43 +46,64 @@ def create_annotation_plot(base_obj=None) -> go.Figure:
 
     fig = create_cachable_line_plot(state.start, state.end)
 
-    df_plot = state.df_plot
+    # df_plot = state.df_plot
 
-    df_selected = df_plot[df_plot.index.isin(state.selection)]
-    df_marked_out = df_plot[df_plot.index.isin(state.outlier)]
-    df_marked_not_out = df_plot[df_plot.index.isin(state.normal)]
+    # df_selected = df_plot[df_plot.index.isin(state.selection)]
+    # df_marked_out = df_plot[df_plot.index.isin(state.outlier)]
+    # df_marked_not_out = df_plot[df_plot.index.isin(state.normal)]
 
-    if not df_selected.empty:
+    for series_name in state.data:
+        if not hasattr(state, f"df_plot_{series_name}"):
+            continue
+        df_series: pd.DataFrame = getattr(state, f"df_plot_{series_name}")
+        if df_series.empty:
+            continue
+
         fig.add_trace(
             go.Scatter(
                 mode="markers",
-                x=df_selected.index,
-                y=df_selected["Water Level"],
-                name=f"Selected ({len(df_selected)})",
-                marker=dict(color="Purple", size=8, line=dict(color="Black", width=1)),
+                x=df_series.index,
+                y=df_series["Water Level"],
+                name=f"{series_name.replace('_', ' ').title()} ({len(df_series)})",
+                marker=dict(
+                    color=ANNOTATION_COLORS[series_name],
+                    size=MARKER_SIZES[series_name],
+                    line=dict(color="Black", width=1),
+                ),
             )
         )
 
-    if not df_marked_out.empty:
-        fig.add_trace(
-            go.Scatter(
-                mode="markers",
-                x=df_marked_out.index,
-                y=df_marked_out["Water Level"],
-                name=f"Marked Outlier ({len(df_marked_out)})",
-                marker=dict(color="Red", size=12, line=dict(color="Black", width=1)),
-            )
-        )
-    if not df_marked_not_out.empty:
-        fig.add_trace(
-            go.Scatter(
-                mode="markers",
-                x=df_marked_not_out.index,
-                y=df_marked_not_out["Water Level"],
-                name=f"Marked Not Outlier ({len(df_marked_not_out)})",
-                marker=dict(color="Green", size=12, line=dict(color="Black", width=1)),
-            )
-        )
+    # if not df_selected.empty:
+    #     fig.add_trace(
+    #         go.Scatter(
+    #             mode="markers",
+    #             x=df_selected.index,
+    #             y=df_selected["Water Level"],
+    #             name=f"Selected ({len(df_selected)})",
+    #             marker=dict(color="Purple", size=8, line=dict(color="Black", width=1)),
+    #         )
+    #     )
+
+    # if not df_marked_out.empty:
+    #     fig.add_trace(
+    #         go.Scatter(
+    #             mode="markers",
+    #             x=df_marked_out.index,
+    #             y=df_marked_out["Water Level"],
+    #             name=f"Marked Outlier ({len(df_marked_out)})",
+    #             marker=dict(color="Red", size=12, line=dict(color="Black", width=1)),
+    #         )
+    #     )
+    # if not df_marked_not_out.empty:
+    #     fig.add_trace(
+    #         go.Scatter(
+    #             mode="markers",
+    #             x=df_marked_not_out.index,
+    #             y=df_marked_not_out["Water Level"],
+    #             name=f"Marked Not Outlier ({len(df_marked_not_out)})",
+    #             marker=dict(color="Green", size=12, line=dict(color="Black", width=1)),
+    #         )
+    #     )
 
     fig.update_layout(dragmode=SELECT_OPTIONS[selection_method])
     fig.update_layout(
@@ -120,24 +150,25 @@ def make_outlier_distribution_plot(dataset_name: str, base_obj=None):
     if number_of_outliers_to_visualize < 200:
         return dataset.index.min(), dataset.index.max()
 
-    form = obj.form(
-        f"form_{dataset_name}",
-    )
-    form.info(
-        "A large number of outliers is about to be visualized. Click on a bar in the distribution plot to view all outliers \
-        in that time period. Each time period is chosen so it contains the same number of total outliers. \
-        That number can be adjusted here."
-    )
-    form.slider(
-        "Number of total outliers per bar",
-        value=20,
-        min_value=1,
-        max_value=150,
-        step=1,
-        key=f"num_outliers_{dataset_name}",
-    )
+    with obj.expander("Visualization Options", expanded=True):
+        form = st.form(
+            f"form_{dataset_name}",
+        )
+        form.info(
+            "A large number of outliers is about to be visualized. Click on a bar in the distribution plot to view all outliers \
+            in that time period. Each time period is chosen so it contains the same number of total outliers. \
+            That number can be adjusted here."
+        )
+        form.slider(
+            "Number of total outliers per bar",
+            value=20,
+            min_value=1,
+            max_value=150,
+            step=1,
+            key=f"num_outliers_{dataset_name}",
+        )
 
-    form.form_submit_button("Update Distribution Plot")
+        form.form_submit_button("Update Distribution Plot")
 
     for model_name, model_preds in model_predictions.items():
         dataset[model_name] = model_preds.astype(np.int8)
