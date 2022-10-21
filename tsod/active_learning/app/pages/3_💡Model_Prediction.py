@@ -8,6 +8,8 @@ from tsod.active_learning.app.components import (
     prediction_options,
     dev_options,
     prediction_summary_table,
+    model_choice_options,
+    number_outlier_options,
 )
 from contextlib import nullcontext
 from streamlit_profiler import Profiler
@@ -22,8 +24,10 @@ def main():
     with Profiler() if profile else nullcontext():
         prediction_options(st.sidebar)
         for dataset_name in st.session_state["inference_results"].keys():
-            with st.expander("Prediction Summary", expanded=True):
+            with st.expander(f"Visualization Options - {dataset_name}", expanded=True):
+                model_choice_options(dataset_name)
                 prediction_summary_table(dataset_name)
+                number_outlier_options(dataset_name)
             start_time, end_time = make_outlier_distribution_plot(dataset_name)
             if start_time:
                 make_time_range_outlier_plot(dataset_name, start_time, end_time)

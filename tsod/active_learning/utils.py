@@ -1,4 +1,6 @@
+from copy import deepcopy
 import datetime
+from tkinter import E
 from typing import Any, Dict, List
 import streamlit as st
 import pandas as pd
@@ -94,3 +96,29 @@ def recursive_length_count(data: Dict) -> int:
             total += recursive_length_count(v)
 
     return total
+
+
+def recursive_round(data: Dict, decimals: int = 3):
+    def value_round(v):
+        if isinstance(v, np.ndarray):
+            return v.round(decimals)
+        elif isinstance(v, float):
+            return round(v, decimals)
+
+    local_data = deepcopy(data)
+
+    for k, v in local_data.items():
+        if isinstance(v, (np.ndarray, float)):
+            local_data[k] = value_round(v)
+        elif isinstance(v, list):
+            local_data[k] = [value_round(e) for e in v]
+        elif isinstance(v, tuple):
+            local_data[k] = tuple(
+                [value_round(x) if isinstance(x, (float, np.ndarray)) else x for x in v]
+            )
+        elif isinstance(v, set):
+            local_data[k] = {value_round(e) for e in v}
+        elif isinstance(v, dict):
+            local_data[k] = recursive_round(v)
+
+    return local_data

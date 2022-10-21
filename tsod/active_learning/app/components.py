@@ -6,7 +6,6 @@ import pandas as pd
 import streamlit as st
 from tsod.active_learning.modelling import (
     construct_training_data,
-    post_training_options,
     train_random_forest_classifier,
 )
 from tsod.active_learning.utils import (
@@ -15,7 +14,8 @@ from tsod.active_learning.utils import (
     custom_text,
     recursive_length_count,
 )
-from tsod.active_learning.modelling import get_model_predictions
+from tsod.active_learning.modelling import get_model_predictions, construct_test_data
+from tsod.active_learning.plotting import feature_importance_plot
 
 
 def filter_data(base_obj=None) -> pd.DataFrame:
@@ -106,7 +106,7 @@ def create_plot_buttons(base_obj=None):
     custom_text("Training Data", 15, True, base_obj=obj)
     c_1, c_2 = obj.columns(2)
     c_1.button("Mark selection Outlier", on_click=state.update_data, args=("outlier",))
-    c_2.button("Mark selection not Outlier", on_click=state.update_data, args=("normal",))
+    c_2.button("Mark selection Normal", on_click=state.update_data, args=("normal",))
     custom_text("Test Data", 15, True, base_obj=obj)
     c_1, c_2 = obj.columns(2)
     c_1.button(
@@ -116,7 +116,7 @@ def create_plot_buttons(base_obj=None):
         key="mark_test_outlier",
     )
     c_2.button(
-        "Mark selection not Outlier",
+        "Mark selection Normal",
         on_click=state.update_data,
         args=("test_normal",),
         key="mark_test_normal",
@@ -182,8 +182,20 @@ def dev_options(base_obj=None):
     with obj.expander("Dev Options"):
         dev_col_1, dev_col_2 = st.columns(2)
         profile = dev_col_1.checkbox("Profile Code", value=False)
+        search_str = dev_col_1.text_input("Search SS", max_chars=25, value="")
         show_ss = dev_col_2.button("Show Session State")
         show_as = dev_col_2.button("Show Annotation State")
+    if len(search_str) > 1:
+        matches = [k for k in st.session_state.keys() if search_str.lower() in k.lower()]
+        df_matches = [m for m in matches if isinstance(st.session_state[m], pd.DataFrame)]
+        non_df_matches = [m for m in matches if m not in df_matches]
+        for m in df_matches:
+            st.write(m)
+            st.table(st.session_state[m].head())
+        if non_df_matches:
+            st.write({k: st.session_state[k] for k in non_df_matches})
+
+        # st.write({k: st.session_state[k] for k in ss_options if search_str.lower() in k.lower()})
     if show_ss:
         st.write(st.session_state)
     if show_as:
@@ -201,10 +213,10 @@ def create_save_load_buttons(base_obj=None):
     file_name = f"Annotations_{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M')}.bin"
 
     if state._download_data:
-        c_1.download_button("Save annotations to disk", state.download_data, file_name=file_name)
+        c_1.download_button("Download Annotations", state.download_data, file_name=file_name)
 
     c_2.file_uploader(
-        "Load annotations from disk",
+        "Upload Annotations",
         key="uploaded_annotation_files",
         type="bin",
         on_change=annotation_file_upload_callback,
@@ -216,35 +228,45 @@ def create_save_load_buttons(base_obj=None):
 
 def show_info(base_obj=None):
     obj = base_obj or st
-    state = get_as()
-    obj.subheader("Annotation summary")
-    c1, c2, c3 = obj.columns([1, 1, 2])
+    with obj.expander("Annotation Info", expanded=True):
+        state = get_as()
+        st.subheader("Annotation summary")
+        c1, c2, c3 = st.columns([1, 1, 2])
 
-    custom_text("Training Data", 15, base_obj=c1)
-    custom_text("Test Data", 15, base_obj=c2)
+        custom_text("Training Data", 15, base_obj=c1, centered=False)
+        custom_text("Test Data", 15, base_obj=c2, centered=False)
 
-    c1.metric("Total number of labelled outliers", len(state.outlier))
-    c1.metric("Total number of labelled normal points", len(state.normal))
-    c2.metric("Total number of labelled outliers", len(state.test_outlier))
-    c2.metric("Total number of labelled normal points", len(state.test_normal))
+        c1.metric("Total labelled Outlier", len(state.outlier))
+        c1.metric("Total labelled Normal", len(state.normal))
+        c2.metric("Total labelled Outlier", len(state.test_outlier))
+        c2.metric("Total labelled Normal", len(state.test_normal))
+
+    if "classifier" in st.session_state:
+        obj.subheader(f"Current model: {st.session_state.last_model_name}")
 
 
 def train_options(base_obj=None):
     obj = base_obj or st
 
-    train_button = obj.button("Train Random Forest Model")
-
-    if train_button:
+    if st.session_state.train_button:
         with st.spinner("Constructing features..."):
             construct_training_data()
+            construct_test_data()
         with st.spinner("Training Model..."):
             train_random_forest_classifier(obj)
-        post_training_options(obj)
+
+    if "classifier" in st.session_state:
+        st.sidebar.download_button(
+            "Download model",
+            pickle.dumps(st.session_state["classifier"]),
+            f"{st.session_state.last_model_name}.pkl",
+        )
 
 
 def get_predictions_callback(obj=None):
     set_session_state_items("hide_choice_menus", True)
-    get_model_predictions(base_obj=obj)
+    get_model_predictions(base_obj=obj, column_for_normalization="Water Level")
+    set_session_state_items("prediction_models", {})
 
 
 def add_annotation_to_pred_data(base_obj=None):
@@ -266,11 +288,12 @@ def add_most_recent_model(base_obj=None):
     st.session_state.prediction_models[model_name] = st.session_state.classifier
 
 
-def add_uploaded_model(base_obj=None):
+def add_uploaded_models(base_obj=None):
     obj = base_obj or st
-    if not st.session_state.current_uploaded_model:
+    set_session_state_items("prediction_models", {})
+    if not st.session_state.current_uploaded_models:
         return
-    for model in st.session_state.current_uploaded_model:
+    for model in st.session_state.current_uploaded_models:
         clf = pickle.loads(model.read())
         if not hasattr(clf, "predict"):
             obj.error(
@@ -284,18 +307,20 @@ def add_uploaded_model(base_obj=None):
 def prediction_options(base_obj=None):
     obj = base_obj or st
     _, c, _ = obj.columns([2, 5, 2])
-    c.button("Add Predictions", on_click=get_predictions_callback, args=(obj,))
+    c.button("Generate Predictions", on_click=get_predictions_callback, args=(obj,))
 
     with obj.expander("Model Choice", expanded=not st.session_state["hide_choice_menus"]):
         st.subheader("Choose Models")
-        st.info("Add models with which to generate predictions.")
-        c1, c2 = st.columns(2)
-        c1.button("Add most recently trained model", on_click=add_most_recent_model, args=(obj,))
-        c2.file_uploader(
+        st.info(
+            "Add models with which to generate predictions. The most recently trained model is automatically added."
+        )
+        # c1, c2 = st.columns(2)
+        # c1.button("Add most recently trained model", on_click=add_most_recent_model, args=(obj,))
+        st.file_uploader(
             "Select model from disk",
             type="pkl",
-            on_change=add_uploaded_model,
-            key="current_uploaded_model",
+            on_change=add_uploaded_models,
+            key="current_uploaded_models",
             args=(obj,),
             accept_multiple_files=True,
         )
@@ -322,7 +347,9 @@ def prediction_options(base_obj=None):
                 key="data_clear",
             )
     _, c, _ = obj.columns([2, 5, 2])
-    c.button("Add Predictions", on_click=get_predictions_callback, args=(obj,), key="pred_btn_2")
+    c.button(
+        "Generate Predictions", on_click=get_predictions_callback, args=(obj,), key="pred_btn_2"
+    )
 
 
 def remove_model_to_visualize(dataset_name, model_name):
@@ -334,7 +361,6 @@ def remove_model_to_visualize(dataset_name, model_name):
 
 def prediction_summary_table(dataset_name: str, base_obj=None):
     obj = base_obj or st
-    obj.subheader(dataset_name)
 
     DEFAULT_COLORS = ["#f11a1a", "#2ada49", "#1e11e6", "#40e0d3"]
 
@@ -342,7 +368,7 @@ def prediction_summary_table(dataset_name: str, base_obj=None):
     if not model_predictions:
         return
 
-    model_names = st.session_state["models_to_visualize"][dataset_name]
+    model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
 
     if not model_names:
         return
@@ -388,3 +414,224 @@ def prediction_summary_table(dataset_name: str, base_obj=None):
             model, key=f"color_{model}", label_visibility="collapsed", value=DEFAULT_COLORS[i]
         )
         obj.markdown("***")
+
+
+def test_metrics(base_obj=None):
+    if "test_features" not in st.session_state:
+        return
+
+    obj = base_obj or st
+    c1, c2, c3, c4 = obj.columns(4)
+
+    current_train_metrics = st.session_state["current_model_train_metrics"]
+    prec = current_train_metrics["precision"]
+    rec = current_train_metrics["recall"]
+    f1 = current_train_metrics["f1"]
+
+    if "previous_model_train_metrics" in st.session_state:
+        old_metrics = st.session_state["previous_model_train_metrics"]
+        old_prec = old_metrics["precision"]
+        old_rec = old_metrics["recall"]
+        old_f1 = old_metrics["f1"]
+
+        out_prec_diff = (prec[1] - old_prec[1]).round(3)
+        out_rec_diff = (rec[1] - old_rec[1]).round(3)
+        out_f1_diff = (f1[1] - old_f1[1]).round(3)
+        norm_prec_diff = (prec[0] - old_prec[0]).round(3)
+        norm_rec_diff = (rec[0] - old_rec[0]).round(3)
+        norm_f1_diff = (f1[0] - old_f1[0]).round(3)
+
+    else:
+        out_prec_diff, out_rec_diff, out_f1_diff, norm_prec_diff, norm_rec_diff, norm_f1_diff = (
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+
+    with c1.expander("Train Set Outlier Metrics", expanded=True):
+        st.metric(
+            "Precision Score",
+            prec[1],
+            delta=out_prec_diff,
+            delta_color="normal" if out_prec_diff != 0.0 else "off",
+            help="The ratio of true predicted positives to total predicted positives for the train set outliers. Represents the ability \
+                not to classify a normal sample as an outlier.",
+        )
+        st.metric(
+            "Recall Score",
+            rec[1],
+            delta=out_rec_diff,
+            delta_color="normal" if out_rec_diff != 0.0 else "off",
+            help="The ratio of true predicted positives to total positives for the train set outliers. Represents the ability \
+                to correctly predict all the outliers.",
+        )
+        st.metric(
+            "F1 Score",
+            f1[1],
+            delta=out_f1_diff,
+            delta_color="normal" if out_f1_diff != 0.0 else "off",
+            help="The harmonic mean of the precision and recall for the train set outliers.",
+        )
+    with c2.expander("Train Set Normal Metrics", expanded=True):
+        st.metric(
+            "Precision Score",
+            prec[0],
+            delta=norm_prec_diff,
+            delta_color="normal" if norm_prec_diff != 0.0 else "off",
+            help="The ratio of true predicted positives to total predicted positives for the train set normal points. Represents the ability \
+                not to classify an outlier sample as a normal point.",
+        )
+        st.metric(
+            "Recall Score",
+            rec[0],
+            delta=norm_rec_diff,
+            delta_color="normal" if norm_rec_diff != 0.0 else "off",
+            help="The ratio of true predicted positives to total positives for the train set normal points. Represents the ability \
+                to correctly predict all the normal points.",
+        )
+        st.metric(
+            "F1 Score",
+            f1[0],
+            delta=norm_f1_diff,
+            delta_color="normal" if norm_f1_diff != 0.0 else "off",
+            help="The harmonic mean of the precision and recall for the train set normal points.",
+        )
+
+    current_metrics = st.session_state["current_model_test_metrics"]
+    prec = current_metrics["precision"]
+    rec = current_metrics["recall"]
+    f1 = current_metrics["f1"]
+
+    if "previous_model_test_metrics" in st.session_state:
+        old_metrics = st.session_state["previous_model_test_metrics"]
+        old_prec = old_metrics["precision"]
+        old_rec = old_metrics["recall"]
+        old_f1 = old_metrics["f1"]
+
+        out_prec_diff = (prec[1] - old_prec[1]).round(3)
+        out_rec_diff = (rec[1] - old_rec[1]).round(3)
+        out_f1_diff = (f1[1] - old_f1[1]).round(3)
+        norm_prec_diff = (prec[0] - old_prec[0]).round(3)
+        norm_rec_diff = (rec[0] - old_rec[0]).round(3)
+        norm_f1_diff = (f1[0] - old_f1[0]).round(3)
+
+    else:
+        out_prec_diff, out_rec_diff, out_f1_diff, norm_prec_diff, norm_rec_diff, norm_f1_diff = (
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+
+    with c3.expander("Test Set Outlier Metrics", expanded=True):
+        st.metric(
+            "Precision Score",
+            prec[1],
+            delta=out_prec_diff,
+            delta_color="normal" if out_prec_diff != 0.0 else "off",
+            help="The ratio of true predicted positives to total predicted positives for the test set outliers. Represents the ability \
+                not to classify a normal sample as an outlier.",
+        )
+        st.metric(
+            "Recall Score",
+            rec[1],
+            delta=out_rec_diff,
+            delta_color="normal" if out_rec_diff != 0.0 else "off",
+            help="The ratio of true predicted positives to total positives for the test set outliers. Represents the ability \
+                to correctly predict all the outliers.",
+        )
+        st.metric(
+            "F1 Score",
+            f1[1],
+            delta=out_f1_diff,
+            delta_color="normal" if out_f1_diff != 0.0 else "off",
+            help="The harmonic mean of the precision and recall for the outliers.",
+        )
+    with c4.expander("Test Set Normal Metrics", expanded=True):
+        st.metric(
+            "Precision Score",
+            prec[0],
+            delta=norm_prec_diff,
+            delta_color="normal" if norm_prec_diff != 0.0 else "off",
+            help="The ratio of true predicted positives to total predicted positives for the test set normal points. Represents the ability \
+                not to classify an outlier sample as a normal point.",
+        )
+        st.metric(
+            "Recall Score",
+            rec[0],
+            delta=norm_rec_diff,
+            delta_color="normal" if norm_rec_diff != 0.0 else "off",
+            help="The ratio of true predicted positives to total positives for the test set normal points. Represents the ability \
+                to correctly predict all the normal points.",
+        )
+        st.metric(
+            "F1 Score",
+            f1[0],
+            delta=norm_f1_diff,
+            delta_color="normal" if norm_f1_diff != 0.0 else "off",
+            help="The harmonic mean of the precision and recall for the normal points.",
+        )
+
+
+def model_choice_callback(dataset_name: str):
+    st.session_state["models_to_visualize"][dataset_name] = set(
+        st.session_state[f"model_choice_{dataset_name}"]
+    )
+
+
+def model_choice_options(dataset_name: str):
+
+    st.info(
+        f"Here you can choose which of the predictions that exist for the datset '{dataset_name}' so far to visualize."
+    )
+    st.multiselect(
+        "Choose models for dataset",
+        sorted(list(st.session_state["inference_results"][dataset_name].keys())),
+        key=f"model_choice_{dataset_name}",
+        default=sorted(list(st.session_state["models_to_visualize"][dataset_name])),
+        on_change=model_choice_callback,
+        args=(dataset_name,),
+    )
+
+    st.markdown("***")
+
+
+def number_outlier_options(dataset_name: str):
+    form = st.form(
+        f"form_{dataset_name}",
+    )
+    form.info(
+        "A large number of outliers is about to be visualized. Click on a bar in the distribution plot to view all outliers \
+        in that time period. Each time period is chosen so it contains the same number of total outliers. \
+        That number can be adjusted here."
+    )
+    form.slider(
+        "Number of total outliers per bar",
+        value=50,
+        min_value=1,
+        max_value=250,
+        step=1,
+        key=f"num_outliers_{dataset_name}",
+    )
+
+    form.form_submit_button("Update Distribution Plot")
+
+
+def show_feature_importances(base_obj=None):
+    obj = base_obj or st
+    if "classifier" not in st.session_state:
+        return
+
+    st.sidebar.success(f"{st.session_state.last_model_name} finished training.")
+
+    clf = st.session_state["classifier"]
+
+    with obj.expander("Feature Importances", expanded=True):
+        c1, c2 = st.columns([2, 1])
+        feature_importance_plot(c1)
+        c2.dataframe(st.session_state["current_importances"])

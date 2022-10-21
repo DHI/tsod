@@ -6,5 +6,6 @@ pytest>=6.2.1
 plotly
 streamlit-plotly-events
 streamlit-echarts
+streamlit_profiler
 ipykernel
 sklearn

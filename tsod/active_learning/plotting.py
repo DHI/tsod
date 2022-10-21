@@ -73,45 +73,12 @@ def create_annotation_plot(base_obj=None) -> go.Figure:
             )
         )
 
-    # if not df_selected.empty:
-    #     fig.add_trace(
-    #         go.Scatter(
-    #             mode="markers",
-    #             x=df_selected.index,
-    #             y=df_selected["Water Level"],
-    #             name=f"Selected ({len(df_selected)})",
-    #             marker=dict(color="Purple", size=8, line=dict(color="Black", width=1)),
-    #         )
-    #     )
-
-    # if not df_marked_out.empty:
-    #     fig.add_trace(
-    #         go.Scatter(
-    #             mode="markers",
-    #             x=df_marked_out.index,
-    #             y=df_marked_out["Water Level"],
-    #             name=f"Marked Outlier ({len(df_marked_out)})",
-    #             marker=dict(color="Red", size=12, line=dict(color="Black", width=1)),
-    #         )
-    #     )
-    # if not df_marked_not_out.empty:
-    #     fig.add_trace(
-    #         go.Scatter(
-    #             mode="markers",
-    #             x=df_marked_not_out.index,
-    #             y=df_marked_not_out["Water Level"],
-    #             name=f"Marked Not Outlier ({len(df_marked_not_out)})",
-    #             marker=dict(color="Green", size=12, line=dict(color="Black", width=1)),
-    #         )
-    #     )
-
     fig.update_layout(dragmode=SELECT_OPTIONS[selection_method])
     fig.update_layout(
         xaxis=dict(
             rangeselector=dict(
                 buttons=list(
                     [
-                        # dict(count=1, label="1h", step="hour", stepmode="backward"),
                         dict(count=1, label="1d", step="day", stepmode="backward"),
                         dict(count=7, label="1w", step="day", stepmode="backward"),
                         dict(count=1, label="1m", step="month", stepmode="backward"),
@@ -133,7 +100,7 @@ def make_outlier_distribution_plot(dataset_name: str, base_obj=None):
     dataset: pd.DataFrame = st.session_state["prediction_data"][dataset_name]
 
     model_predictions = st.session_state["inference_results"][dataset_name]
-    model_names = st.session_state["models_to_visualize"][dataset_name]
+    model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
     if not model_names:
         return None, None
     for model_name, model_preds in model_predictions.items():
@@ -149,26 +116,6 @@ def make_outlier_distribution_plot(dataset_name: str, base_obj=None):
 
     if number_of_outliers_to_visualize < 200:
         return dataset.index.min(), dataset.index.max()
-
-    with obj.expander("Visualization Options", expanded=True):
-        form = st.form(
-            f"form_{dataset_name}",
-        )
-        form.info(
-            "A large number of outliers is about to be visualized. Click on a bar in the distribution plot to view all outliers \
-            in that time period. Each time period is chosen so it contains the same number of total outliers. \
-            That number can be adjusted here."
-        )
-        form.slider(
-            "Number of total outliers per bar",
-            value=20,
-            min_value=1,
-            max_value=150,
-            step=1,
-            key=f"num_outliers_{dataset_name}",
-        )
-
-        form.form_submit_button("Update Distribution Plot")
 
     for model_name, model_preds in model_predictions.items():
         dataset[model_name] = model_preds.astype(np.int8)
@@ -215,6 +162,7 @@ def make_outlier_distribution_plot(dataset_name: str, base_obj=None):
                 name_rotate=90,
                 name_location="middle",
                 name_gap=50,
+                boundary_gap="30%",
             ),
             datazoom_opts=[
                 opts.DataZoomOpts(
@@ -228,6 +176,7 @@ def make_outlier_distribution_plot(dataset_name: str, base_obj=None):
                     range_end=100,
                 ),
             ],
+            legend_opts=opts.LegendOpts(pos_top=10, pos_right=10, orient="vertical"),
         )
     )
     for i, model in enumerate(model_names):
@@ -263,9 +212,7 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
 
     dataset: pd.DataFrame = st.session_state["prediction_data"][dataset_name]
 
-    model_predictions = st.session_state["inference_results"][dataset_name]
-    model_names = st.session_state["models_to_visualize"][dataset_name]
-    # model_names = list(model_predictions.keys())
+    model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
 
     df_plot = dataset[dataset.index.to_series().between(start_time, end_time)]
     x_data = df_plot.index.to_list()
@@ -335,3 +282,61 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
         )
     )
     st_pyecharts(line, height="500px", theme="dark")
+
+
+def feature_importance_plot(base_obj=None):
+    obj = base_obj or st
+
+    df_new: pd.DataFrame = st.session_state["current_importances"]
+
+    if "previous_importances" in st.session_state:
+        df_old: pd.DataFrame = st.session_state["previous_importances"]
+        df_plot = df_new.merge(df_old, how="left", on="Feature", suffixes=("", " before"))
+        df_plot["diff"] = (
+            df_plot["Feature importance"] - df_plot["Feature importance before"]
+        ).round(3)
+        df_plot["diff_text"] = df_plot["diff"].apply(lambda x: str(x) if x <= 0 else f"+{x}")
+    else:
+        df_plot = df_new
+
+    df_plot = df_plot.iloc[:10].sort_values("Feature importance")
+
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=df_plot["Feature importance"],
+                y=df_plot["Feature"],
+                orientation="h",
+                name="Current Importances",
+                text=df_plot["Feature importance"],
+            )
+        ]
+    )
+
+    if "previous_importances" in st.session_state:
+        fig.add_trace(
+            go.Bar(
+                x=df_plot["diff"],
+                y=df_plot["Feature"],
+                orientation="h",
+                name="Change",
+                text=df_plot["diff_text"],
+            )
+        )
+    fig.update_layout(
+        margin=dict(l=10, r=10, t=50, b=0),
+        legend=dict(yanchor="bottom", y=1.0, xanchor="right", x=0.5, orientation="h"),
+        barmode="relative",
+        title={
+            "text": f"Feature importances {st.session_state['last_model_name']}",
+            "y": 1.0,
+            "x": 0.5,
+            "xanchor": "center",
+            "yanchor": "top",
+        },
+        # title_text=f"Feature importances {st.session_state['last_model_name']}",
+    )
+    # with obj:
+    # st_pyecharts(bar, theme="dark")
+    # obj.bar_chart(df_new, x=["Feature importance"])
+    obj.plotly_chart(fig, use_container_width=True)
