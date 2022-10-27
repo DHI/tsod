@@ -1,11 +1,13 @@
 from ast import arg
 import datetime
 import pickle
+from tkinter import E
+from typing import Dict, List
 
 import pandas as pd
 import streamlit as st
 from tsod.active_learning.modelling import (
-    construct_training_data,
+    construct_training_data_RF,
     train_random_forest_classifier,
 )
 from tsod.active_learning.utils import (
@@ -13,8 +15,9 @@ from tsod.active_learning.utils import (
     set_session_state_items,
     custom_text,
     recursive_length_count,
+    MODEL_OPTIONS,
 )
-from tsod.active_learning.modelling import get_model_predictions, construct_test_data
+from tsod.active_learning.modelling import get_model_predictions, construct_test_data_RF
 from tsod.active_learning.plotting import feature_importance_plot
 
 
@@ -96,7 +99,7 @@ def shift_plot_window(days: int):
     set_session_state_items("date_shift_buttons_used", True)
 
 
-def create_plot_buttons(base_obj=None):
+def create_annotation_plot_buttons(base_obj=None):
     obj = base_obj or st
 
     state = get_as()
@@ -248,24 +251,45 @@ def show_info(base_obj=None):
 def train_options(base_obj=None):
     obj = base_obj or st
 
+    with st.sidebar.expander("Modelling Options", expanded=True):
+        st.info("Here you can choose what type of outlier detection approach to use.")
+        method = st.selectbox(
+            "Choose OD method",
+            options=list(MODEL_OPTIONS.keys()),
+            key="current_method_choice",
+            format_func=lambda x: MODEL_OPTIONS.get(x),
+        )
+
+    with st.sidebar.expander("Feature Options", expanded=True):
+        st.info(
+            "Here you can choose how many points before and after each annotated point \
+            to include in its feature set."
+        )
+        st.number_input("Points before", min_value=1, value=10, key="number_points_before", step=5)
+        st.number_input("Points after", min_value=0, value=10, key="number_points_after", step=5)
+
+    st.sidebar.button("Train Random Forest Model", key="train_button")
+
     if st.session_state.train_button:
         with st.spinner("Constructing features..."):
-            construct_training_data()
-            construct_test_data()
+            if method == "RF_1":
+                construct_training_data_RF()
+                construct_test_data_RF()
         with st.spinner("Training Model..."):
-            train_random_forest_classifier(obj)
+            if method == "RF_1":
+                train_random_forest_classifier(obj)
 
-    if "classifier" in st.session_state:
+    if "last_model_name" in st.session_state:
         st.sidebar.download_button(
             "Download model",
-            pickle.dumps(st.session_state["classifier"]),
+            pickle.dumps(st.session_state["model_library"][st.session_state["last_model_name"]]),
             f"{st.session_state.last_model_name}.pkl",
         )
 
 
 def get_predictions_callback(obj=None):
     set_session_state_items("hide_choice_menus", True)
-    get_model_predictions(base_obj=obj, column_for_normalization="Water Level")
+    get_model_predictions(obj)
     set_session_state_items("prediction_models", {})
 
 
@@ -279,29 +303,31 @@ def add_annotation_to_pred_data(base_obj=None):
     st.session_state.prediction_data["Annotation Data"] = get_as().df.copy(deep=True)
 
 
-def add_most_recent_model(base_obj=None):
-    obj = base_obj or st
-    if not st.session_state.last_model_name:
-        obj.error("No model has been trained yet this session.")
-        return
-    model_name = st.session_state.last_model_name
-    st.session_state.prediction_models[model_name] = st.session_state.classifier
+# def add_most_recent_model(base_obj=None):
+#     obj = base_obj or st
+#     if not st.session_state.last_model_name:
+#         obj.error("No model has been trained yet this session.")
+#         return
+#     model_name = st.session_state.last_model_name
+#     st.session_state.prediction_models[model_name] = st.session_state.classifier
 
 
 def add_uploaded_models(base_obj=None):
     obj = base_obj or st
-    set_session_state_items("prediction_models", {})
+    # set_session_state_items("prediction_models", {})
     if not st.session_state.current_uploaded_models:
         return
-    for model in st.session_state.current_uploaded_models:
-        clf = pickle.loads(model.read())
-        if not hasattr(clf, "predict"):
+    for data in st.session_state.current_uploaded_models:
+        model_data = pickle.loads(data.read())
+        model = model_data["model"]
+        if not hasattr(model, "predict"):
             obj.error(
                 "The uploaded object can not be used for prediction (does not implement 'predict' method)."
             )
             continue
 
-        st.session_state.prediction_models[model.name] = clf
+        st.session_state["prediction_models"][data.name] = model_data
+        st.session_state["model_library"][data.name] = model_data
 
 
 def prediction_options(base_obj=None):
@@ -379,17 +405,18 @@ def prediction_summary_table(dataset_name: str, base_obj=None):
         )
         return
 
-    c1, c2, c3, c4, c5 = obj.columns([5, 2, 4, 4, 3])
-    custom_text("Model Name", base_obj=c1, font_size=20, centered=True)
-    custom_text("Predicted Outliers", base_obj=c3, font_size=20, centered=False)
-    custom_text("Predicted Normal", base_obj=c4, font_size=20, centered=False)
-    custom_text("Choose Plot Color", base_obj=c5, font_size=20, centered=False)
+    c1, c2, c4, c5, c6, c7 = obj.columns([5, 3, 6, 3, 3, 3])
+    custom_text("Model Name", base_obj=c1, font_size=15, centered=True)
+    custom_text("Params", base_obj=c4, font_size=15, centered=False)
+    custom_text("Predicted Outliers", base_obj=c5, font_size=15, centered=False)
+    custom_text("Predicted Normal", base_obj=c6, font_size=15, centered=False)
+    custom_text("Choose Plot Color", base_obj=c7, font_size=15, centered=False)
 
     obj.markdown("***")
 
     for i, model in enumerate(model_names):
         _local_obj = obj.container()
-        c1, c2, c3, c4, c5 = _local_obj.columns([5, 2, 4, 4, 3])
+        c1, c2, c4, c5, c6, c7 = _local_obj.columns([5, 3, 6, 3, 3, 3])
         custom_text(model, base_obj=c1, font_size=15, centered=True)
         c2.button(
             "Remove",
@@ -397,20 +424,21 @@ def prediction_summary_table(dataset_name: str, base_obj=None):
             on_click=remove_model_to_visualize,
             args=(dataset_name, model),
         )
+        c4.json(st.session_state["model_library"][model]["params"], expanded=False)
         custom_text(
             st.session_state["number_outliers"][dataset_name][model],
-            base_obj=c3,
+            base_obj=c5,
             font_size=20,
             centered=False,
         )
         custom_text(
             len(st.session_state["prediction_data"][dataset_name])
             - st.session_state["number_outliers"][dataset_name][model],
-            base_obj=c4,
+            base_obj=c6,
             font_size=20,
             centered=False,
         )
-        c5.color_picker(
+        c7.color_picker(
             model, key=f"color_{model}", label_visibility="collapsed", value=DEFAULT_COLORS[i]
         )
         obj.markdown("***")
@@ -421,6 +449,7 @@ def test_metrics(base_obj=None):
         return
 
     obj = base_obj or st
+    custom_text(f"Most recent model: {st.session_state['last_model_name']}", base_obj=obj)
     c1, c2, c3, c4 = obj.columns(4)
 
     current_train_metrics = st.session_state["current_model_train_metrics"]
@@ -612,7 +641,7 @@ def number_outlier_options(dataset_name: str):
     )
     form.slider(
         "Number of total outliers per bar",
-        value=50,
+        value=20,
         min_value=1,
         max_value=250,
         step=1,
@@ -624,14 +653,50 @@ def number_outlier_options(dataset_name: str):
 
 def show_feature_importances(base_obj=None):
     obj = base_obj or st
-    if "classifier" not in st.session_state:
+    if "last_model_name" not in st.session_state:
         return
 
     st.sidebar.success(f"{st.session_state.last_model_name} finished training.")
-
-    clf = st.session_state["classifier"]
 
     with obj.expander("Feature Importances", expanded=True):
         c1, c2 = st.columns([2, 1])
         feature_importance_plot(c1)
         c2.dataframe(st.session_state["current_importances"])
+
+
+def process_point_from_outlier_plot(selected_point: List | Dict, base_obj=None):
+    obj = base_obj or st
+
+    state = get_as()
+    if isinstance(selected_point, list):  # plot point clicked
+        state.update_selected([selected_point[0]])
+        # st.session_state["selected_points"][selected_point[0]] = selected_point[0]
+    elif isinstance(selected_point, dict):  # marker clicked
+        state.update_selected([selected_point["coord"][0]])
+        # st.session_state["selected_points"][selected_point["name"]] = selected_point["coord"][0]
+
+    if not state.selection:
+        return
+    obj.subheader("Selected points:")
+    c1, c2, c3 = obj.columns([2, 1, 1])
+    c1.json(
+        list(state.selection),
+        expanded=len(state.selection) < 5,
+    )
+
+    c2.button("Mark Train Outlier", on_click=state.update_data, args=("outlier",))
+    c3.button("Mark Train Normal", on_click=state.update_data, args=("normal",))
+    c2.button(
+        "Mark Test Outlier",
+        on_click=state.update_data,
+        args=("test_outlier",),
+        key="mark_test_outlier",
+    )
+    c3.button(
+        "Mark Test Normal",
+        on_click=state.update_data,
+        args=("test_normal",),
+        key="mark_test_normal",
+    )
+    c2.button("Clear Selection", on_click=state.clear_selection)
+    # c3.button("Clear All", on_click=state.clear_all)

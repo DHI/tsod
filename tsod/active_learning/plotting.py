@@ -133,8 +133,8 @@ def make_outlier_distribution_plot(dataset_name: str, base_obj=None):
         if i > 0:
             ts.append(group.index[0])
 
-        if i == 20:
-            break
+        # if i == 20:
+        # break
 
     ts.insert(0, dataset.index.min())
     # ts.append(dataset.index.max())
@@ -218,12 +218,13 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
     x_data = df_plot.index.to_list()
     y_data = df_plot["Water Level"].to_list()
     markers = []
+    state = get_as()
 
     for model_number, model_name in enumerate(model_names):
 
         counter = 1
         for i, row in df_plot.iterrows():
-            if row[model_name] == 1:
+            if row[model_name] == 1:  # Outlier
                 markers.append(
                     opts.MarkPointItem(
                         name=f"Outlier {counter} {model_name}",
@@ -236,6 +237,16 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
                     )
                 )
                 counter += 1
+            if i in state.selection:
+                markers.append(
+                    opts.MarkPointItem(
+                        name=f"Selected ({i})",
+                        coord=[i, row["Water Level"].item()],
+                        symbol="pin",
+                        itemstyle_opts=opts.ItemStyleOpts(color="purple"),
+                        # value=counter,
+                    )
+                )
 
     line = (
         Line()
@@ -250,7 +261,7 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
         .set_global_opts(
             title_opts=opts.TitleOpts(
                 title=f"Outliers {start_time} - {end_time}",
-                # subtitle="Click on bar to isolate time range",
+                subtitle="Click on points or markers to add annotations.",
             ),
             yaxis_opts=opts.AxisOpts(
                 type_="value",
@@ -281,7 +292,15 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
             tooltip_opts=opts.TooltipOpts(axis_pointer_type="line", trigger="axis"),
         )
     )
-    st_pyecharts(line, height="500px", theme="dark")
+    clicked_point = st_pyecharts(
+        line,
+        height="500px",
+        theme="dark",
+        # events={"click": "function(params) { console.log(params) }"},
+        events={"click": "function(params) { return params.data }"},
+    )
+
+    return clicked_point
 
 
 def feature_importance_plot(base_obj=None):
@@ -319,13 +338,13 @@ def feature_importance_plot(base_obj=None):
                 x=df_plot["diff"],
                 y=df_plot["Feature"],
                 orientation="h",
-                name="Change",
+                name="Change to previous model",
                 text=df_plot["diff_text"],
             )
         )
     fig.update_layout(
         margin=dict(l=10, r=10, t=50, b=0),
-        legend=dict(yanchor="bottom", y=1.0, xanchor="right", x=0.5, orientation="h"),
+        legend=dict(yanchor="bottom", y=1.0, xanchor="left", x=0.2, orientation="h"),
         barmode="relative",
         title={
             "text": f"Feature importances {st.session_state['last_model_name']}",

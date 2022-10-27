@@ -8,6 +8,8 @@ import numpy as np
 from collections import defaultdict
 from tsod.active_learning.data_structures import AnnotationState
 
+MODEL_OPTIONS = {"RF_1": "Random Forest Classifier"}
+
 
 SELECT_OPTIONS = {"Point": "zoom", "Box": "select", "Lasso": "lasso"}
 SELECT_INFO = {
@@ -59,7 +61,7 @@ def init_session_state():
     _add_to_ss_if_not_in_it("uploaded_annotation_data", {})
     _add_to_ss_if_not_in_it("prediction_models", {})
     _add_to_ss_if_not_in_it("prediction_data", {})
-    _add_to_ss_if_not_in_it("last_model_name", None)
+    # _add_to_ss_if_not_in_it("last_model_name", None)
     _add_to_ss_if_not_in_it("use_date_picker", True)
     _add_to_ss_if_not_in_it("inference_results", defaultdict(dict))
     _add_to_ss_if_not_in_it("number_outliers", defaultdict(dict))
@@ -72,6 +74,10 @@ def init_session_state():
     _add_to_ss_if_not_in_it("date_shift_buttons_used", False)
     _add_to_ss_if_not_in_it("hide_choice_menus", False)
     _add_to_ss_if_not_in_it("models_to_visualize", defaultdict(set))
+    _add_to_ss_if_not_in_it("RF_features_computed_start", 0)
+    _add_to_ss_if_not_in_it("RF_features_computed_end", 0)
+    _add_to_ss_if_not_in_it("model_library", {})
+    _add_to_ss_if_not_in_it("selected_points", {})
 
 
 def set_session_state_items(key: str | List[str], value: Any | List[Any]):

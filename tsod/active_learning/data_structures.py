@@ -130,6 +130,10 @@ class AnnotationState:
             return datetime.datetime.fromtimestamp(value / 1000)
         # also for some reason, as a string for single point selection
         elif isinstance(value, str):
-            return datetime.datetime.strptime(value, "%Y-%m-%d %H:%M")
+            try:
+                return datetime.datetime.strptime(value, "%Y-%m-%d %H:%M")  # Plotly return format
+            except ValueError:
+                pass
+            return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")  # Pyecharts return format
         else:
             return value

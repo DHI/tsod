@@ -12,13 +12,14 @@ from sklearn.metrics import precision_recall_fscore_support
 
 def get_neighboring_points(
     indices: List,
-    number_neighbors: int,
+    points_before: int,
+    points_after: int,
     full_df: pd.DataFrame,
     column_for_normalization: str | None = None,
-):
+) -> List[List]:
     """
     Given a list of datetime indices, returns the number_neighbors points before and
-    after each point (from df_full).
+    after each point (from full_df).
     If column_for_normalization is set, every neighbor's value is divided by this columns value at the corresponding index.
     """
     df: pd.DataFrame = full_df.reset_index(names="date")
@@ -36,7 +37,7 @@ def get_neighboring_points(
         normalization_value = (
             df.loc[i, column_for_normalization] if column_for_normalization else 1.0
         )
-        for i_2 in range(i - number_neighbors, i + number_neighbors + 1):
+        for i_2 in range(i - points_before, i + points_after + 1):
             try:
                 if i_2 != i:
                     # Access full df for neighboring values
@@ -49,7 +50,18 @@ def get_neighboring_points(
     return all_neighbors
 
 
-def construct_training_data(window_size: int = 10):
+def get_class_labels_RF(points_before: int, points_after: int):
+    class_labels = [f"t-{i}" for i in reversed(range(1, points_before + 1))]
+    class_labels.extend([f"t+{i}" for i in range(1, points_after + 1)])
+
+    return class_labels
+
+
+def construct_training_data_RF():
+    points_before = st.session_state["number_points_before"]
+    points_after = st.session_state["number_points_after"]
+    st.session_state["last_points_before"] = points_before
+    st.session_state["last_points_after"] = points_after
     state = get_as()
     outliers = state.df_outlier
     if outliers.empty:
@@ -59,28 +71,29 @@ def construct_training_data(window_size: int = 10):
     features = []
     labels = []
     features.extend(
-        get_neighboring_points(outliers.index.to_list(), window_size, state.df, "Water Level")
+        get_neighboring_points(
+            outliers.index.to_list(), points_before, points_after, state.df, "Water Level"
+        )
     )
     features.extend(
-        get_neighboring_points(normal.index.to_list(), window_size, state.df, "Water Level")
+        get_neighboring_points(
+            normal.index.to_list(), points_before, points_after, state.df, "Water Level"
+        )
     )
     labels.extend([1] * len(outliers))
     labels.extend([0] * len(normal))
 
-    class_labels = [f"t-{i}" for i in reversed(range(1, window_size + 1))]
-    class_labels.extend([f"t+{i}" for i in range(1, window_size + 1)])
-
-    features = pd.DataFrame(features, columns=class_labels)
+    features = pd.DataFrame(features, columns=get_class_labels_RF(points_before, points_after))
     labels = np.array(labels)
-
-    # with open("data.pcl", "wb") as f:
-    # pickle.dump({"features": features, "labels": labels}, f)
 
     st.session_state["features"] = features
     st.session_state["labels"] = labels
 
 
-def construct_test_data(window_size: int = 10):
+def construct_test_data_RF():
+    points_before = st.session_state["number_points_before"]
+    points_after = st.session_state["number_points_after"]
+
     state = get_as()
     outliers = state.df_test_outlier
     normal = state.df_test_normal
@@ -91,16 +104,20 @@ def construct_test_data(window_size: int = 10):
     features = []
     labels = []
     features.extend(
-        get_neighboring_points(outliers.index.to_list(), window_size, state.df, "Water Level")
+        get_neighboring_points(
+            outliers.index.to_list(), points_before, points_after, state.df, "Water Level"
+        )
     )
     features.extend(
-        get_neighboring_points(normal.index.to_list(), window_size, state.df, "Water Level")
+        get_neighboring_points(
+            normal.index.to_list(), points_before, points_after, state.df, "Water Level"
+        )
     )
     labels.extend([1] * len(outliers))
     labels.extend([0] * len(normal))
 
-    class_labels = [f"t-{i}" for i in reversed(range(1, window_size + 1))]
-    class_labels.extend([f"t+{i}" for i in range(1, window_size + 1)])
+    class_labels = [f"t-{i}" for i in reversed(range(1, points_before + 1))]
+    class_labels.extend([f"t+{i}" for i in range(1, points_after + 1)])
 
     features = pd.DataFrame(features, columns=class_labels)
     labels = np.array(labels)
@@ -135,11 +152,8 @@ def train_random_forest_classifier(base_obj=None):
 
     clf.fit(X, y)
 
-    st.session_state["classifier"] = clf.best_estimator_
-    st.session_state[
-        "last_model_name"
-    ] = f"RF_Classifier ({datetime.datetime.now().strftime('%Y-%m-%d %H:%M')})"
-
+    model_name = f"RF_Classifier ({datetime.datetime.now().strftime('%Y-%m-%d %H:%M')})"
+    st.session_state["last_model_name"] = model_name
     # Update Test metrics
     if "current_model_test_metrics" in st.session_state:
         st.session_state["previous_model_test_metrics"] = st.session_state[
@@ -149,7 +163,7 @@ def train_random_forest_classifier(base_obj=None):
             "current_model_train_metrics"
         ]
 
-    model = st.session_state["classifier"]
+    model = clf.best_estimator_
     X_test = st.session_state["test_features"]
     y_test = st.session_state["test_labels"]
 
@@ -178,37 +192,78 @@ def train_random_forest_classifier(base_obj=None):
 
     st.session_state["current_importances"] = df_fi
 
-    st.session_state["prediction_models"][st.session_state["last_model_name"]] = model
+    st.session_state["model_library"][model_name] = {
+        "model": model,
+        "type": st.session_state["current_method_choice"],
+        "params": {
+            "points_before": st.session_state["last_points_before"],
+            "points_after": st.session_state["last_points_after"],
+        },
+    }
+
+    st.session_state["prediction_models"][st.session_state["last_model_name"]] = st.session_state[
+        "model_library"
+    ][model_name]
 
     st.experimental_rerun()
 
 
-def get_model_predictions(
-    window_size: int = 10, column_for_normalization: str | None = None, base_obj=None
-):
+def get_model_predictions(base_obj=None):
     obj = base_obj or st
     models: Dict[str, RandomForestClassifier] = st.session_state["prediction_models"]
     datasets: Dict[str, pd.DataFrame] = st.session_state["prediction_data"]
-
     if (not models) or (not datasets):
         obj.error("Please add at least one model and one data file.")
         return
 
+    get_model_predictions_RF(column_for_normalization="Water Level")
+
+
+def get_model_predictions_RF(
+    column_for_normalization: str | None = None,
+):
+    model_dicts: Dict[str, Dict] = {
+        k: v for k, v in st.session_state["prediction_models"].items() if v["type"] == "RF_1"
+    }
+    datasets: Dict[str, pd.DataFrame] = st.session_state["prediction_data"]
+
+    if (not model_dicts) or (not datasets):
+        return
+
+    params = [d["params"] for d in model_dicts.values()]
+    start_features = max([p["points_before"] for p in params])
+    end_features = max([p["points_after"] for p in params])
+
     for dataset_name, ds in datasets.items():
-        try:
-            features = st.session_state["uploaded_ds_features"][dataset_name]
-        except KeyError:
+        if (
+            (dataset_name not in st.session_state["uploaded_ds_features"])
+            or (start_features > st.session_state["RF_features_computed_start"])
+            or (end_features > st.session_state["RF_features_computed_end"])
+        ):
             with st.spinner("Constructing dataset features..."):
                 features = get_neighboring_points(
-                    ds.index, window_size, ds, column_for_normalization
+                    ds.index, start_features, end_features, ds, column_for_normalization
                 )
+                feature_names = get_class_labels_RF(start_features, end_features)
+                features = pd.DataFrame(features, columns=feature_names)
                 st.session_state["uploaded_ds_features"][dataset_name] = features
+                st.session_state["RF_features_computed_start"] = start_features
+                st.session_state["RF_features_computed_end"] = end_features
 
         with st.spinner("Getting model results..."):
-            for model_name, model in models.items():
+            for model_name, model_data in model_dicts.items():
                 if model_name not in st.session_state["inference_results"][dataset_name]:
                     st.session_state["models_to_visualize"][dataset_name].update([model_name])
-                    results = model.predict(features)
+                    # select relevant subset of ds features, based on what the model needs
+                    number_model_features_before = model_data["params"]["points_before"]
+                    number_model_features_after = model_data["params"]["points_after"]
+                    relevant_model_columns = get_class_labels_RF(
+                        number_model_features_before, number_model_features_after
+                    )
+                    model_feautures = st.session_state["uploaded_ds_features"][dataset_name][
+                        relevant_model_columns
+                    ]
+                    results = model_data["model"].predict(model_feautures)
                     st.session_state["inference_results"][dataset_name][model_name] = results
                     st.session_state["number_outliers"][dataset_name][model_name] = len(
                         results.nonzero()[0].tolist()

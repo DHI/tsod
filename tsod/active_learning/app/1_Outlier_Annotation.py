@@ -4,7 +4,7 @@ import streamlit as st
 from streamlit_plotly_events import plotly_events
 from streamlit_profiler import Profiler
 from tsod.active_learning.app.components import (
-    create_plot_buttons,
+    create_annotation_plot_buttons,
     create_save_load_buttons,
     filter_data,
     dev_options,
@@ -23,7 +23,7 @@ def main():
         init_session_state()
         state = get_as()
 
-        create_plot_buttons(st.sidebar)
+        create_annotation_plot_buttons(st.sidebar)
         filter_data(st.sidebar)
         plot_time_ph = st.sidebar.container()
 
