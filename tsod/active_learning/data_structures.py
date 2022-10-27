@@ -128,10 +128,16 @@ class AnnotationState:
         # Plotly sometimes returns selected points as timestamp
         if isinstance(value, int):
             return datetime.datetime.fromtimestamp(value / 1000)
-        # also for some reason, as a string for single point selection
+        # also sometimes as strings
         elif isinstance(value, str):
             try:
                 return datetime.datetime.strptime(value, "%Y-%m-%d %H:%M")  # Plotly return format
+            except ValueError:
+                pass
+            try:
+                return datetime.datetime.strptime(
+                    value, "%Y-%m-%d"
+                )  # Plotly return format for midnight values
             except ValueError:
                 pass
             return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")  # Pyecharts return format
