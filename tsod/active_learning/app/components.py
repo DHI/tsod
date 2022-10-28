@@ -265,12 +265,31 @@ def train_options(base_obj=None):
             "Here you can choose how many points before and after each annotated point \
             to include in its feature set."
         )
-        st.number_input("Points before", min_value=1, value=10, key="number_points_before", step=5)
-        st.number_input("Points after", min_value=0, value=10, key="number_points_after", step=5)
+        st.number_input(
+            "Points before",
+            min_value=1,
+            value=st.session_state.get("old_points_before")
+            if st.session_state.get("old_points_before") is not None
+            else 10,
+            key="number_points_before",
+            step=5,
+        )
+        st.number_input(
+            "Points after",
+            min_value=0,
+            value=st.session_state.get("old_points_after")
+            if st.session_state.get("old_points_after") is not None
+            else 10,
+            key="number_points_after",
+            step=5,
+        )
 
     st.sidebar.button("Train Random Forest Model", key="train_button")
 
     if st.session_state.train_button:
+        st.session_state["old_points_before"] = st.session_state["number_points_before"]
+        st.session_state["old_points_after"] = st.session_state["number_points_after"]
+
         with st.spinner("Constructing features..."):
             if method == "RF_1":
                 construct_training_data_RF()
@@ -388,7 +407,7 @@ def remove_model_to_visualize(dataset_name, model_name):
 def prediction_summary_table(dataset_name: str, base_obj=None):
     obj = base_obj or st
 
-    DEFAULT_COLORS = ["#f11a1a", "#2ada49", "#1e11e6", "#40e0d3"]
+    DEFAULT_MARKER_COLORS = ["#e88b0b", "#1778dc", "#1bd476", "#d311e6"]
 
     model_predictions = st.session_state["inference_results"].get(dataset_name)
     if not model_predictions:
@@ -399,9 +418,9 @@ def prediction_summary_table(dataset_name: str, base_obj=None):
     if not model_names:
         return
 
-    if len(model_names) > len(DEFAULT_COLORS):
+    if len(model_names) > len(DEFAULT_MARKER_COLORS):
         obj.error(
-            f"Currently max. number of models is {len(DEFAULT_COLORS)}, got {len(model_names)}"
+            f"Currently max. number of models is {len(DEFAULT_MARKER_COLORS)}, got {len(model_names)}"
         )
         return
 
@@ -439,8 +458,12 @@ def prediction_summary_table(dataset_name: str, base_obj=None):
             centered=False,
         )
         c7.color_picker(
-            model, key=f"color_{model}", label_visibility="collapsed", value=DEFAULT_COLORS[i]
+            model,
+            key=f"color_{model}",
+            label_visibility="collapsed",
+            value=DEFAULT_MARKER_COLORS[i],
         )
+        c7.write(st.session_state[f"color_{model}"])
         obj.markdown("***")
 
 
@@ -636,16 +659,23 @@ def number_outlier_options(dataset_name: str):
     )
     form.info(
         "A large number of outliers is about to be visualized. Click on a bar in the distribution plot to view all outliers \
-        in that time period. Each time period is chosen so it contains the same number of total outliers. \
-        That number can be adjusted here."
+        in that time period. Each time period is chosen so it contains the same number of datapoints. That number can be adjusted here."
     )
     form.slider(
-        "Number of total outliers per bar",
-        value=20,
-        min_value=1,
-        max_value=250,
+        "Number of datapoints per bar",
+        value=300,
+        min_value=10,
+        max_value=1000,
         step=1,
         key=f"num_outliers_{dataset_name}",
+    )
+    form.slider(
+        "Height of figures (px)",
+        value=600,
+        min_value=100,
+        max_value=1500,
+        step=100,
+        key=f"figure_height_{dataset_name}",
     )
 
     form.form_submit_button("Update Distribution Plot")
@@ -670,10 +700,9 @@ def process_point_from_outlier_plot(selected_point: List | Dict, base_obj=None):
     state = get_as()
     if isinstance(selected_point, list):  # plot point clicked
         state.update_selected([selected_point[0]])
-        # st.session_state["selected_points"][selected_point[0]] = selected_point[0]
     elif isinstance(selected_point, dict):  # marker clicked
-        state.update_selected([selected_point["coord"][0]])
-        # st.session_state["selected_points"][selected_point["name"]] = selected_point["coord"][0]
+        if selected_point["name"].lower().startswith("outlier"):
+            state.update_selected([selected_point["coord"][0]])
 
     if not state.selection:
         return

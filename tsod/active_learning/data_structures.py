@@ -32,23 +32,27 @@ class AnnotationState:
         return pickle.dumps(self._download_data)
 
     @property
-    def selection(self):
+    def all_indices(self):
+        return self.selection.union(self.outlier, self.normal, self.test_outlier, self.test_normal)
+
+    @property
+    def selection(self) -> set:
         return self.data["selected"]
 
     @property
-    def outlier(self):
+    def outlier(self) -> set:
         return self.data["outlier"]
 
     @property
-    def normal(self):
+    def normal(self) -> set:
         return self.data["normal"]
 
     @property
-    def test_outlier(self):
+    def test_outlier(self) -> set:
         return self.data["test_outlier"]
 
     @property
-    def test_normal(self):
+    def test_normal(self) -> set:
         return self.data["test_normal"]
 
     def update_selected(self, data: Sequence):

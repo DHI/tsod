@@ -1,5 +1,6 @@
 from collections import defaultdict
 import datetime
+from turtle import color
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -7,17 +8,31 @@ import plotly.graph_objs as go
 import streamlit as st
 from pyecharts import options as opts
 from pyecharts.charts import Line, Bar
-from streamlit_echarts import st_pyecharts
+from streamlit_echarts import st_pyecharts, JsCode
 from tsod.active_learning.utils import SELECT_INFO, SELECT_OPTIONS, get_as
 
 ANNOTATION_COLORS = {
-    "selected": "Purple",
-    "outlier": "Red",
-    "normal": "Green",
-    "test_outlier": "Pink",
-    "test_normal": "Brown",
+    "selected": "#8c259a",
+    "outlier": "#e60b0b",
+    "normal": "#3fc762",
+    "test_outlier": "#fd7c99",
+    "test_normal": "#0fefc7",
 }
 MARKER_SIZES = {"selected": 10, "outlier": 12, "normal": 12, "test_outlier": 12, "test_normal": 12}
+MARKER_VALUES = {
+    "selected": "S",
+    "outlier": "O",
+    "normal": "N",
+    "test_outlier": "TO",
+    "test_normal": "TN",
+}
+MARKER_HOVER = {
+    "selected": "Selected Point",
+    "outlier": "Training Outlier",
+    "normal": "Traning Normal",
+    "test_outlier": "Test Outlier",
+    "test_normal": "Test Normal",
+}
 
 
 @st.experimental_memo(persist="disk", show_spinner=False)
@@ -97,6 +112,7 @@ def create_annotation_plot(base_obj=None) -> go.Figure:
 
 def make_outlier_distribution_plot(dataset_name: str, base_obj=None):
     obj = base_obj or st
+    state = get_as()
     dataset: pd.DataFrame = st.session_state["prediction_data"][dataset_name]
 
     model_predictions = st.session_state["inference_results"][dataset_name]
@@ -106,38 +122,59 @@ def make_outlier_distribution_plot(dataset_name: str, base_obj=None):
     for model_name, model_preds in model_predictions.items():
         dataset[model_name] = model_preds.astype(np.int8)
 
-    number_of_outliers_to_visualize = sum(
-        [
-            v
-            for k, v in st.session_state["number_outliers"][dataset_name].items()
-            if k in model_names
-        ]
-    )
+    # number_of_outliers_to_visualize = sum(
+    #     [
+    #         v
+    #         for k, v in st.session_state["number_outliers"][dataset_name].items()
+    #         if k in model_names
+    #     ]
+    # )
 
-    if number_of_outliers_to_visualize < 200:
-        return dataset.index.min(), dataset.index.max()
+    # if number_of_outliers_to_visualize < 200:
+    # return dataset.index.min(), dataset.index.max()
 
     for model_name, model_preds in model_predictions.items():
         dataset[model_name] = model_preds.astype(np.int8)
 
+    dataset["outlier_group"] = range(len(dataset))
     dataset["outlier_group"] = (
-        dataset[model_names].sum(axis=1).cumsum()
-        // st.session_state[f"num_outliers_{dataset_name}"]
+        dataset["outlier_group"] // st.session_state[f"num_outliers_{dataset_name}"]
     ).astype(np.int16)
+
+    # dataset["outlier_group"] = (
+    # dataset[model_names].sum(axis=1).cumsum()
+    # // st.session_state[f"num_outliers_{dataset_name}"]
+    # ).astype(np.int16)
 
     ts = []
     outlier_counts = defaultdict(list)
+    annotated_outliers = state.df_outlier
+    annotated_test_outliers = state.df_test_outlier
     for i, (_, group) in enumerate(dataset.groupby("outlier_group")):
         for model in model_names:
             outlier_counts[model].append(group[model].sum().item())
         if i > 0:
             ts.append(group.index[0])
 
-        # if i == 20:
-        # break
+        outlier_counts["Marked Train Outliers"].append(
+            len(
+                annotated_outliers[
+                    annotated_outliers.index.to_series().between(group.index[0], group.index[-1])
+                ]
+            )
+        )
+        outlier_counts["Marked Test Outliers"].append(
+            len(
+                annotated_test_outliers[
+                    annotated_test_outliers.index.to_series().between(
+                        group.index[0], group.index[-1]
+                    )
+                ]
+            )
+        )
 
     ts.insert(0, dataset.index.min())
-    # ts.append(dataset.index.max())
+    ts.append(dataset.index.max())
 
     ranges = [f"{i} - {j}" for i, j in zip(ts, ts[1:])]
 
@@ -177,23 +214,50 @@ def make_outlier_distribution_plot(dataset_name: str, base_obj=None):
                 ),
             ],
             legend_opts=opts.LegendOpts(pos_top=10, pos_right=10, orient="vertical"),
+            tooltip_opts=opts.TooltipOpts(
+                axis_pointer_type="shadow",
+                trigger="axis",
+            ),
         )
     )
-    for i, model in enumerate(model_names):
+    for series in model_names:
         bar = bar.add_yaxis(
-            model,
-            outlier_counts[model],
-            stack="x",
+            series,
+            outlier_counts[series],
+            stack=series,
             label_opts=opts.LabelOpts(is_show=False),
+            category_gap="40%",
         )
 
-    bar.set_colors([st.session_state[f"color_{m}"] for m in model_names])
+    colors = [st.session_state[f"color_{m}"] for m in model_names]
+    if state.outlier:
+        bar = bar.add_yaxis(
+            "Marked Train Outliers",
+            outlier_counts["Marked Train Outliers"],
+            stack="Marked Train Outliers",
+            label_opts=opts.LabelOpts(is_show=False),
+            category_gap="40%",
+        )
+        colors.append("#e60b0b")
+    if state.test_outlier:
+        bar = bar.add_yaxis(
+            "Marked Test Outliers",
+            outlier_counts["Marked Test Outliers"],
+            stack="Marked Test Outliers",
+            label_opts=opts.LabelOpts(is_show=False),
+            category_gap="40%",
+        )
+        colors.append("#fd7c99")
 
+    bar.set_colors(colors)
     clicked_range = st_pyecharts(
         bar,
-        height="500px",
+        height=f"{st.session_state[f'figure_height_{dataset_name}']}px",
         theme="dark",
-        events={"click": "function(params) { return params.name }"},
+        events={
+            "click": "function(params) { return params.name }",
+            # "dblclick": "function(params) { console.log(params) } ",
+        },
     )
 
     def _get_start_and_end_date(clicked_range: str):
@@ -225,28 +289,30 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
         counter = 1
         for i, row in df_plot.iterrows():
             if row[model_name] == 1:  # Outlier
-                markers.append(
-                    opts.MarkPointItem(
-                        name=f"Outlier {counter} {model_name}",
-                        coord=[i, row["Water Level"].item()],
-                        symbol=symbols[model_number],
-                        itemstyle_opts=opts.ItemStyleOpts(
-                            color=st.session_state[f"color_{model_name}"]
-                        ),
-                        value=counter,
+                if i not in state.all_indices:
+                    markers.append(
+                        opts.MarkPointItem(
+                            name=f"Outlier {counter} {model_name}",
+                            coord=[i, row["Water Level"].item()],
+                            symbol=symbols[model_number],
+                            itemstyle_opts=opts.ItemStyleOpts(
+                                color=st.session_state[f"color_{model_name}"]
+                            ),
+                            value=counter,
+                        )
                     )
-                )
                 counter += 1
-            if i in state.selection:
-                markers.append(
-                    opts.MarkPointItem(
-                        name=f"Selected ({i})",
-                        coord=[i, row["Water Level"].item()],
-                        symbol="pin",
-                        itemstyle_opts=opts.ItemStyleOpts(color="purple"),
-                        # value=counter,
+            for series_name, data in state.data.items():
+                if i in data:
+                    markers.append(
+                        opts.MarkPointItem(
+                            name=f"{MARKER_HOVER[series_name]} ({i})",
+                            coord=[i, row["Water Level"].item()],
+                            symbol="pin",
+                            itemstyle_opts=opts.ItemStyleOpts(color=ANNOTATION_COLORS[series_name]),
+                            value=MARKER_VALUES[series_name],
+                        )
                     )
-                )
 
     line = (
         Line()
@@ -282,19 +348,23 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
                     type_="slider",
                     range_start=0,
                     range_end=100,
+                    # range_start=None,
+                    # range_end=None,
+                    # start_value=start_time,
+                    # end_value=end_time,
                 ),
                 opts.DataZoomOpts(
                     type_="inside",
-                    range_start=0,
-                    range_end=100,
+                    # range_start=0,
+                    # range_end=100,
                 ),
             ],
-            tooltip_opts=opts.TooltipOpts(axis_pointer_type="line", trigger="axis"),
+            # tooltip_opts=opts.TooltipOpts(axis_pointer_type="line", trigger="axis"),
         )
     )
     clicked_point = st_pyecharts(
         line,
-        height="500px",
+        height=f"{st.session_state[f'figure_height_{dataset_name}']}px",
         theme="dark",
         # events={"click": "function(params) { console.log(params) }"},
         events={"click": "function(params) { return params.data }"},
