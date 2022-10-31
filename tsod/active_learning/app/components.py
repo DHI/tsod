@@ -1,7 +1,5 @@
-from ast import arg
 import datetime
 import pickle
-from tkinter import E
 from typing import Dict, List
 
 import pandas as pd
@@ -19,6 +17,7 @@ from tsod.active_learning.utils import (
 )
 from tsod.active_learning.modelling import get_model_predictions, construct_test_data_RF
 from tsod.active_learning.plotting import feature_importance_plot
+from tsod.active_learning.data_structures import plot_return_value_as_datetime
 
 
 def filter_data(base_obj=None) -> pd.DataFrame:
@@ -160,24 +159,11 @@ def validate_uploaded_file_contents(base_obj=None):
 def annotation_file_upload_callback(base_obj=None):
     obj = base_obj or st
     validate_uploaded_file_contents(obj)
-    # if file_val_results:
-    # obj.info("Validation passed")
-    # elif file_val_results is None:
-    # return
-    # else:
-    # obj.error("The loaded annotation data points do not all match the loaded data.")
-    # return
-
     state = get_as()
-    # file_name = st.session_state.current_uploaded_file.name
-    # data = st.session_state.uploaded_annotation_data[file_name]
 
     for data in st.session_state.uploaded_annotation_data.values():
         for key, df in data.items():
             state.update_data(key, df.index.to_list())
-
-    # state.update_data("outlier", data["outliers"].index.to_list())
-    # state.update_data("normal", data["normal"].index.to_list())
 
 
 def dev_options(base_obj=None):
@@ -307,7 +293,7 @@ def train_options(base_obj=None):
 
 
 def get_predictions_callback(obj=None):
-    set_session_state_items("hide_choice_menus", True)
+    # set_session_state_items("hide_choice_menus", True)
     get_model_predictions(obj)
     set_session_state_items("prediction_models", {})
 
@@ -319,7 +305,8 @@ def add_annotation_to_pred_data(base_obj=None):
         obj.error("No annotation data has been loaded in this session.")
         return
 
-    st.session_state.prediction_data["Annotation Data"] = get_as().df.copy(deep=True)
+    if "Annotation Data" not in st.session_state.prediction_data:
+        st.session_state.prediction_data["Annotation Data"] = get_as().df.copy(deep=True)
 
 
 # def add_most_recent_model(base_obj=None):
@@ -349,12 +336,27 @@ def add_uploaded_models(base_obj=None):
         st.session_state["model_library"][data.name] = model_data
 
 
+def add_uploaded_dataset(base_obj=None):
+    obj = base_obj or st
+
+    if not st.session_state["uploaded_datasets"]:
+        return
+
+    for data in st.session_state.uploaded_datasets:
+        try:
+            df = pd.read_csv("data/Elev_NW1.csv", index_col=0, parse_dates=True)
+            st.session_state["prediction_data"][data.name] = df
+        except Exception:
+            obj.error(f"Could not read file {data.name}.")
+
+
 def prediction_options(base_obj=None):
     obj = base_obj or st
     _, c, _ = obj.columns([2, 5, 2])
     c.button("Generate Predictions", on_click=get_predictions_callback, args=(obj,))
 
-    with obj.expander("Model Choice", expanded=not st.session_state["hide_choice_menus"]):
+    with obj.expander("Model Choice", expanded=True):
+        # with obj.expander("Model Choice", expanded=not st.session_state["hide_choice_menus"]):
         st.subheader("Choose Models")
         st.info(
             "Add models with which to generate predictions. The most recently trained model is automatically added."
@@ -376,12 +378,19 @@ def prediction_options(base_obj=None):
             st.button(
                 "Clear selection", on_click=set_session_state_items, args=("prediction_models", {})
             )
-    with obj.expander("Data Choice", expanded=not st.session_state["hide_choice_menus"]):
+    with obj.expander("Data Choice", expanded=True):
+        # with obj.expander("Data Choice", expanded=not st.session_state["hide_choice_menus"]):
         st.subheader("Select Data")
         st.info("Add datasets for outlier evaluation.")
         c1, c2 = st.columns(2)
         c1.button("Add Annotation Data", on_click=add_annotation_to_pred_data)
         add_annotation_to_pred_data()
+        c2.file_uploader(
+            "Select file from disk",
+            accept_multiple_files=True,
+            key="uploaded_datasets",
+            on_change=add_uploaded_dataset,
+        )
         st.subheader("Selected Files:")
         st.json(list(st.session_state.prediction_data.keys()))
         if st.session_state.prediction_data:
@@ -400,19 +409,17 @@ def prediction_options(base_obj=None):
 def remove_model_to_visualize(dataset_name, model_name):
     st.session_state["models_to_visualize"][dataset_name].discard(model_name)
 
-    if not recursive_length_count(st.session_state["models_to_visualize"]):
-        st.session_state["hide_choice_menus"] = False
+    # if not recursive_length_count(st.session_state["models_to_visualize"]):
+    # st.session_state["hide_choice_menus"] = False
 
 
 def prediction_summary_table(dataset_name: str, base_obj=None):
     obj = base_obj or st
 
     DEFAULT_MARKER_COLORS = ["#e88b0b", "#1778dc", "#1bd476", "#d311e6"]
-
-    model_predictions = st.session_state["inference_results"].get(dataset_name)
-    if not model_predictions:
+    model_predictions: pd.DataFrame() = st.session_state["inference_results"].get(dataset_name)
+    if model_predictions is None:
         return
-
     model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
 
     if not model_names:
@@ -439,7 +446,7 @@ def prediction_summary_table(dataset_name: str, base_obj=None):
         custom_text(model, base_obj=c1, font_size=15, centered=True)
         c2.button(
             "Remove",
-            key=f"remove_{model}",
+            key=f"remove_{model}_{dataset_name}",
             on_click=remove_model_to_visualize,
             args=(dataset_name, model),
         )
@@ -451,7 +458,7 @@ def prediction_summary_table(dataset_name: str, base_obj=None):
             centered=False,
         )
         custom_text(
-            len(st.session_state["prediction_data"][dataset_name])
+            len(st.session_state["inference_results"][dataset_name])
             - st.session_state["number_outliers"][dataset_name][model],
             base_obj=c6,
             font_size=20,
@@ -459,11 +466,10 @@ def prediction_summary_table(dataset_name: str, base_obj=None):
         )
         c7.color_picker(
             model,
-            key=f"color_{model}",
+            key=f"color_{model}_{dataset_name}",
             label_visibility="collapsed",
             value=DEFAULT_MARKER_COLORS[i],
         )
-        c7.write(st.session_state[f"color_{model}"])
         obj.markdown("***")
 
 
@@ -637,13 +643,14 @@ def model_choice_callback(dataset_name: str):
 
 
 def model_choice_options(dataset_name: str):
-
+    if st.session_state["inference_results"].get(dataset_name) is None:
+        return
     st.info(
         f"Here you can choose which of the predictions that exist for the datset '{dataset_name}' so far to visualize."
     )
     st.multiselect(
         "Choose models for dataset",
-        sorted(list(st.session_state["inference_results"][dataset_name].keys())),
+        sorted(st.session_state["available_models"][dataset_name]),
         key=f"model_choice_{dataset_name}",
         default=sorted(list(st.session_state["models_to_visualize"][dataset_name])),
         on_change=model_choice_callback,
@@ -653,7 +660,10 @@ def model_choice_options(dataset_name: str):
     st.markdown("***")
 
 
-def number_outlier_options(dataset_name: str):
+def outlier_visualization_options(dataset_name: str):
+    if st.session_state["inference_results"].get(dataset_name) is None:
+        return
+
     form = st.form(
         f"form_{dataset_name}",
     )
@@ -678,6 +688,11 @@ def number_outlier_options(dataset_name: str):
         key=f"figure_height_{dataset_name}",
     )
 
+    form.checkbox(
+        "Only show time ranges containing outliers (predicted or annotated)",
+        key=f"only_show_ranges_with_outliers_{dataset_name}",
+    )
+
     form.form_submit_button("Update Distribution Plot")
 
 
@@ -694,38 +709,66 @@ def show_feature_importances(base_obj=None):
         c2.dataframe(st.session_state["current_importances"])
 
 
-def process_point_from_outlier_plot(selected_point: List | Dict, base_obj=None):
+def process_point_from_outlier_plot(selected_point: List | Dict, dataset_name: str, base_obj=None):
     obj = base_obj or st
-
     state = get_as()
     if isinstance(selected_point, list):  # plot point clicked
-        state.update_selected([selected_point[0]])
+        point_to_process = plot_return_value_as_datetime(selected_point[0])
     elif isinstance(selected_point, dict):  # marker clicked
-        if selected_point["name"].lower().startswith("outlier"):
-            state.update_selected([selected_point["coord"][0]])
+        point_to_process = plot_return_value_as_datetime(selected_point["coord"][0])
+    else:
+        point_to_process = None
 
-    if not state.selection:
+    if point_to_process:
+        if point_to_process not in state.selection:
+            state.update_selected([point_to_process])
+        else:
+            state.selection.remove(point_to_process)
+            st.experimental_rerun()
+
+    if not state.all_indices:
         return
-    obj.subheader("Selected points:")
-    c1, c2, c3 = obj.columns([2, 1, 1])
-    c1.json(
-        list(state.selection),
-        expanded=len(state.selection) < 5,
+    obj.subheader("Prediction correction:")
+
+    obj.info(
+        "Either select individual points in the above plot or using the below slider. \
+        Then use the buttons to add annotations."
     )
 
-    c2.button("Mark Train Outlier", on_click=state.update_data, args=("outlier",))
-    c3.button("Mark Train Normal", on_click=state.update_data, args=("normal",))
+    c1, c2, c3, c4 = obj.columns(4)
+    # c1, c2, c3 = obj.columns([2, 1, 1])
+    # c1.json(
+    # list(state.selection),
+    # expanded=len(state.selection) < 5,
+    # )
+
+    c1.button(
+        "Mark Train Outlier",
+        on_click=state.update_data,
+        args=("outlier",),
+        key=f"pred_mark_outlier_{dataset_name}",
+    )
     c2.button(
+        "Mark Train Normal",
+        on_click=state.update_data,
+        args=("normal",),
+        key=f"pred_mark_normal_{dataset_name}",
+    )
+    c3.button(
         "Mark Test Outlier",
         on_click=state.update_data,
         args=("test_outlier",),
-        key="mark_test_outlier",
+        key=f"pred_mark_test_outlier_{dataset_name}",
     )
-    c3.button(
+    c4.button(
         "Mark Test Normal",
         on_click=state.update_data,
         args=("test_normal",),
-        key="mark_test_normal",
+        key=f"pred_mark_test_normal_{dataset_name}",
     )
-    c2.button("Clear Selection", on_click=state.clear_selection)
+    c1.button(
+        "Clear Selection",
+        on_click=state.clear_selection,
+        key=f"pred_clear_selection_{dataset_name}",
+    )
     # c3.button("Clear All", on_click=state.clear_all)

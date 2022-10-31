@@ -1,4 +1,3 @@
-import pickle
 from typing import Dict, List
 import streamlit as st
 import pandas as pd
@@ -164,21 +163,21 @@ def train_random_forest_classifier(base_obj=None):
         ]
 
     model = clf.best_estimator_
-    X_test = st.session_state["test_features"]
-    y_test = st.session_state["test_labels"]
 
     train_preds = model.predict(X)
-    preds = model.predict(X_test)
-
     train_prec, train_rec, train_f1, train_support = precision_recall_fscore_support(y, train_preds)
-    prec, rec, f1, support = precision_recall_fscore_support(y_test, preds)
-
-    st.session_state["current_model_test_metrics"] = recursive_round(
-        {"precision": prec, "recall": rec, "f1": f1}
-    )
     st.session_state["current_model_train_metrics"] = recursive_round(
         {"precision": train_prec, "recall": train_rec, "f1": train_f1}
     )
+
+    if "test_features" in st.session_state:
+        X_test = st.session_state["test_features"]
+        y_test = st.session_state["test_labels"]
+        test_preds = model.predict(X_test)
+        prec, rec, f1, support = precision_recall_fscore_support(y_test, test_preds)
+        st.session_state["current_model_test_metrics"] = recursive_round(
+            {"precision": prec, "recall": rec, "f1": f1}
+        )
 
     if "current_importances" in st.session_state:
         st.session_state["previous_importances"] = st.session_state["current_importances"]
@@ -251,6 +250,8 @@ def get_model_predictions_RF(
                 st.session_state["RF_features_computed_end"] = end_features
 
         with st.spinner("Getting model results..."):
+            if dataset_name not in st.session_state["inference_results"]:
+                st.session_state["inference_results"][dataset_name] = ds.copy(deep=True)
             for model_name, model_data in model_dicts.items():
                 if model_name not in st.session_state["inference_results"][dataset_name]:
                     st.session_state["models_to_visualize"][dataset_name].update([model_name])
@@ -268,3 +269,4 @@ def get_model_predictions_RF(
                     st.session_state["number_outliers"][dataset_name][model_name] = len(
                         results.nonzero()[0].tolist()
                     )
+                    st.session_state["available_models"][dataset_name].update([model_name])

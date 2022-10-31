@@ -56,7 +56,7 @@ class AnnotationState:
         return self.data["test_normal"]
 
     def update_selected(self, data: Sequence):
-        to_add = {self.value_as_datetime(e) for e in set(data)}
+        to_add = {plot_return_value_as_datetime(e) for e in set(data)}
         if not to_add.issubset(self.data["selected"]):
             self.data["selected"].update(to_add)
             self._update_df("selected")
@@ -67,7 +67,9 @@ class AnnotationState:
         obj = base_obj or st
 
         _data = (
-            {self.value_as_datetime(e) for e in set(data_to_add)} if data_to_add else self.selection
+            {plot_return_value_as_datetime(e) for e in set(data_to_add)}
+            if data_to_add
+            else self.selection
         )
 
         for k, stored_data in self.data.items():
@@ -127,23 +129,23 @@ class AnnotationState:
         setattr(self, f"df_{key}", new_df)
         self._download_data[key] = new_df
 
-    @staticmethod
-    def value_as_datetime(value: str | int | datetime.datetime) -> datetime.datetime:
-        # Plotly sometimes returns selected points as timestamp
-        if isinstance(value, int):
-            return datetime.datetime.fromtimestamp(value / 1000)
-        # also sometimes as strings
-        elif isinstance(value, str):
-            try:
-                return datetime.datetime.strptime(value, "%Y-%m-%d %H:%M")  # Plotly return format
-            except ValueError:
-                pass
-            try:
-                return datetime.datetime.strptime(
-                    value, "%Y-%m-%d"
-                )  # Plotly return format for midnight values
-            except ValueError:
-                pass
-            return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")  # Pyecharts return format
-        else:
-            return value
+
+def plot_return_value_as_datetime(value: str | int | datetime.datetime) -> datetime.datetime:
+    # Plotly sometimes returns selected points as timestamp
+    if isinstance(value, int):
+        return datetime.datetime.fromtimestamp(value / 1000)
+    # also sometimes as strings
+    elif isinstance(value, str):
+        try:
+            return datetime.datetime.strptime(value, "%Y-%m-%d %H:%M")  # Plotly return format
+        except ValueError:
+            pass
+        try:
+            return datetime.datetime.strptime(
+                value, "%Y-%m-%d"
+            )  # Plotly return format for midnight values
+        except ValueError:
+            pass
+        return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")  # Pyecharts return format
+    else:
+        return value

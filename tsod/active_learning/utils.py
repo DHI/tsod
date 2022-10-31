@@ -1,6 +1,7 @@
 from copy import deepcopy
 import datetime
-from tkinter import E
+import random
+import os
 from typing import Any, Dict, List
 import streamlit as st
 import pandas as pd
@@ -63,7 +64,7 @@ def init_session_state():
     _add_to_ss_if_not_in_it("prediction_data", {})
     # _add_to_ss_if_not_in_it("last_model_name", None)
     _add_to_ss_if_not_in_it("use_date_picker", True)
-    _add_to_ss_if_not_in_it("inference_results", defaultdict(dict))
+    _add_to_ss_if_not_in_it("inference_results", {})
     _add_to_ss_if_not_in_it("number_outliers", defaultdict(dict))
     _add_to_ss_if_not_in_it("uploaded_ds_features", {})
     _add_to_ss_if_not_in_it(
@@ -78,6 +79,7 @@ def init_session_state():
     _add_to_ss_if_not_in_it("RF_features_computed_end", 0)
     _add_to_ss_if_not_in_it("model_library", {})
     _add_to_ss_if_not_in_it("selected_points", {})
+    _add_to_ss_if_not_in_it("available_models", defaultdict(set))
 
 
 def set_session_state_items(key: str | List[str], value: Any | List[Any]):
@@ -128,3 +130,9 @@ def recursive_round(data: Dict, decimals: int = 3):
             local_data[k] = recursive_round(v)
 
     return local_data
+
+
+def fix_random_seeds(seed=30):
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
