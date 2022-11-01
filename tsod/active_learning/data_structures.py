@@ -61,7 +61,8 @@ class AnnotationState:
             self.data["selected"].update(to_add)
             self._update_df("selected")
             self._update_plot_df("selected")
-            st.experimental_rerun()
+            return True
+        return False
 
     def update_data(self, key: str, data_to_add: Sequence | None = None, base_obj=None):
         obj = base_obj or st

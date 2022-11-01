@@ -78,8 +78,8 @@ def init_session_state():
     _add_to_ss_if_not_in_it("RF_features_computed_start", 0)
     _add_to_ss_if_not_in_it("RF_features_computed_end", 0)
     _add_to_ss_if_not_in_it("model_library", {})
-    _add_to_ss_if_not_in_it("selected_points", {})
     _add_to_ss_if_not_in_it("available_models", defaultdict(set))
+    _add_to_ss_if_not_in_it("current_outlier_value_store", {})
 
 
 def set_session_state_items(key: str | List[str], value: Any | List[Any]):

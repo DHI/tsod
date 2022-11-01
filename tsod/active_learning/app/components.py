@@ -18,6 +18,8 @@ from tsod.active_learning.utils import (
 from tsod.active_learning.modelling import get_model_predictions, construct_test_data_RF
 from tsod.active_learning.plotting import feature_importance_plot
 from tsod.active_learning.data_structures import plot_return_value_as_datetime
+from contextlib import nullcontext
+from streamlit_profiler import Profiler
 
 
 def filter_data(base_obj=None) -> pd.DataFrame:
@@ -190,7 +192,7 @@ def dev_options(base_obj=None):
     if show_as:
         st.write(get_as().__dict__)
 
-    return profile
+    return Profiler() if profile else nullcontext()
 
 
 def create_save_load_buttons(base_obj=None):
@@ -709,61 +711,104 @@ def show_feature_importances(base_obj=None):
         c2.dataframe(st.session_state["current_importances"])
 
 
-def process_point_from_outlier_plot(selected_point: List | Dict, dataset_name: str, base_obj=None):
+def add_slider_selected_points(dataset_name: str, model_name: str):
+    start, end = st.session_state[f"outlier_slider_{dataset_name}_{model_name}"]
+    coords = st.session_state[f"current_outlier_value_store"][dataset_name][model_name]
+    timestamps_to_add = {coords[i][0] for i in range(start, end + 1)}
+    state = get_as()
+    state.update_selected(timestamps_to_add)
+
+
+def process_data_from_outlier_plot(
+    clicked_point: List | dict | None, dataset_name: str, base_obj=None
+):
     obj = base_obj or st
     state = get_as()
-    if isinstance(selected_point, list):  # plot point clicked
-        point_to_process = plot_return_value_as_datetime(selected_point[0])
-    elif isinstance(selected_point, dict):  # marker clicked
-        point_to_process = plot_return_value_as_datetime(selected_point["coord"][0])
-    else:
-        point_to_process = None
+
+    def _get_point_x_value(point):
+        if isinstance(point, list):  # plot point clicked
+            return plot_return_value_as_datetime(point[0])
+        elif isinstance(point, dict):  # marker clicked
+            return plot_return_value_as_datetime(point["coord"][0])
+        else:
+            return None
+
+    point_to_process = _get_point_x_value(clicked_point)
 
     if point_to_process:
-        if point_to_process not in state.selection:
-            state.update_selected([point_to_process])
-        else:
+        if point_to_process in state.selection:
             state.selection.remove(point_to_process)
             st.experimental_rerun()
+        else:
+            was_updated = state.update_selected([point_to_process])
+            if was_updated:
+                st.experimental_rerun()
 
-    if not state.all_indices:
-        return
+    # if not state.all_indices:
+    # return
     obj.subheader("Prediction correction:")
 
     obj.info(
-        "Either select individual points in the above plot or using the below slider. \
-        Then use the buttons to add annotations."
+        "Either select individual points in the above plot or use the below slider(s) \
+        to select the marked model outliers. Then use the buttons to add annotations."
     )
 
+    current_range = st.session_state[f"range_str_{dataset_name}"]
+    df_current_counts = st.session_state[f"current_ranges_counts_{dataset_name}"]
+
+    model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
+    for model_name in model_names:
+        model_counts = df_current_counts.loc[current_range, model_name]
+        if model_counts <= 1:
+            continue
+        # if not st.session_state[f"current_outlier_value_store"][dataset_name].get(model_name):
+        # continue
+        form = st.form(f"outlier_select_form_{dataset_name}_{model_name}")
+        c1, c2, c3, c4 = form.columns([5, 7, 1, 2])
+        custom_text(model_name, 20, base_obj=c1)
+        if model_counts > 1:
+            c2.slider(
+                model_name,
+                min_value=1,
+                max_value=model_counts,
+                value=(1, model_counts),
+                label_visibility="collapsed",
+                key=f"outlier_slider_{dataset_name}_{model_name}",
+            )
+        c4.form_submit_button(
+            "Select Outlier points",
+            on_click=add_slider_selected_points,
+            args=(dataset_name, model_name),
+        )
+
     c1, c2, c3, c4 = obj.columns(4)
-    # c1, c2, c3 = obj.columns([2, 1, 1])
-    # c1.json(
-    # list(state.selection),
-    # expanded=len(state.selection) < 5,
-    # )
 
     c1.button(
         "Mark Train Outlier",
         on_click=state.update_data,
         args=("outlier",),
+        kwargs={"base_obj": obj},
         key=f"pred_mark_outlier_{dataset_name}",
     )
     c2.button(
         "Mark Train Normal",
         on_click=state.update_data,
         args=("normal",),
+        kwargs={"base_obj": obj},
         key=f"pred_mark_normal_{dataset_name}",
     )
     c3.button(
         "Mark Test Outlier",
         on_click=state.update_data,
         args=("test_outlier",),
+        kwargs={"base_obj": obj},
         key=f"pred_mark_test_outlier_{dataset_name}",
     )
     c4.button(
         "Mark Test Normal",
         on_click=state.update_data,
         args=("test_normal",),
+        kwargs={"base_obj": obj},
         key=f"pred_mark_test_normal_{dataset_name}",
     )
     c1.button(

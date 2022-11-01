@@ -1,6 +1,6 @@
 from collections import defaultdict
 import datetime
-from typing import Dict, List, Tuple
+from typing import List
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -117,7 +117,7 @@ def cachable_get_outlier_counts(
     train_outliers: set,
     test_outliers: set,
     number_of_datapoints: int,
-) -> Tuple[Dict, List]:
+) -> pd.DataFrame:
     with st.spinner("Creating new distribution plot..."):
         state = get_as()
         dataset: pd.DataFrame = st.session_state["inference_results"][dataset_name]
@@ -127,55 +127,35 @@ def cachable_get_outlier_counts(
             np.int16
         )
 
-        ts = []
-        outlier_counts = defaultdict(list)
+        threshold_timestamps = (
+            dataset.reset_index().groupby("outlier_group")["index"].first().to_list()
+        )
+        threshold_timestamps.append(dataset.index.max())
+        ranges = [f"{i} - {j}" for i, j in zip(threshold_timestamps, threshold_timestamps[1:])]
+
+        df_out = pd.DataFrame(
+            index=ranges, columns=model_names + ["Marked Train Outliers", "Marked Test Outliers"]
+        )
+
         annotated_outliers = state.df_outlier
         annotated_test_outliers = state.df_test_outlier
-        for i, (_, group) in enumerate(dataset.groupby("outlier_group")):
-            for model in model_names:
-                outlier_counts[model].append(group[model].sum().item())
-            if i > 0:
-                ts.append(group.index[0])
+        for group_index, (_, group) in enumerate(dataset.groupby("outlier_group")):
+            for model_index, model in enumerate(model_names):
+                df_out.iat[group_index, model_index] = group[model].sum().item()
 
-            if train_outliers:
-                outlier_counts["Marked Train Outliers"].append(
-                    len(
-                        annotated_outliers[
-                            annotated_outliers.index.to_series().between(
-                                group.index[0], group.index[-1]
-                            )
-                        ]
+            df_out.iat[group_index, -2] = len(
+                annotated_outliers[
+                    annotated_outliers.index.to_series().between(group.index[0], group.index[-1])
+                ]
+            )
+            df_out.iat[group_index, -1] = len(
+                annotated_test_outliers[
+                    annotated_test_outliers.index.to_series().between(
+                        group.index[0], group.index[-1]
                     )
-                )
-            if test_outliers:
-                outlier_counts["Marked Test Outliers"].append(
-                    len(
-                        annotated_test_outliers[
-                            annotated_test_outliers.index.to_series().between(
-                                group.index[0], group.index[-1]
-                            )
-                        ]
-                    )
-                )
-        ts.insert(0, dataset.index.min())
-        ts.append(dataset.index.max())
-
-        ranges = [f"{i} - {j}" for i, j in zip(ts, ts[1:])]
-
-        return outlier_counts, ranges
-
-
-@st.cache(persist=True, max_entries=100)
-def cachable_filter_counts(outlier_counts: Dict, ranges: List):
-    filtered_ranges = []
-    filtered_counts = defaultdict(list)
-    for i, index_counts in enumerate(zip(*outlier_counts.values())):
-        if any(index_counts):
-            for i_2, key in enumerate(outlier_counts.keys()):
-                filtered_counts[key].append(index_counts[i_2])
-            filtered_ranges.append(ranges[i])
-
-    return filtered_counts, filtered_ranges
+                ]
+            )
+        return df_out
 
 
 def make_outlier_distribution_plot(dataset_name: str):
@@ -184,7 +164,7 @@ def make_outlier_distribution_plot(dataset_name: str):
         return None, None
     state = get_as()
 
-    outlier_counts, ranges = cachable_get_outlier_counts(
+    df_counts = cachable_get_outlier_counts(
         dataset_name,
         model_names,
         state.outlier,
@@ -193,11 +173,13 @@ def make_outlier_distribution_plot(dataset_name: str):
     )
 
     if st.session_state[f"only_show_ranges_with_outliers_{dataset_name}"]:
-        outlier_counts, ranges = cachable_filter_counts(outlier_counts, ranges)
+        df_counts = df_counts[df_counts.any(axis=1)]
+
+    st.session_state[f"current_ranges_counts_{dataset_name}"] = df_counts
 
     bar = (
         Bar()
-        .add_xaxis(ranges)
+        .add_xaxis(df_counts.index.to_list())
         .set_global_opts(
             title_opts=opts.TitleOpts(
                 title="Distribution of outliers per model",
@@ -237,33 +219,20 @@ def make_outlier_distribution_plot(dataset_name: str):
             ),
         )
     )
-    for series in model_names:
-        bar = bar.add_yaxis(
-            series,
-            outlier_counts[series],
-            stack=series,
-            label_opts=opts.LabelOpts(is_show=False),
-            category_gap="40%",
-        )
+    for series in df_counts.columns:
+        if df_counts[series].any():
+            bar = bar.add_yaxis(
+                series,
+                df_counts[series].to_list(),
+                stack=series,
+                label_opts=opts.LabelOpts(is_show=False),
+                category_gap="40%",
+            )
 
     colors = [st.session_state[f"color_{m}_{dataset_name}"] for m in model_names]
     if state.outlier:
-        bar = bar.add_yaxis(
-            "Marked Train Outliers",
-            outlier_counts["Marked Train Outliers"],
-            stack="Marked Train Outliers",
-            label_opts=opts.LabelOpts(is_show=False),
-            category_gap="40%",
-        )
         colors.append("#e60b0b")
     if state.test_outlier:
-        bar = bar.add_yaxis(
-            "Marked Test Outliers",
-            outlier_counts["Marked Test Outliers"],
-            stack="Marked Test Outliers",
-            label_opts=opts.LabelOpts(is_show=False),
-            category_gap="40%",
-        )
         colors.append("#fd7c99")
 
     bar.set_colors(colors)
@@ -285,6 +254,7 @@ def make_outlier_distribution_plot(dataset_name: str):
         start_time = datetime.datetime.strptime(start_str, "%Y-%m-%d %H:%M:%S")
         end_time = datetime.datetime.strptime(end_str, "%Y-%m-%d %H:%M:%S")
         st.session_state[f"last_clicked_range_{dataset_name}"] = start_time, end_time
+        st.session_state[f"range_str_{dataset_name}"] = clicked_range
         return start_time, end_time
 
     return _get_start_and_end_date(clicked_range)
@@ -302,7 +272,7 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
     y_data = df_plot["Water Level"].to_list()
     markers = []
     state = get_as()
-
+    outlier_value_store = defaultdict(dict)
     for model_number, model_name in enumerate(model_names):
         counter = 1
         for i, row in df_plot.iterrows():
@@ -319,6 +289,10 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
                             value=counter,
                         )
                     )
+                outlier_value_store[model_name][counter] = (
+                    i,
+                    row["Water Level"].item(),
+                )
                 counter += 1
             for series_name, data in state.data.items():
                 if i in data:
@@ -333,9 +307,9 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
                             value=MARKER_VALUES[series_name],
                         )
                     )
-
+    st.session_state["current_outlier_value_store"][dataset_name] = outlier_value_store
     line = (
-        Line()
+        Line(init_opts=opts.InitOpts(animation_opts=opts.AnimationOpts(animation=False)))
         .add_xaxis(x_data)
         .add_yaxis(
             "Water Level",
@@ -347,7 +321,7 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
         .set_global_opts(
             title_opts=opts.TitleOpts(
                 title=f"Outliers {start_time} - {end_time}",
-                subtitle="Click on points or markers to add annotations.",
+                subtitle="Click on points or markers to select / unselect.",
             ),
             yaxis_opts=opts.AxisOpts(
                 type_="value",
@@ -373,6 +347,7 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
                     type_="inside",
                 ),
             ],
+            legend_opts=opts.LegendOpts(pos_top=10, pos_right=10, orient="vertical"),
             # tooltip_opts=opts.TooltipOpts(axis_pointer_type="line", trigger="axis"),
         )
     )
@@ -381,8 +356,10 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
         height=f"{st.session_state[f'figure_height_{dataset_name}']}px",
         theme="dark",
         # events={"click": "function(params) { console.log(params) }"},
-        events={"click": "function(params) { return params.data }"},
-        key=f"time_range_plot_{dataset_name}",
+        events={
+            "click": "function(params) { return params.data }",
+        },
+        # key=f"time_range_plot_{dataset_name}",
     )
 
     return clicked_point
