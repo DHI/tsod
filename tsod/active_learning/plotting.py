@@ -61,12 +61,6 @@ def create_annotation_plot(base_obj=None) -> go.Figure:
 
     fig = create_cachable_line_plot(state.start, state.end)
 
-    # df_plot = state.df_plot
-
-    # df_selected = df_plot[df_plot.index.isin(state.selection)]
-    # df_marked_out = df_plot[df_plot.index.isin(state.outlier)]
-    # df_marked_not_out = df_plot[df_plot.index.isin(state.normal)]
-
     for series_name in state.data:
         if not hasattr(state, f"df_plot_{series_name}"):
             continue
@@ -262,6 +256,7 @@ def make_outlier_distribution_plot(dataset_name: str):
 
 def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
     symbols = ["pin", "arrow", "diamond", "triangle"]
+    sizes = [50, 30, 30, 30]
 
     dataset: pd.DataFrame = st.session_state["inference_results"][dataset_name]
 
@@ -277,12 +272,13 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
         counter = 1
         for i, row in df_plot.iterrows():
             if row[model_name] == 1:  # Outlier
-                if i not in state.all_indices:
+                if i not in state.selection:
                     markers.append(
                         opts.MarkPointItem(
                             name=f"Outlier {counter} {model_name}",
                             coord=[i, row["Water Level"].item()],
                             symbol=symbols[model_number],
+                            symbol_size=sizes[model_number],
                             itemstyle_opts=opts.ItemStyleOpts(
                                 color=st.session_state[f"color_{model_name}_{dataset_name}"]
                             ),
@@ -296,13 +292,15 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
                 counter += 1
             for series_name, data in state.data.items():
                 if i in data:
-                    if (series_name != "selected") and i in state.selection:
-                        continue
+                    # if (series_name != "selected") and i in state.selection:
+                    # continue
                     markers.append(
                         opts.MarkPointItem(
                             name=f"{MARKER_HOVER[series_name]} ({i})",
                             coord=[i, row["Water Level"].item()],
-                            symbol="pin",
+                            symbol="pin" if series_name == "selected" else "roundRect",
+                            symbol_size=sizes[0] if series_name == "selected" else 20,
+                            # symbol="pin",
                             itemstyle_opts=opts.ItemStyleOpts(color=ANNOTATION_COLORS[series_name]),
                             value=MARKER_VALUES[series_name],
                         )

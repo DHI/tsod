@@ -2,7 +2,7 @@ import streamlit as st
 from tsod.active_learning.app.components import (
     dev_options,
     show_feature_importances,
-    show_info,
+    show_annotation_summary,
     test_metrics,
     train_options,
 )
@@ -14,7 +14,7 @@ def main():
     init_session_state()
     fix_random_seeds()
     with dev_options(st.sidebar):
-        show_info()
+        show_annotation_summary()
         # c1, c2, c3 = st.columns(3)
         train_options()
         test_metrics()

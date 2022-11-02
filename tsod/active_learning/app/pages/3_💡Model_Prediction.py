@@ -27,6 +27,8 @@ def main():
                 model_choice_options(dataset_name)
                 prediction_summary_table(dataset_name)
                 outlier_visualization_options(dataset_name)
+            if not st.session_state["models_to_visualize"][dataset_name]:
+                continue
             with st.expander(f"{dataset_name} - Graphs", expanded=True):
                 start_time, end_time = make_outlier_distribution_plot(dataset_name)
                 if start_time is None:

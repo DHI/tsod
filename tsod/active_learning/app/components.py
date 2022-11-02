@@ -217,7 +217,7 @@ def create_save_load_buttons(base_obj=None):
     obj.markdown("***")
 
 
-def show_info(base_obj=None):
+def show_annotation_summary(base_obj=None):
     obj = base_obj or st
     with obj.expander("Annotation Info", expanded=True):
         state = get_as()
@@ -227,10 +227,39 @@ def show_info(base_obj=None):
         custom_text("Training Data", 15, base_obj=c1, centered=False)
         custom_text("Test Data", 15, base_obj=c2, centered=False)
 
-        c1.metric("Total labelled Outlier", len(state.outlier))
-        c1.metric("Total labelled Normal", len(state.normal))
-        c2.metric("Total labelled Outlier", len(state.test_outlier))
-        c2.metric("Total labelled Normal", len(state.test_normal))
+        annotation_keys = ["outlier", "normal", "test_outlier", "test_normal"]
+        if "old_number_annotations" in st.session_state:
+            deltas = {
+                k: len(state.data[k]) - st.session_state["old_number_annotations"][k]
+                for k in annotation_keys
+            }
+        else:
+            deltas = {k: None for k in annotation_keys}
+
+        c1.metric(
+            "Total labelled Outlier",
+            len(state.outlier),
+            delta=deltas["outlier"],
+            delta_color="normal" if deltas["outlier"] != 0 else "off",
+        )
+        c1.metric(
+            "Total labelled Normal",
+            len(state.normal),
+            delta=deltas["normal"],
+            delta_color="normal" if deltas["normal"] != 0 else "off",
+        )
+        c2.metric(
+            "Total labelled Outlier",
+            len(state.test_outlier),
+            delta=deltas["test_outlier"],
+            delta_color="normal" if deltas["test_outlier"] != 0 else "off",
+        )
+        c2.metric(
+            "Total labelled Normal",
+            len(state.test_normal),
+            delta=deltas["test_normal"],
+            delta_color="normal" if deltas["test_normal"] != 0 else "off",
+        )
 
     if "classifier" in st.session_state:
         obj.subheader(f"Current model: {st.session_state.last_model_name}")
@@ -278,6 +307,9 @@ def train_options(base_obj=None):
         st.session_state["old_points_before"] = st.session_state["number_points_before"]
         st.session_state["old_points_after"] = st.session_state["number_points_after"]
 
+        state = get_as()
+        st.session_state["old_number_annotations"] = {k: len(v) for k, v in state.data.items()}
+
         with st.spinner("Constructing features..."):
             if method == "RF_1":
                 construct_training_data_RF()
@@ -287,6 +319,7 @@ def train_options(base_obj=None):
                 train_random_forest_classifier(obj)
 
     if "last_model_name" in st.session_state:
+        st.sidebar.success(f"{st.session_state.last_model_name} finished training.")
         st.sidebar.download_button(
             "Download model",
             pickle.dumps(st.session_state["model_library"][st.session_state["last_model_name"]]),
@@ -352,6 +385,25 @@ def add_uploaded_dataset(base_obj=None):
             obj.error(f"Could not read file {data.name}.")
 
 
+def add_session_models():
+    to_add = st.session_state["session_models_to_add"]
+    uploaded_models = {
+        k: v for k, v in st.session_state["prediction_models"].items() if k.endswith(".pkl")
+    }
+    st.session_state["prediction_models"] = {
+        k: st.session_state["model_library"][k] for k in to_add
+    }
+    st.session_state["prediction_models"].update(uploaded_models)
+
+    # for model_name in to_add:
+    #     if model_name in st.session_state["prediction_models"]:
+    #         continue
+
+    #     st.session_state["prediction_models"][model_name] = st.session_state["model_library"][
+    #         model_name
+    #     ]
+
+
 def prediction_options(base_obj=None):
     obj = base_obj or st
     _, c, _ = obj.columns([2, 5, 2])
@@ -363,7 +415,17 @@ def prediction_options(base_obj=None):
         st.info(
             "Add models with which to generate predictions. The most recently trained model is automatically added."
         )
-        # c1, c2 = st.columns(2)
+        st.multiselect(
+            "Select models trained this session",
+            options=sorted(
+                [k for k in st.session_state["model_library"].keys() if not k.endswith(".pkl")]
+            ),
+            default=[
+                k for k in st.session_state["prediction_models"].keys() if not k.endswith(".pkl")
+            ],
+            on_change=add_session_models,
+            key="session_models_to_add",
+        )
         # c1.button("Add most recently trained model", on_click=add_most_recent_model, args=(obj,))
         st.file_uploader(
             "Select model from disk",
@@ -654,7 +716,7 @@ def model_choice_options(dataset_name: str):
         "Choose models for dataset",
         sorted(st.session_state["available_models"][dataset_name]),
         key=f"model_choice_{dataset_name}",
-        default=sorted(list(st.session_state["models_to_visualize"][dataset_name])),
+        default=sorted(st.session_state["models_to_visualize"][dataset_name]),
         on_change=model_choice_callback,
         args=(dataset_name,),
     )
@@ -663,14 +725,17 @@ def model_choice_options(dataset_name: str):
 
 
 def outlier_visualization_options(dataset_name: str):
-    if st.session_state["inference_results"].get(dataset_name) is None:
+    # if st.session_state["inference_results"].get(dataset_name) is None:
+    # return
+
+    if not st.session_state["models_to_visualize"][dataset_name]:
         return
 
     form = st.form(
         f"form_{dataset_name}",
     )
     form.info(
-        "A large number of outliers is about to be visualized. Click on a bar in the distribution plot to view all outliers \
+        "Click on a bar in the distribution plot to view all outliers \
         in that time period. Each time period is chosen so it contains the same number of datapoints. That number can be adjusted here."
     )
     form.slider(
@@ -702,8 +767,6 @@ def show_feature_importances(base_obj=None):
     obj = base_obj or st
     if "last_model_name" not in st.session_state:
         return
-
-    st.sidebar.success(f"{st.session_state.last_model_name} finished training.")
 
     with obj.expander("Feature Importances", expanded=True):
         c1, c2 = st.columns([2, 1])

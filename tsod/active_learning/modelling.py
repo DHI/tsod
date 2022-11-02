@@ -2,6 +2,7 @@ from typing import Dict, List
 import streamlit as st
 import pandas as pd
 import datetime
+from zoneinfo import ZoneInfo
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV
@@ -136,7 +137,7 @@ def train_random_forest_classifier(base_obj=None):
     X = st.session_state["features"]
     y = st.session_state["labels"]
 
-    rfc = RandomForestClassifier()
+    rfc = RandomForestClassifier(random_state=30)
 
     forest_params = {
         "max_depth": [int(x) for x in np.linspace(10, 30, num=3)] + [None],
@@ -146,12 +147,18 @@ def train_random_forest_classifier(base_obj=None):
         "bootstrap": [True, False],
     }
     clf = RandomizedSearchCV(
-        estimator=rfc, param_distributions=forest_params, cv=3, n_iter=10, n_jobs=-1, verbose=0
+        estimator=rfc,
+        param_distributions=forest_params,
+        cv=3,
+        n_iter=10,
+        n_jobs=-1,
+        verbose=0,
+        random_state=30,
     )
 
     clf.fit(X, y)
 
-    model_name = f"RF_Classifier ({datetime.datetime.now().strftime('%Y-%m-%d %H:%M')})"
+    model_name = f"RF_Classifier ({datetime.datetime.now(tz=ZoneInfo('Europe/Copenhagen')).strftime('%Y-%m-%d %H:%M:%S')})"
     st.session_state["last_model_name"] = model_name
     # Update Test metrics
     if "current_model_test_metrics" in st.session_state:
@@ -174,9 +181,9 @@ def train_random_forest_classifier(base_obj=None):
         X_test = st.session_state["test_features"]
         y_test = st.session_state["test_labels"]
         test_preds = model.predict(X_test)
-        prec, rec, f1, support = precision_recall_fscore_support(y_test, test_preds)
+        test_prec, test_rec, test_f1, support = precision_recall_fscore_support(y_test, test_preds)
         st.session_state["current_model_test_metrics"] = recursive_round(
-            {"precision": prec, "recall": rec, "f1": f1}
+            {"precision": test_prec, "recall": test_rec, "f1": test_f1}
         )
 
     if "current_importances" in st.session_state:
@@ -254,7 +261,7 @@ def get_model_predictions_RF(
                 st.session_state["inference_results"][dataset_name] = ds.copy(deep=True)
             for model_name, model_data in model_dicts.items():
                 if model_name not in st.session_state["inference_results"][dataset_name]:
-                    st.session_state["models_to_visualize"][dataset_name].update([model_name])
+                    # st.session_state["models_to_visualize"][dataset_name].update([model_name])
                     # select relevant subset of ds features, based on what the model needs
                     number_model_features_before = model_data["params"]["points_before"]
                     number_model_features_after = model_data["params"]["points_after"]
@@ -270,3 +277,7 @@ def get_model_predictions_RF(
                         results.nonzero()[0].tolist()
                     )
                     st.session_state["available_models"][dataset_name].update([model_name])
+
+                    st.session_state["models_to_visualize"][dataset_name] = sorted(
+                        st.session_state["available_models"][dataset_name]
+                    )[-2:]
