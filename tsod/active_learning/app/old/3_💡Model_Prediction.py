@@ -4,13 +4,14 @@ from tsod.active_learning.plotting import (
     make_outlier_distribution_plot,
 )
 from tsod.active_learning.utils import init_session_state
-from tsod.active_learning.app.components import (
+from tsod.active_learning.components import (
     prediction_options,
     dev_options,
     prediction_summary_table,
     model_choice_options,
     outlier_visualization_options,
-    process_data_from_outlier_plot,
+    process_data_from_echarts_plot,
+    correction_options,
 )
 
 
@@ -21,7 +22,15 @@ def main():
 
     with dev_options(st.sidebar):
         prediction_options(st.sidebar)
+
+        if not st.session_state["inference_results"]:
+            st.info(
+                "To see and interact with model predictions, please choose one or multiple models and datasets \
+                in the sidebar, then click 'Generate Predictions.'"
+            )
         for dataset_name in st.session_state["prediction_data"].keys():
+            if st.session_state["inference_results"].get(dataset_name) is None:
+                continue
             with st.expander(f"{dataset_name} - Visualization Options", expanded=True):
                 st.subheader(dataset_name)
                 model_choice_options(dataset_name)
@@ -39,7 +48,8 @@ def main():
                     else:
                         continue
                 clicked_point = make_time_range_outlier_plot(dataset_name, start_time, end_time)
-                process_data_from_outlier_plot(clicked_point, dataset_name)
+                process_data_from_echarts_plot(clicked_point)
+                correction_options(dataset_name)
 
 
 if __name__ == "__main__":

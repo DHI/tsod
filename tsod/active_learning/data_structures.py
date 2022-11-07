@@ -4,6 +4,7 @@ import pickle
 from typing import Sequence
 import pandas as pd
 import streamlit as st
+import time
 
 
 class AnnotationState:
@@ -19,6 +20,7 @@ class AnnotationState:
         self.start = None
         self.end = None
         self._download_data = {}
+        self._selection_last_updated = time.perf_counter()  # to prevent update loop
 
     @classmethod
     def from_other_state(cls, other):
@@ -57,7 +59,11 @@ class AnnotationState:
 
     def update_selected(self, data: Sequence):
         to_add = {plot_return_value_as_datetime(e) for e in set(data)}
+        # time_since_last_upate = time.perf_counter() - self._selection_last_updated
+        # if time_since_last_upate < 2.0:
+        # return False
         if not to_add.issubset(self.data["selected"]):
+            self._selection_last_updated = time.perf_counter()
             self.data["selected"].update(to_add)
             self._update_df("selected")
             self._update_plot_df("selected")

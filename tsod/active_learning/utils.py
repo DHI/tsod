@@ -2,7 +2,7 @@ from copy import deepcopy
 import datetime
 import random
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -69,7 +69,7 @@ def init_session_state():
     _add_to_ss_if_not_in_it("uploaded_ds_features", {})
     _add_to_ss_if_not_in_it(
         "plot_start_date",
-        st.session_state["df_full"].index.max().date() - datetime.timedelta(days=7),
+        st.session_state["df_full"].index.max().date() - datetime.timedelta(days=3),
     )
     _add_to_ss_if_not_in_it("plot_end_date", st.session_state["df_full"].index.max().date())
     _add_to_ss_if_not_in_it("date_shift_buttons_used", False)
@@ -80,6 +80,7 @@ def init_session_state():
     _add_to_ss_if_not_in_it("model_library", {})
     _add_to_ss_if_not_in_it("available_models", defaultdict(set))
     _add_to_ss_if_not_in_it("current_outlier_value_store", {})
+    _add_to_ss_if_not_in_it("page_index", 0)
 
 
 def set_session_state_items(key: str | List[str], value: Any | List[Any]):
@@ -95,13 +96,27 @@ def set_session_state_items(key: str | List[str], value: Any | List[Any]):
         st.session_state[key] = value
 
 
-def recursive_length_count(data: Dict) -> int:
+def recursive_length_count(data: Dict, exclude_keys: Sequence = None) -> int:
     total = 0
-    for v in data.values():
+    _exclude = exclude_keys or []
+    for k, v in data.items():
+        if k in _exclude:
+            continue
         if isinstance(v, (set, list)):
             total += len(v)
         elif isinstance(v, dict):
             total += recursive_length_count(v)
+
+    return total
+
+
+def recursive_sum(data: Dict) -> int | float:
+    total = 0
+    for v in data.values():
+        if isinstance(v, (int, float)):
+            total += v
+        elif isinstance(v, dict):
+            total += recursive_sum(v)
 
     return total
 

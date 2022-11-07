@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV
-from tsod.active_learning.utils import get_as, recursive_round
+from tsod.active_learning.utils import get_as, recursive_round, set_session_state_items
 from sklearn.metrics import precision_recall_fscore_support
 
 
@@ -211,6 +211,7 @@ def train_random_forest_classifier(base_obj=None):
         "model_library"
     ][model_name]
 
+    set_session_state_items("page_index", 1)
     st.experimental_rerun()
 
 
@@ -272,12 +273,18 @@ def get_model_predictions_RF(
                         relevant_model_columns
                     ]
                     results = model_data["model"].predict(model_feautures)
+                    probas = model_data["model"].predict_proba(model_feautures)
                     st.session_state["inference_results"][dataset_name][model_name] = results
+                    st.session_state["inference_results"][dataset_name][
+                        f"certainty_{model_name}"
+                    ] = np.abs(
+                        probas[:, 0] - 0.5
+                    )  # lower = more uncertain
                     st.session_state["number_outliers"][dataset_name][model_name] = len(
                         results.nonzero()[0].tolist()
                     )
                     st.session_state["available_models"][dataset_name].update([model_name])
 
-                    st.session_state["models_to_visualize"][dataset_name] = sorted(
-                        st.session_state["available_models"][dataset_name]
-                    )[-2:]
+                    st.session_state["models_to_visualize"][dataset_name] = set(
+                        sorted(st.session_state["available_models"][dataset_name])[-2:]
+                    )

@@ -7,7 +7,7 @@ import plotly.express as px
 import plotly.graph_objs as go
 import streamlit as st
 from pyecharts import options as opts
-from pyecharts.charts import Line, Bar
+from pyecharts.charts import Line, Bar, Scatter
 from streamlit_echarts import st_pyecharts
 from tsod.active_learning.utils import SELECT_INFO, SELECT_OPTIONS, get_as
 
@@ -254,76 +254,38 @@ def make_outlier_distribution_plot(dataset_name: str):
     return _get_start_and_end_date(clicked_range)
 
 
-def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
-    symbols = ["pin", "arrow", "diamond", "triangle"]
-    sizes = [50, 30, 30, 30]
-
-    dataset: pd.DataFrame = st.session_state["inference_results"][dataset_name]
-
-    model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
-
-    df_plot = dataset[dataset.index.to_series().between(start_time, end_time)]
-    x_data = df_plot.index.to_list()
-    y_data = df_plot["Water Level"].to_list()
-    markers = []
+def get_echarts_plot_time_range(
+    start_time,
+    end_time,
+    data_column,
+    include_annotations,
+    plot_title: str,
+    dataset_name: str = None,
+):
     state = get_as()
-    outlier_value_store = defaultdict(dict)
-    for model_number, model_name in enumerate(model_names):
-        counter = 1
-        for i, row in df_plot.iterrows():
-            if row[model_name] == 1:  # Outlier
-                if i not in state.selection:
-                    markers.append(
-                        opts.MarkPointItem(
-                            name=f"Outlier {counter} {model_name}",
-                            coord=[i, row["Water Level"].item()],
-                            symbol=symbols[model_number],
-                            symbol_size=sizes[model_number],
-                            itemstyle_opts=opts.ItemStyleOpts(
-                                color=st.session_state[f"color_{model_name}_{dataset_name}"]
-                            ),
-                            value=counter,
-                        )
-                    )
-                outlier_value_store[model_name][counter] = (
-                    i,
-                    row["Water Level"].item(),
-                )
-                counter += 1
-            for series_name, data in state.data.items():
-                if i in data:
-                    # if (series_name != "selected") and i in state.selection:
-                    # continue
-                    markers.append(
-                        opts.MarkPointItem(
-                            name=f"{MARKER_HOVER[series_name]} ({i})",
-                            coord=[i, row["Water Level"].item()],
-                            symbol="pin" if series_name == "selected" else "roundRect",
-                            symbol_size=sizes[0] if series_name == "selected" else 20,
-                            # symbol="pin",
-                            itemstyle_opts=opts.ItemStyleOpts(color=ANNOTATION_COLORS[series_name]),
-                            value=MARKER_VALUES[series_name],
-                        )
-                    )
-    st.session_state["current_outlier_value_store"][dataset_name] = outlier_value_store
-    line = (
+    state.update_plot(start_time, end_time)
+
+    x_data = state.df_plot.index.to_list()
+    y_data = state.df_plot[data_column].to_list()
+    plot = (
         Line(init_opts=opts.InitOpts(animation_opts=opts.AnimationOpts(animation=False)))
         .add_xaxis(x_data)
         .add_yaxis(
-            "Water Level",
+            data_column,
             y_data,
             color="yellow",
             label_opts=opts.LabelOpts(is_show=False),
-            markpoint_opts=opts.MarkPointOpts(data=markers),
+            # markpoint_opts=opts.MarkPointOpts(data=markers),
+            is_symbol_show=False,
         )
         .set_global_opts(
             title_opts=opts.TitleOpts(
-                title=f"Outliers {start_time} - {end_time}",
-                subtitle="Click on points or markers to select / unselect.",
+                title=plot_title,
+                subtitle="Click on points or markers to select them. Activate different selection modes in the toolbar.",
             ),
             yaxis_opts=opts.AxisOpts(
                 type_="value",
-                name="Water Level",
+                name=data_column,
                 name_rotate=90,
                 name_location="middle",
                 name_gap=50,
@@ -345,17 +307,128 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
                     type_="inside",
                 ),
             ],
-            legend_opts=opts.LegendOpts(pos_top=10, pos_right=10, orient="vertical"),
-            # tooltip_opts=opts.TooltipOpts(axis_pointer_type="line", trigger="axis"),
+            legend_opts=opts.LegendOpts(pos_top=40, pos_right=10, orient="vertical"),
+            brush_opts=opts.BrushOpts(
+                throttle_type="debounce",
+                throttle_delay=500,
+                brush_mode="multiple",
+                brush_type="lineX",
+                tool_box=["lineX", "rect", "clear"],
+                # brush_link="all",
+                # geo_index=0,
+                series_index="all",
+                # x_axis_index=0,
+                # x_axis_index=2,
+                # y_axis_index=2,
+                # out_of_brush={"symbol": "pin"},
+                out_of_brush={"colorAlpha": 0.1},
+            ),
+            tooltip_opts=opts.TooltipOpts(axis_pointer_type="line", trigger="axis"),
         )
     )
+
+    scatter = (
+        Scatter()
+        .add_xaxis(x_data)
+        .add_yaxis(
+            "Datapoints",
+            y_data,
+            label_opts=opts.LabelOpts(is_show=False),
+            symbol_size=3,
+            itemstyle_opts=opts.ItemStyleOpts(color="#dce4e3"),
+            is_selected=len(x_data) < 2000,
+            tooltip_opts=opts.TooltipOpts(is_show=False),
+        )
+    )
+    plot = plot.overlap(scatter)
+    if not include_annotations:
+        return plot
+
+    df_selected = getattr(state, "df_plot_selected", None)
+
+    for series_name in state.data:
+        if not hasattr(state, f"df_plot_{series_name}"):
+            continue
+
+        df = getattr(state, f"df_plot_{series_name}")
+        if df_selected is not None and series_name != "selected":
+            df = df[~df.index.isin(df_selected.index)]
+        if df.empty:
+            continue
+        plot.overlap(
+            Scatter()
+            .add_xaxis(df.index.to_list())
+            .add_yaxis(
+                MARKER_HOVER[series_name],
+                df["Water Level"].to_list(),
+                label_opts=opts.LabelOpts(is_show=False),
+                symbol_rotate=0,
+                symbol="roundRect",
+                symbol_size=15,
+                # color="#dce4e3",
+                itemstyle_opts=opts.ItemStyleOpts(opacity=1, color=ANNOTATION_COLORS[series_name]),
+                tooltip_opts=opts.TooltipOpts(is_show=False),
+            )
+        )
+    return plot
+
+
+def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
+    symbols = ["pin", "arrow", "diamond", "triangle"]
+    sizes = [50, 30, 30, 30]
+
+    dataset: pd.DataFrame = st.session_state["inference_results"][dataset_name]
+
+    model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
+
+    df_plot = dataset[dataset.index.to_series().between(start_time, end_time)]
+
+    plot = get_echarts_plot_time_range(
+        start_time,
+        end_time,
+        "Water Level",
+        plot_title=f"Outliers {start_time} - {end_time}",
+        include_annotations=True,
+    )
+
+    # x_data = df_plot.index.to_list()
+    # y_data = df_plot["Water Level"].to_list()
+    # markers = []
+    # outlier_value_store = defaultdict(dict)
+    pred_outlier_tracker = {}
+    for model_number, model_name in enumerate(model_names):
+        df_outlier = df_plot[df_plot[model_name] > 0]
+        pred_outlier_tracker[model_name] = df_outlier
+        if df_outlier.empty:
+            continue
+        plot.overlap(
+            Scatter()
+            .add_xaxis(df_outlier.index.to_list())
+            .add_yaxis(
+                model_name,
+                df_outlier["Water Level"].to_list(),
+                label_opts=opts.LabelOpts(is_show=False),
+                symbol_rotate=-90 * model_number,
+                symbol="pin",
+                symbol_size=40,
+                itemstyle_opts=opts.ItemStyleOpts(
+                    opacity=1, color=st.session_state[f"color_{model_name}_{dataset_name}"]
+                ),
+                tooltip_opts=opts.TooltipOpts(formatter="{a} <br>Outlier predicted"),
+            )
+        )
+
+    st.session_state["pred_outlier_tracker"] = pred_outlier_tracker
+
     clicked_point = st_pyecharts(
-        line,
+        plot,
         height=f"{st.session_state[f'figure_height_{dataset_name}']}px",
         theme="dark",
-        # events={"click": "function(params) { console.log(params) }"},
         events={
-            "click": "function(params) { return params.data }",
+            "click": "function(params) { return [params.data[0], 'click'] }",
+            # "brushselected": "function(params) { console.log(params) }",
+            "brushselected": "function(params) { return [params.batch[0].selected, 'brush'] }",
+            # "brushselected": "function(params) { return [params.batch[0].selected[1].dataIndex, 'brush'] }",
         },
         # key=f"time_range_plot_{dataset_name}",
     )

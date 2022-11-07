@@ -14,18 +14,107 @@ from tsod.active_learning.utils import (
     custom_text,
     recursive_length_count,
     MODEL_OPTIONS,
+    fix_random_seeds,
+    _add_to_ss_if_not_in_it,
 )
 from tsod.active_learning.modelling import get_model_predictions, construct_test_data_RF
-from tsod.active_learning.plotting import feature_importance_plot
+from tsod.active_learning.plotting import (
+    feature_importance_plot,
+    get_echarts_plot_time_range,
+    make_outlier_distribution_plot,
+    make_time_range_outlier_plot,
+)
 from tsod.active_learning.data_structures import plot_return_value_as_datetime
 from contextlib import nullcontext
 from streamlit_profiler import Profiler
+from streamlit_echarts import st_pyecharts
 
 
-def filter_data(base_obj=None) -> pd.DataFrame:
+def outlier_annotation():
+    st.sidebar.title("Annotation Controls")
+    with dev_options(st.sidebar):
+        state = get_as()
+        create_annotation_plot_buttons(st.sidebar)
+        with st.sidebar.expander("Time Range Selection", expanded=True):
+            time_range_selection()
+
+        create_save_load_buttons(st.sidebar)
+
+        plot = get_echarts_plot_time_range(
+            state.start,
+            state.end,
+            "Water Level",
+            True,
+            "Outlier Annotation",
+        )
+
+        clicked_point = st_pyecharts(
+            plot,
+            height=1000,
+            theme="dark",
+            events={
+                "click": "function(params) { return [params.data[0], 'click'] }",
+                "brushselected": "function(params) { return [params.batch[0].selected, 'brush'] }",
+                # "brushselected": """function(params) { return [params.batch[0].selected.filter( obj => {return obj.seriesName === 'Datapoints'})[0].dataIndex, 'brush'] }""",
+            },
+        )
+        process_data_from_echarts_plot(clicked_point)
+
+
+def model_training():
+    st.sidebar.title("Training Controls")
+    # set_session_state_items("page_index", 1)
+    fix_random_seeds()
+    with dev_options(st.sidebar):
+        show_annotation_summary()
+        # c1, c2, c3 = st.columns(3)
+        train_options()
+        test_metrics()
+        show_feature_importances()
+
+
+def model_prediction():
+    st.sidebar.title("Prediction Controls")
+    with dev_options(st.sidebar):
+        prediction_options(st.sidebar)
+
+        if not st.session_state["inference_results"]:
+            st.info(
+                "To see and interact with model predictions, please choose one or multiple models and datasets \
+                in the sidebar, then click 'Generate Predictions.'"
+            )
+        for dataset_name in st.session_state["prediction_data"].keys():
+            if st.session_state["inference_results"].get(dataset_name) is None:
+                continue
+            with st.expander(f"{dataset_name} - Visualization Options", expanded=True):
+                st.subheader(dataset_name)
+                model_choice_options(dataset_name)
+                prediction_summary_table(dataset_name)
+                outlier_visualization_options(dataset_name)
+            if not st.session_state["models_to_visualize"][dataset_name]:
+                continue
+            with st.expander(f"{dataset_name} - Graphs", expanded=True):
+                start_time, end_time = make_outlier_distribution_plot(dataset_name)
+                if start_time is None:
+                    if f"last_clicked_range_{dataset_name}" in st.session_state:
+                        start_time, end_time = st.session_state[
+                            f"last_clicked_range_{dataset_name}"
+                        ]
+                    else:
+                        continue
+                st.checkbox(
+                    "Area select: Only select predicted outliers",
+                    True,
+                    key=f"only_select_outliers_{dataset_name}",
+                )
+                clicked_point = make_time_range_outlier_plot(dataset_name, start_time, end_time)
+                # pass in dataset_name to activate checking for "select only outliers"
+                process_data_from_echarts_plot(clicked_point, dataset_name)
+                correction_options(dataset_name)
+
+
+def time_range_selection(base_obj=None) -> pd.DataFrame:
     obj = base_obj or st
-    obj.subheader("Time range selection")
-
     data = st.session_state["df_full"]
     dates = obj.date_input(
         "Graph Date Range",
@@ -72,8 +161,6 @@ def filter_data(base_obj=None) -> pd.DataFrame:
             on_click=set_session_state_items,
             args=("use_date_picker", True),
         )
-
-    obj.markdown("***")
 
     state.update_plot(start_dt, end_dt)
 
@@ -125,6 +212,9 @@ def create_annotation_plot_buttons(base_obj=None):
         args=("test_normal",),
         key="mark_test_normal",
     )
+    obj.markdown("***")
+    c_1, c_2 = obj.columns(2)
+
     c_1.button("Clear Selection", on_click=state.clear_selection)
     c_2.button("Clear All", on_click=state.clear_all)
 
@@ -221,7 +311,9 @@ def show_annotation_summary(base_obj=None):
     obj = base_obj or st
     with obj.expander("Annotation Info", expanded=True):
         state = get_as()
-        st.subheader("Annotation summary")
+        c1, c2 = st.columns(2)
+        c1.subheader("Annotation summary")
+        c2.info("Test data will not be used for training.")
         c1, c2, c3 = st.columns([1, 1, 2])
 
         custom_text("Training Data", 15, base_obj=c1, centered=False)
@@ -260,6 +352,17 @@ def show_annotation_summary(base_obj=None):
             delta=deltas["test_normal"],
             delta_color="normal" if deltas["test_normal"] != 0 else "off",
         )
+
+        if not (len(state.data["outlier"]) and len(state.data["normal"]) > 1):
+            c3.warning(
+                """In order to train an outlier prediction model, please annotate at least one outlier 
+                and two normal points as training data.  
+                You can add annotations by  
+                1) Marking points in the 'Outlier Annotation' - page  
+                2) Uploading a previously created annotation file  
+                3) Correcting model predictions in the 'Model prediction' - page  
+                Then choose a method and parameters and click on 'Train Outlier Model' in the sidebar."""
+            )
 
     if "classifier" in st.session_state:
         obj.subheader(f"Current model: {st.session_state.last_model_name}")
@@ -301,14 +404,18 @@ def train_options(base_obj=None):
             step=5,
         )
 
-    st.sidebar.button("Train Random Forest Model", key="train_button")
+    state = get_as()
+    if len(state.data["outlier"]) and len(state.data["normal"]) > 1:
+        train_button = st.sidebar.button("Train Outlier Model", key="train_button")
+    else:
+        train_button = False
 
-    if st.session_state.train_button:
+    if train_button:
         st.session_state["old_points_before"] = st.session_state["number_points_before"]
         st.session_state["old_points_after"] = st.session_state["number_points_after"]
 
-        state = get_as()
-        st.session_state["old_number_annotations"] = {k: len(v) for k, v in state.data.items()}
+        if recursive_length_count(state.data, exclude_keys="selected"):
+            st.session_state["old_number_annotations"] = {k: len(v) for k, v in state.data.items()}
 
         with st.spinner("Constructing features..."):
             if method == "RF_1":
@@ -329,6 +436,7 @@ def train_options(base_obj=None):
 
 def get_predictions_callback(obj=None):
     # set_session_state_items("hide_choice_menus", True)
+    set_session_state_items("page_index", 2)
     get_model_predictions(obj)
     set_session_state_items("prediction_models", {})
 
@@ -534,6 +642,7 @@ def prediction_summary_table(dataset_name: str, base_obj=None):
             label_visibility="collapsed",
             value=DEFAULT_MARKER_COLORS[i],
         )
+        c7.write(st.session_state[f"color_{model}_{dataset_name}"])
         obj.markdown("***")
 
 
@@ -710,7 +819,8 @@ def model_choice_options(dataset_name: str):
     if st.session_state["inference_results"].get(dataset_name) is None:
         return
     st.info(
-        f"Here you can choose which of the predictions that exist for the datset '{dataset_name}' so far to visualize."
+        f"Here you can choose which of the model predictions that exist for the datset \
+            '{dataset_name}' so far to visualize."
     )
     st.multiselect(
         "Choose models for dataset",
@@ -782,69 +892,96 @@ def add_slider_selected_points(dataset_name: str, model_name: str):
     state.update_selected(timestamps_to_add)
 
 
-def process_data_from_outlier_plot(
-    clicked_point: List | dict | None, dataset_name: str, base_obj=None
+def process_data_from_echarts_plot(
+    clicked_point: List | dict | None, dataset_name=None, base_obj=None
 ):
     obj = base_obj or st
     state = get_as()
+    was_updated = False
 
-    def _get_point_x_value(point):
-        if isinstance(point, list):  # plot point clicked
-            return plot_return_value_as_datetime(point[0])
-        elif isinstance(point, dict):  # marker clicked
-            return plot_return_value_as_datetime(point["coord"][0])
+    if (clicked_point is None) or ((clicked_point[1] == "brush") and (not clicked_point[0])):
+        return
+
+    # we want to select only the outlier series, not the datapoints series.
+    # This behaviour is set by a checkbox above the plot. It only effects area selection.
+    if (
+        (clicked_point[1] == "brush")
+        and dataset_name
+        and st.session_state[f"only_select_outliers_{dataset_name}"]
+    ):
+        model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
+
+        state = get_as()
+        relevant_outlier_idc = {
+            d["seriesName"]: d["dataIndex"]
+            for d in clicked_point[0]
+            if d["seriesName"] in model_names
+        }
+        relevant_data_points = [
+            st.session_state["pred_outlier_tracker"][k].iloc[v].index.to_list()
+            for k, v in relevant_outlier_idc.items()
+        ]
+        relevant_data_points = set().union(*relevant_data_points)
+        was_updated = state.update_selected(relevant_data_points)
+
+    else:
+        if clicked_point[1] == "click":
+            point_to_process = plot_return_value_as_datetime(clicked_point[0])
+            if point_to_process:
+                if point_to_process not in state.selection:
+                    was_updated = state.update_selected([point_to_process])
         else:
-            return None
+            relevant_series = [s for s in clicked_point[0] if s["seriesName"] == "Datapoints"][0]
+            relevant_data_idc = relevant_series["dataIndex"]
+            was_updated = state.update_selected(
+                state.df_plot.iloc[relevant_data_idc].index.to_list()
+            )
 
-    point_to_process = _get_point_x_value(clicked_point)
+    if was_updated:
+        st.experimental_rerun()
 
-    if point_to_process:
-        if point_to_process in state.selection:
-            state.selection.remove(point_to_process)
-            st.experimental_rerun()
-        else:
-            was_updated = state.update_selected([point_to_process])
-            if was_updated:
-                st.experimental_rerun()
 
-    # if not state.all_indices:
-    # return
+def correction_options(dataset_name: str, base_obj=None):
+    obj = base_obj or st
     obj.subheader("Prediction correction:")
 
     obj.info(
-        "Either select individual points in the above plot or use the below slider(s) \
-        to select the marked model outliers. Then use the buttons to add annotations."
+        """Either select individual points in the above plot or use the area select options
+        (top right corner of the plot window) to select multiple points. Then add further
+        annotations to correct faulty model predictions."""
     )
 
-    current_range = st.session_state[f"range_str_{dataset_name}"]
-    df_current_counts = st.session_state[f"current_ranges_counts_{dataset_name}"]
+    # current_range = st.session_state[f"range_str_{dataset_name}"]
+    # df_current_counts = st.session_state[f"current_ranges_counts_{dataset_name}"]
 
-    model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
-    for model_name in model_names:
-        model_counts = df_current_counts.loc[current_range, model_name]
-        if model_counts <= 1:
-            continue
-        # if not st.session_state[f"current_outlier_value_store"][dataset_name].get(model_name):
-        # continue
-        form = st.form(f"outlier_select_form_{dataset_name}_{model_name}")
-        c1, c2, c3, c4 = form.columns([5, 7, 1, 2])
-        custom_text(model_name, 20, base_obj=c1)
-        if model_counts > 1:
-            c2.slider(
-                model_name,
-                min_value=1,
-                max_value=model_counts,
-                value=(1, model_counts),
-                label_visibility="collapsed",
-                key=f"outlier_slider_{dataset_name}_{model_name}",
-            )
-        c4.form_submit_button(
-            "Select Outlier points",
-            on_click=add_slider_selected_points,
-            args=(dataset_name, model_name),
-        )
+    # model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
+    # for model_name in model_names:
+    #     model_counts = df_current_counts.loc[current_range, model_name]
+    #     if model_counts <= 1:
+    #         continue
+    #     # if not st.session_state[f"current_outlier_value_store"][dataset_name].get(model_name):
+    #     # continue
+    #     form = st.form(f"outlier_select_form_{dataset_name}_{model_name}")
+    #     c1, c2, c3, c4 = form.columns([5, 7, 1, 2])
+    #     custom_text(model_name, 20, base_obj=c1)
+    #     if model_counts > 1:
+    #         c2.slider(
+    #             model_name,
+    #             min_value=1,
+    #             max_value=model_counts,
+    #             value=(1, model_counts),
+    #             label_visibility="collapsed",
+    #             key=f"outlier_slider_{dataset_name}_{model_name}",
+    #         )
+    #     c4.form_submit_button(
+    #         "Select Outlier points",
+    #         on_click=add_slider_selected_points,
+    #         args=(dataset_name, model_name),
+    #     )
 
     c1, c2, c3, c4 = obj.columns(4)
+
+    state = get_as()
 
     c1.button(
         "Mark Train Outlier",

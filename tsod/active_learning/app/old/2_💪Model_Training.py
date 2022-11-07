@@ -1,5 +1,5 @@
 import streamlit as st
-from tsod.active_learning.app.components import (
+from tsod.active_learning.components import (
     dev_options,
     show_feature_importances,
     show_annotation_summary,
@@ -11,6 +11,7 @@ from tsod.active_learning.utils import init_session_state, fix_random_seeds
 
 def main():
     st.set_page_config(layout="wide", page_icon="💪", page_title="Model Training")
+    st.sidebar.title("Training Controls")
     init_session_state()
     fix_random_seeds()
     with dev_options(st.sidebar):
