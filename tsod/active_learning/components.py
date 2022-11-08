@@ -1,7 +1,7 @@
 import datetime
 import pickle
 from typing import Dict, List
-
+from collections import defaultdict
 import pandas as pd
 import streamlit as st
 from tsod.active_learning.modelling import (
@@ -28,12 +28,18 @@ from tsod.active_learning.data_structures import plot_return_value_as_datetime
 from contextlib import nullcontext
 from streamlit_profiler import Profiler
 from streamlit_echarts import st_pyecharts
+from tsod.active_learning.upload_data import data_uploader
 
 
 def outlier_annotation():
+    exp = st.sidebar.expander("Data Upload", expanded=not len(st.session_state["data_store"]))
+    data_uploader(exp)
     st.sidebar.title("Annotation Controls")
     with dev_options(st.sidebar):
+        data_selection(st.sidebar)
         state = get_as()
+        if not state:
+            return
         create_annotation_plot_buttons(st.sidebar)
         with st.sidebar.expander("Time Range Selection", expanded=True):
             time_range_selection()
@@ -43,7 +49,7 @@ def outlier_annotation():
         plot = get_echarts_plot_time_range(
             state.start,
             state.end,
-            "Water Level",
+            state.column,
             True,
             "Outlier Annotation",
         )
@@ -66,6 +72,7 @@ def model_training():
     # set_session_state_items("page_index", 1)
     fix_random_seeds()
     with dev_options(st.sidebar):
+        data_selection(st.sidebar)
         show_annotation_summary()
         # c1, c2, c3 = st.columns(3)
         train_options()
@@ -113,9 +120,44 @@ def model_prediction():
                 correction_options(dataset_name)
 
 
+def instructions():
+    with open("tsod/active_learning/instructions.md", "r") as f:
+        data = f.read()
+
+    st.markdown(data)
+
+
+def data_selection(base_obj=None):
+    obj = base_obj or st
+
+    with obj.expander("Data selection", expanded=st.session_state["expand_data_selection"]):
+
+        dataset_choice = st.selectbox(
+            label="Select dataset",
+            options=list(st.session_state["data_store"].keys()),
+            index=0,
+            # index=len(st.session_state["data_store"]) - 1,
+            disabled=len(st.session_state["data_store"]) < 2,
+            key="dataset_choice",
+        )
+        if not dataset_choice:
+            return
+        column_choice = st.selectbox(
+            "Select Series",
+            list(st.session_state["data_store"][dataset_choice].columns),
+            disabled=len(st.session_state["data_store"][dataset_choice].columns) < 2,
+            on_change=set_session_state_items,
+            args=("expand_data_selection", False),
+            key="column_choice",
+        )
+
+        st.session_state[f"column_choice_{dataset_choice}"] = column_choice
+
+
 def time_range_selection(base_obj=None) -> pd.DataFrame:
     obj = base_obj or st
-    data = st.session_state["df_full"]
+    data = get_as().df
+    # data = st.session_state["df_full"]
     dates = obj.date_input(
         "Graph Date Range",
         value=(st.session_state.plot_start_date, st.session_state.plot_end_date),
@@ -170,7 +212,7 @@ def shift_plot_window(days: int):
     current_end = st.session_state.plot_end_date
 
     current_range = current_end - current_start
-    df = st.session_state.df_full
+    df = get_as().df
 
     new_start = current_start + datetime.timedelta(days)
     new_end = current_end + datetime.timedelta(days)
@@ -226,36 +268,80 @@ def validate_uploaded_file_contents(base_obj=None):
     uploaded_files = st.session_state["uploaded_annotation_files"]
     if not uploaded_files:
         return
-    for uploaded_file in uploaded_files:
+    state = get_as(return_all_columns=True)
+    data_to_load_if_file_ok = defaultdict(list)
+    # loop through files if there are multiple
+    for file_number, uploaded_file in enumerate(uploaded_files):
+        datapoints_tracker = {}
         file_failed = False
         data = pickle.loads(uploaded_file.getvalue())
-        state = get_as()
-        for df in data.values():
-            if df.empty or file_failed:
+        # loop through series of uploaded data
+        for column, data_dict in data.items():
+            if file_failed:
+                break
+            total_datapoints_loaded = 0
+            if column not in state:
+                obj.warning(
+                    f"""File {uploaded_file.name}:  
+                Column {column} not found in current dataset {st.session_state["dataset_choice"]}, skipping."""
+                )
                 continue
+            # loop through different annotation types (outlier, normal, etc.)
+            for df in data_dict.values():
+                if df.empty:
+                    continue
+                values_match = (
+                    df[column]
+                    .astype(float)
+                    .isin(state[column].df[column].values)
+                    .all()
+                    # df["Water Level"].astype(float).isin(state.df["Water Level"].values).all()
+                )
+                index_match = df.index.isin(state[column].df.index).all()
 
-            values_match = (
-                df["Water Level"].astype(float).isin(state.df["Water Level"].values).all()
-            )
-            index_match = df.index.isin(state.df.index).all()
+                if (not values_match) or (not index_match):
+                    file_failed = True
+                    break
+                total_datapoints_loaded += len(df)
 
-            if (not values_match) or (not index_match):
-                file_failed = True
+            if not file_failed:
+                datapoints_tracker[column] = total_datapoints_loaded
+                data_to_load_if_file_ok[column].append(data_dict)
+
         if file_failed:
-            obj.error(f"{uploaded_file.name}: Did not pass validation for loaded dataset.")
+            obj.error(
+                f"""{uploaded_file.name}: Did not pass validation for loaded dataset.  
+            Either index or values of loaded annotations do not match."""
+            )
         else:
+            for c, count in datapoints_tracker.items():
+                obj.success(
+                    f"File {file_number + 1}: Loaded {count} annotations for series {c}.", icon="✅"
+                )
+
             st.session_state.uploaded_annotation_data[uploaded_file.name] = data
-            obj.success(f"{uploaded_file.name}: Loaded.", icon="✅")
+
+    st.session_state["uploaded_annotation_data"] = data_to_load_if_file_ok
+
+    # if not file_failed:
+
+    # if file_failed:
+
+    # else:
+    #     st.session_state.uploaded_annotation_data[uploaded_file.name] = data
+    # obj.success(f"{uploaded_file.name}: Loaded.", icon="✅")
 
 
 def annotation_file_upload_callback(base_obj=None):
     obj = base_obj or st
     validate_uploaded_file_contents(obj)
-    state = get_as()
+    # state = get_as()
 
-    for data in st.session_state.uploaded_annotation_data.values():
-        for key, df in data.items():
-            state.update_data(key, df.index.to_list())
+    for column, data_list in st.session_state.uploaded_annotation_data.items():
+        state = get_as(column=column)
+        for data in data_list:
+            for key, df in data.items():
+                state.update_data(key, df.index.to_list())
 
 
 def dev_options(base_obj=None):
@@ -280,7 +366,8 @@ def dev_options(base_obj=None):
     if show_ss:
         st.write(st.session_state)
     if show_as:
-        st.write(get_as().__dict__)
+        st.write(st.session_state["AS"])
+        # st.write(st.session_state["AS"]["ddd"]["Water Level"].df)
 
     return Profiler() if profile else nullcontext()
 
@@ -288,13 +375,31 @@ def dev_options(base_obj=None):
 def create_save_load_buttons(base_obj=None):
     obj = base_obj or st
     obj.subheader("Save / load previous")
-    c_1, c_2 = obj.columns(2)
     state = get_as()
+    obj.info(
+        f"""Current dataset:  
+        {state.dataset}"""
+    )
+    c_1, c_2 = obj.columns(2)
 
-    file_name = f"Annotations_{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M')}.bin"
+    file_name = (
+        f"{state.dataset}_Annotations_{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M')}.bin"
+    )
 
-    if state._download_data:
-        c_1.download_button("Download Annotations", state.download_data, file_name=file_name)
+    if not state.all_indices:
+        c_1.warning("No Annotations have been added for this dataset.")
+    c_1.download_button(
+        "Download Annotations",
+        pickle.dumps(
+            {
+                k: v._download_data
+                for k, v in get_as(state.dataset, return_all_columns=True).items()
+                if (v._download_data) and (k != "selected")
+            }
+        ),
+        file_name=file_name,
+        disabled=not state.all_indices,
+    )
 
     c_2.file_uploader(
         "Upload Annotations",
@@ -311,9 +416,7 @@ def show_annotation_summary(base_obj=None):
     obj = base_obj or st
     with obj.expander("Annotation Info", expanded=True):
         state = get_as()
-        c1, c2 = st.columns(2)
-        c1.subheader("Annotation summary")
-        c2.info("Test data will not be used for training.")
+        obj.subheader(f"Annotation summary - {state.dataset} - {state.column}")
         c1, c2, c3 = st.columns([1, 1, 2])
 
         custom_text("Training Data", 15, base_obj=c1, centered=False)
@@ -345,6 +448,8 @@ def show_annotation_summary(base_obj=None):
             len(state.test_outlier),
             delta=deltas["test_outlier"],
             delta_color="normal" if deltas["test_outlier"] != 0 else "off",
+            help="""Test data will not be used for training. It can be used to measure how well
+            a model performs on new data not seen during training. """,
         )
         c2.metric(
             "Total labelled Normal",
@@ -390,7 +495,7 @@ def train_options(base_obj=None):
             min_value=1,
             value=st.session_state.get("old_points_before")
             if st.session_state.get("old_points_before") is not None
-            else 10,
+            else 1,
             key="number_points_before",
             step=5,
         )
@@ -399,7 +504,7 @@ def train_options(base_obj=None):
             min_value=0,
             value=st.session_state.get("old_points_after")
             if st.session_state.get("old_points_after") is not None
-            else 10,
+            else 0,
             key="number_points_after",
             step=5,
         )
@@ -512,6 +617,17 @@ def add_session_models():
     #     ]
 
 
+def add_session_dataset():
+    session_ds = st.session_state["pred_session_ds_choice"]
+    session_cols = st.session_state["pred_session_col_choice"]
+
+    st.session_state["prediction_data"][session_ds] = {}
+    for col in session_cols:
+        st.session_state["prediction_data"][session_ds][col] = st.session_state["data_store"][
+            session_ds
+        ][col]
+
+
 def prediction_options(base_obj=None):
     obj = base_obj or st
     _, c, _ = obj.columns([2, 5, 2])
@@ -554,17 +670,60 @@ def prediction_options(base_obj=None):
         # with obj.expander("Data Choice", expanded=not st.session_state["hide_choice_menus"]):
         st.subheader("Select Data")
         st.info("Add datasets for outlier evaluation.")
-        c1, c2 = st.columns(2)
-        c1.button("Add Annotation Data", on_click=add_annotation_to_pred_data)
-        add_annotation_to_pred_data()
-        c2.file_uploader(
-            "Select file from disk",
+        # c1, c2 = st.columns(2)
+        ds_options = list(st.session_state["data_store"].keys())
+        if "last_model_name" in st.session_state:
+            idx = ds_options.index(
+                st.session_state["model_library"][st.session_state["last_model_name"]][
+                    "trained_on_dataset"
+                ]
+            )
+        else:
+            if len(ds_options):
+                idx = len(ds_options) - 1
+            else:
+                idx = None
+        ds_choice = st.selectbox(
+            label="Select datasets created this session",
+            options=ds_options,
+            index=idx,
+            disabled=len(st.session_state["data_store"]) < 2,
+            key="pred_session_ds_choice",
+        )
+        if ds_choice:
+            col_options = list(st.session_state["data_store"][ds_choice].columns)
+            if "last_model_name" in st.session_state:
+                if (
+                    ds_choice
+                    == st.session_state["model_library"][st.session_state["last_model_name"]][
+                        "trained_on_dataset"
+                    ]
+                ):
+                    default = st.session_state["model_library"][
+                        st.session_state["last_model_name"]
+                    ]["trained_on_series"]
+                else:
+                    default = None
+            else:
+                default = None
+
+            session_ds_columns = st.multiselect(
+                "Pick columns",
+                options=col_options,
+                default=default,
+                on_change=add_session_dataset,
+                key="pred_session_col_choice",
+            )
+        # c1.button("Add Annotation Data", on_click=add_annotation_to_pred_data)
+        # add_annotation_to_pred_data()
+        st.file_uploader(
+            "Select dataset from disk",
             accept_multiple_files=True,
             key="uploaded_datasets",
             on_change=add_uploaded_dataset,
         )
-        st.subheader("Selected Files:")
-        st.json(list(st.session_state.prediction_data.keys()))
+        st.subheader("Selected Series:")
+        st.json({k: list(v.keys()) for k, v in st.session_state["prediction_data"].items()})
         if st.session_state.prediction_data:
             st.button(
                 "Clear selection",
@@ -829,6 +988,7 @@ def model_choice_options(dataset_name: str):
         default=sorted(st.session_state["models_to_visualize"][dataset_name]),
         on_change=model_choice_callback,
         args=(dataset_name,),
+        max_selections=4,
     )
 
     st.markdown("***")
@@ -931,8 +1091,10 @@ def process_data_from_echarts_plot(
                 if point_to_process not in state.selection:
                     was_updated = state.update_selected([point_to_process])
         else:
-            relevant_series = [s for s in clicked_point[0] if s["seriesName"] == "Datapoints"][0]
-            relevant_data_idc = relevant_series["dataIndex"]
+            relevant_series = [s for s in clicked_point[0] if s["seriesName"] == "Datapoints"]
+            if not relevant_series:
+                return
+            relevant_data_idc = relevant_series[0]["dataIndex"]
             was_updated = state.update_selected(
                 state.df_plot.iloc[relevant_data_idc].index.to_list()
             )

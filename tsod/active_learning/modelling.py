@@ -12,6 +12,7 @@ from sklearn.metrics import precision_recall_fscore_support
 
 def get_neighboring_points(
     indices: List,
+    data_column: str,
     points_before: int,
     points_after: int,
     full_df: pd.DataFrame,
@@ -41,7 +42,7 @@ def get_neighboring_points(
             try:
                 if i_2 != i:
                     # Access full df for neighboring values
-                    sample_neighbors.append(df.loc[i_2, "Water Level"] / normalization_value)
+                    sample_neighbors.append(df.loc[i_2, data_column] / normalization_value)
             except KeyError:
                 sample_neighbors.append(1.0)
 
@@ -72,14 +73,25 @@ def construct_training_data_RF():
     labels = []
     features.extend(
         get_neighboring_points(
-            outliers.index.to_list(), points_before, points_after, state.df, "Water Level"
+            indices=outliers.index.to_list(),
+            data_column=state.column,
+            points_before=points_before,
+            points_after=points_after,
+            full_df=state.df,
+            column_for_normalization=state.column,
         )
     )
     features.extend(
         get_neighboring_points(
-            normal.index.to_list(), points_before, points_after, state.df, "Water Level"
+            indices=normal.index.to_list(),
+            data_column=state.column,
+            points_before=points_before,
+            points_after=points_after,
+            full_df=state.df,
+            column_for_normalization=state.column,
         )
     )
+
     labels.extend([1] * len(outliers))
     labels.extend([0] * len(normal))
 
@@ -105,12 +117,22 @@ def construct_test_data_RF():
     labels = []
     features.extend(
         get_neighboring_points(
-            outliers.index.to_list(), points_before, points_after, state.df, "Water Level"
+            outliers.index.to_list(),
+            state.column,
+            points_before,
+            points_after,
+            state.df,
+            state.column,
         )
     )
     features.extend(
         get_neighboring_points(
-            normal.index.to_list(), points_before, points_after, state.df, "Water Level"
+            normal.index.to_list(),
+            state.column,
+            points_before,
+            points_after,
+            state.df,
+            state.column,
         )
     )
     labels.extend([1] * len(outliers))
@@ -197,6 +219,8 @@ def train_random_forest_classifier(base_obj=None):
     ).sort_values("Feature importance", ascending=False)
 
     st.session_state["current_importances"] = df_fi
+    ds_choice = st.session_state["dataset_choice"]
+    col_choice = st.session_state["column_choice"]
 
     st.session_state["model_library"][model_name] = {
         "model": model,
@@ -205,11 +229,17 @@ def train_random_forest_classifier(base_obj=None):
             "points_before": st.session_state["last_points_before"],
             "points_after": st.session_state["last_points_after"],
         },
+        "trained_on_dataset": ds_choice,
+        "trained_on_series": col_choice,
     }
 
     st.session_state["prediction_models"][st.session_state["last_model_name"]] = st.session_state[
         "model_library"
     ][model_name]
+
+    st.session_state["prediction_data"][ds_choice][col_choice] = st.session_state["data_store"][
+        ds_choice
+    ][col_choice]
 
     set_session_state_items("page_index", 1)
     st.experimental_rerun()

@@ -8,8 +8,12 @@ import time
 
 
 class AnnotationState:
-    def __init__(self, df_full: pd.DataFrame) -> None:
-        self.df = df_full
+    def __init__(self, dataset: str, column: str) -> None:
+        # def __init__(self, df_full: pd.DataFrame) -> None:
+        self.df = st.session_state["data_store"][dataset][[column]]
+        # self.df = df_full
+        self.dataset = dataset
+        self.column = column
         self.data = defaultdict(set)
         self.df_selected = pd.DataFrame()
         self.df_outlier = pd.DataFrame()
@@ -20,7 +24,6 @@ class AnnotationState:
         self.start = None
         self.end = None
         self._download_data = {}
-        self._selection_last_updated = time.perf_counter()  # to prevent update loop
 
     @classmethod
     def from_other_state(cls, other):
@@ -29,9 +32,9 @@ class AnnotationState:
 
         return state
 
-    @property
-    def download_data(self):
-        return pickle.dumps(self._download_data)
+    # @property
+    # def download_data(self):
+    # return pickle.dumps(self._download_data)
 
     @property
     def all_indices(self):
@@ -59,11 +62,7 @@ class AnnotationState:
 
     def update_selected(self, data: Sequence):
         to_add = {plot_return_value_as_datetime(e) for e in set(data)}
-        # time_since_last_upate = time.perf_counter() - self._selection_last_updated
-        # if time_since_last_upate < 2.0:
-        # return False
         if not to_add.issubset(self.data["selected"]):
-            self._selection_last_updated = time.perf_counter()
             self.data["selected"].update(to_add)
             self._update_df("selected")
             self._update_plot_df("selected")
@@ -134,7 +133,10 @@ class AnnotationState:
         new_df = self.df[self.df.index.isin(self.data[key])]
 
         setattr(self, f"df_{key}", new_df)
-        self._download_data[key] = new_df
+        if new_df.empty:
+            del self._download_data[key]
+        else:
+            self._download_data[key] = new_df
 
 
 def plot_return_value_as_datetime(value: str | int | datetime.datetime) -> datetime.datetime:

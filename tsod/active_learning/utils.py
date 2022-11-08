@@ -46,8 +46,22 @@ def load_data(file_name: str = "TODO"):
     return df
 
 
-def get_as() -> AnnotationState:
-    return st.session_state.AS
+def get_as(
+    dataset: str | None = None, column: str | None = None, return_all_columns: bool = False
+) -> AnnotationState:
+    if not dataset:
+        dataset = st.session_state["dataset_choice"]
+        if not dataset:
+            return None
+    ds_dict = st.session_state["AS"].get(dataset)
+
+    if not column:
+        if return_all_columns:
+            return ds_dict
+        column = st.session_state[f"column_choice_{dataset}"]
+    if not ds_dict:
+        return None
+    return ds_dict.get(column)
 
 
 def _add_to_ss_if_not_in_it(key: str, init_value: Any):
@@ -56,22 +70,44 @@ def _add_to_ss_if_not_in_it(key: str, init_value: Any):
 
 
 def init_session_state():
-    _add_to_ss_if_not_in_it("df_full", load_data())
-    _add_to_ss_if_not_in_it("AS", AnnotationState(st.session_state["df_full"]))
+    ######### for dev, remove ###################
+    if "data_store" not in st.session_state:
+        import pickle
+
+        with open("dev_data.pkl", "rb") as f:
+            test = pickle.load(f)
+        st.session_state["data_store"] = test
+
+        _add_to_ss_if_not_in_it("AS", defaultdict(dict))
+        st.session_state["AS"]["fff"]["Water Level"] = AnnotationState("fff", "Water Level")
+        st.session_state["AS"]["ddd"]["Water Level"] = AnnotationState("ddd", "Water Level")
+        st.session_state["AS"]["ddd"]["another_column"] = AnnotationState("ddd", "another_column")
+
+        st.session_state["plot_start_date"] = st.session_state["AS"]["ddd"][
+            "Water Level"
+        ].df.index.max().date() - datetime.timedelta(days=3)
+        st.session_state["plot_end_date"] = (
+            st.session_state["AS"]["ddd"]["Water Level"].df.index.max().date()
+        )
+
+    ################################################
+
+    _add_to_ss_if_not_in_it("data_store", {})
+    # _add_to_ss_if_not_in_it("AS", AnnotationState(st.session_state["df_full"]))
     _add_to_ss_if_not_in_it("annotation_data_loaded", True)
     _add_to_ss_if_not_in_it("uploaded_annotation_data", {})
     _add_to_ss_if_not_in_it("prediction_models", {})
-    _add_to_ss_if_not_in_it("prediction_data", {})
+    _add_to_ss_if_not_in_it("prediction_data", defaultdict(dict))
     # _add_to_ss_if_not_in_it("last_model_name", None)
     _add_to_ss_if_not_in_it("use_date_picker", True)
     _add_to_ss_if_not_in_it("inference_results", {})
     _add_to_ss_if_not_in_it("number_outliers", defaultdict(dict))
     _add_to_ss_if_not_in_it("uploaded_ds_features", {})
-    _add_to_ss_if_not_in_it(
-        "plot_start_date",
-        st.session_state["df_full"].index.max().date() - datetime.timedelta(days=3),
-    )
-    _add_to_ss_if_not_in_it("plot_end_date", st.session_state["df_full"].index.max().date())
+    # _add_to_ss_if_not_in_it(
+    #     "plot_start_date",
+    #     st.session_state["df_full"].index.max().date() - datetime.timedelta(days=3),
+    # )
+    # _add_to_ss_if_not_in_it("plot_end_date", st.session_state["df_full"].index.max().date())
     _add_to_ss_if_not_in_it("date_shift_buttons_used", False)
     _add_to_ss_if_not_in_it("hide_choice_menus", False)
     _add_to_ss_if_not_in_it("models_to_visualize", defaultdict(set))
@@ -81,18 +117,25 @@ def init_session_state():
     _add_to_ss_if_not_in_it("available_models", defaultdict(set))
     _add_to_ss_if_not_in_it("current_outlier_value_store", {})
     _add_to_ss_if_not_in_it("page_index", 0)
+    _add_to_ss_if_not_in_it("expand_data_selection", False)
 
 
-def set_session_state_items(key: str | List[str], value: Any | List[Any]):
+def set_session_state_items(
+    key: str | List[str], value: Any | List[Any], add_if_not_present: bool = False
+):
     if [type(key), type(value)].count(list) == 1:
         raise ValueError("Either both or neither of key and value should be list.")
 
     if isinstance(key, list):
         assert len(key) == len(value)
         for k, v in zip(key, value):
+            if add_if_not_present:
+                _add_to_ss_if_not_in_it(k, v)
             st.session_state[k] = v
 
     else:
+        if add_if_not_present:
+            _add_to_ss_if_not_in_it(key, value)
         st.session_state[key] = value
 
 

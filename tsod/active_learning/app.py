@@ -3,19 +3,26 @@ from tsod.active_learning.components import (
     outlier_annotation,
     model_training,
     model_prediction,
+    instructions,
 )
 from tsod.active_learning.utils import init_session_state
 from streamlit_option_menu import option_menu
 
 
 def main():
-    st.set_page_config(layout="wide", page_icon="📈", page_title="Outlier Annotation Tool")
+    st.set_page_config(
+        layout="wide",
+        page_icon="https://static.thenounproject.com/png/2196104-200.png",
+        page_title="Outlier Annotation Tool",
+    )
+    # st.set_page_config(layout="wide", page_icon="📈", page_title="Outlier Annotation Tool")
     init_session_state()
 
     func_mapping = {
         "Outlier Annotation": outlier_annotation,
         "Model Training": model_training,
         "Model Prediction": model_prediction,
+        "Instructions": instructions,
     }
 
     with st.sidebar:
@@ -24,7 +31,7 @@ def main():
             list(func_mapping.keys()),
             # orientation="horizontal",
             default_index=st.session_state["page_index"],
-            icons=["graph-up", "file-bar-graph", "lightbulb"],
+            icons=["graph-up", "file-bar-graph", "lightbulb", "info-circle"],
             styles={
                 "container": {"padding": "0!important"},
                 # "container": {"padding": "0!important", "background-color": "#fafafa"},

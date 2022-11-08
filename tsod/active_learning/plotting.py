@@ -336,7 +336,7 @@ def get_echarts_plot_time_range(
             label_opts=opts.LabelOpts(is_show=False),
             symbol_size=3,
             itemstyle_opts=opts.ItemStyleOpts(color="#dce4e3"),
-            is_selected=len(x_data) < 2000,
+            is_selected=len(x_data) < 10000,
             tooltip_opts=opts.TooltipOpts(is_show=False),
         )
     )
@@ -360,7 +360,7 @@ def get_echarts_plot_time_range(
             .add_xaxis(df.index.to_list())
             .add_yaxis(
                 MARKER_HOVER[series_name],
-                df["Water Level"].to_list(),
+                df[state.column].to_list(),
                 label_opts=opts.LabelOpts(is_show=False),
                 symbol_rotate=0,
                 symbol="roundRect",
@@ -382,11 +382,12 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
     model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
 
     df_plot = dataset[dataset.index.to_series().between(start_time, end_time)]
+    state = get_as()
 
     plot = get_echarts_plot_time_range(
         start_time,
         end_time,
-        "Water Level",
+        state.column,
         plot_title=f"Outliers {start_time} - {end_time}",
         include_annotations=True,
     )
@@ -406,7 +407,7 @@ def make_time_range_outlier_plot(dataset_name: str, start_time, end_time):
             .add_xaxis(df_outlier.index.to_list())
             .add_yaxis(
                 model_name,
-                df_outlier["Water Level"].to_list(),
+                df_outlier[state.column].to_list(),
                 label_opts=opts.LabelOpts(is_show=False),
                 symbol_rotate=-90 * model_number,
                 symbol="pin",
