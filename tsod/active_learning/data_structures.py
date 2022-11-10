@@ -1,16 +1,14 @@
 from collections import defaultdict
 import datetime
-import pickle
 from typing import Sequence
 import pandas as pd
 import streamlit as st
-import time
 
 
 class AnnotationState:
     def __init__(self, dataset: str, column: str) -> None:
         # def __init__(self, df_full: pd.DataFrame) -> None:
-        self.df = st.session_state["data_store"][dataset][[column]]
+        self.df = st.session_state["data_store"][dataset][column]
         # self.df = df_full
         self.dataset = dataset
         self.column = column
@@ -134,7 +132,7 @@ class AnnotationState:
 
         setattr(self, f"df_{key}", new_df)
         if new_df.empty:
-            del self._download_data[key]
+            self._download_data.pop(key, None)
         else:
             self._download_data[key] = new_df
 

@@ -15,7 +15,6 @@ def main():
         page_icon="https://static.thenounproject.com/png/2196104-200.png",
         page_title="Outlier Annotation Tool",
     )
-    # st.set_page_config(layout="wide", page_icon="📈", page_title="Outlier Annotation Tool")
     init_session_state()
 
     func_mapping = {

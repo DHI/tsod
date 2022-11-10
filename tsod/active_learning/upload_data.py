@@ -6,6 +6,7 @@ from dateutil.parser._parser import ParserError
 import dateutil
 import numpy as np
 from tsod.active_learning.data_structures import AnnotationState
+import datetime
 
 
 def datetime_unififer(data=pd.DataFrame, date_column=str, base_obj=None):
@@ -293,7 +294,7 @@ def data_upload_callback(base_obj=None):
     dataframe.index.name = None
     if len(dataframe.columns) > 1:
         st.session_state["expand_data_selection"] = True
-    st.session_state["data_store"][file_handle] = dataframe
+    # st.session_state["data_store"][file_handle] = dataframe
 
     if len(st.session_state["data_store"]) > 1:
         st.session_state["expand_data_selection"] = True
@@ -308,5 +309,7 @@ def data_upload_callback(base_obj=None):
 
     # add new annotation state instance for each column
     for col in unique_columns:
-        # if not get_as(file_handle, col):
+        sub_df = dataframe[[col]]
+        sub_df = sub_df[~sub_df[col].isna()]
+        st.session_state["data_store"][file_handle][col] = sub_df
         st.session_state["AS"][file_handle][col] = AnnotationState(file_handle, col)

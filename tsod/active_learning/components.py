@@ -51,7 +51,7 @@ def outlier_annotation():
             state.end,
             state.column,
             True,
-            "Outlier Annotation",
+            f"Outlier Annotation - {state.dataset} - {state.column}",
         )
 
         clicked_point = st_pyecharts(
@@ -69,6 +69,12 @@ def outlier_annotation():
 
 def model_training():
     st.sidebar.title("Training Controls")
+    if not st.session_state["data_store"]:
+        st.info(
+            """To train models or view annotation summaries, please upload some data
+        in the 'Outlier Annotation' - page."""
+        )
+        return
     # set_session_state_items("page_index", 1)
     fix_random_seeds()
     with dev_options(st.sidebar):
@@ -90,34 +96,43 @@ def model_prediction():
                 "To see and interact with model predictions, please choose one or multiple models and datasets \
                 in the sidebar, then click 'Generate Predictions.'"
             )
-        for dataset_name in st.session_state["prediction_data"].keys():
-            if st.session_state["inference_results"].get(dataset_name) is None:
-                continue
-            with st.expander(f"{dataset_name} - Visualization Options", expanded=True):
-                st.subheader(dataset_name)
-                model_choice_options(dataset_name)
-                prediction_summary_table(dataset_name)
-                outlier_visualization_options(dataset_name)
-            if not st.session_state["models_to_visualize"][dataset_name]:
-                continue
-            with st.expander(f"{dataset_name} - Graphs", expanded=True):
-                start_time, end_time = make_outlier_distribution_plot(dataset_name)
-                if start_time is None:
-                    if f"last_clicked_range_{dataset_name}" in st.session_state:
-                        start_time, end_time = st.session_state[
-                            f"last_clicked_range_{dataset_name}"
-                        ]
-                    else:
-                        continue
-                st.checkbox(
-                    "Area select: Only select predicted outliers",
-                    True,
-                    key=f"only_select_outliers_{dataset_name}",
-                )
-                clicked_point = make_time_range_outlier_plot(dataset_name, start_time, end_time)
-                # pass in dataset_name to activate checking for "select only outliers"
-                process_data_from_echarts_plot(clicked_point, dataset_name)
-                correction_options(dataset_name)
+        for dataset_name, series_dict in st.session_state["inference_results"].items():
+            # for dataset_name, series_list in st.session_state["prediction_data"].items():
+            # if st.session_state["inference_results"].get(dataset_name) is None:
+            # continue
+            for series in series_dict.keys():
+                # for series in series_list:
+                # if st.session_state["inference_results"].get(dataset_name).get(series) is None:
+                # continue
+                with st.expander(
+                    f"{dataset_name} - {series} - Visualization Options", expanded=True
+                ):
+                    st.subheader(f"{dataset_name} - {series}")
+                    model_choice_options(dataset_name, series)
+                    prediction_summary_table(dataset_name, series)
+                    outlier_visualization_options(dataset_name, series)
+                if not st.session_state["models_to_visualize"][dataset_name][series]:
+                    continue
+                with st.expander(f"{dataset_name} - {series} - Graphs", expanded=True):
+                    start_time, end_time = make_outlier_distribution_plot(dataset_name, series)
+                    if start_time is None:
+                        if f"last_clicked_range_{dataset_name}_{series}" in st.session_state:
+                            start_time, end_time = st.session_state[
+                                f"last_clicked_range_{dataset_name}_{series}"
+                            ]
+                        else:
+                            continue
+                    st.checkbox(
+                        "Area select: Only select predicted outliers",
+                        True,
+                        key=f"only_select_outliers_{dataset_name}_{series}",
+                    )
+                    clicked_point = make_time_range_outlier_plot(
+                        dataset_name, series, start_time, end_time
+                    )
+                    # pass in dataset_name to activate checking for "select only outliers"
+                    process_data_from_echarts_plot(clicked_point, dataset_name, series)
+                    correction_options(dataset_name, series)
 
 
 def instructions():
@@ -144,8 +159,8 @@ def data_selection(base_obj=None):
             return
         column_choice = st.selectbox(
             "Select Series",
-            list(st.session_state["data_store"][dataset_choice].columns),
-            disabled=len(st.session_state["data_store"][dataset_choice].columns) < 2,
+            list(st.session_state["data_store"][dataset_choice].keys()),
+            disabled=len(st.session_state["data_store"][dataset_choice]) < 2,
             on_change=set_session_state_items,
             args=("expand_data_selection", False),
             key="column_choice",
@@ -416,6 +431,8 @@ def show_annotation_summary(base_obj=None):
     obj = base_obj or st
     with obj.expander("Annotation Info", expanded=True):
         state = get_as()
+        dataset = state.dataset
+        series = state.column
         obj.subheader(f"Annotation summary - {state.dataset} - {state.column}")
         c1, c2, c3 = st.columns([1, 1, 2])
 
@@ -423,9 +440,10 @@ def show_annotation_summary(base_obj=None):
         custom_text("Test Data", 15, base_obj=c2, centered=False)
 
         annotation_keys = ["outlier", "normal", "test_outlier", "test_normal"]
-        if "old_number_annotations" in st.session_state:
+        if f"old_number_annotations_{dataset}_{series}" in st.session_state:
             deltas = {
-                k: len(state.data[k]) - st.session_state["old_number_annotations"][k]
+                k: len(state.data[k])
+                - st.session_state[f"old_number_annotations_{dataset}_{series}"][k]
                 for k in annotation_keys
             }
         else:
@@ -448,8 +466,8 @@ def show_annotation_summary(base_obj=None):
             len(state.test_outlier),
             delta=deltas["test_outlier"],
             delta_color="normal" if deltas["test_outlier"] != 0 else "off",
-            help="""Test data will not be used for training. It can be used to measure how well
-            a model performs on new data not seen during training. """,
+            help="""Test data will not be used for training.  
+            It can be used to measure how well a model performs on new data not seen during training. """,
         )
         c2.metric(
             "Total labelled Normal",
@@ -470,11 +488,17 @@ def show_annotation_summary(base_obj=None):
             )
 
     if "classifier" in st.session_state:
-        obj.subheader(f"Current model: {st.session_state.last_model_name}")
+        obj.subheader(f"Current model: {st.session_state[f'last_model_name_{dataset}_{series}']}")
 
 
 def train_options(base_obj=None):
     obj = base_obj or st
+
+    state = get_as()
+    dataset = state.dataset
+    series = state.column
+    if not (len(state.data["outlier"]) and len(state.data["normal"]) > 1):
+        return
 
     with st.sidebar.expander("Modelling Options", expanded=True):
         st.info("Here you can choose what type of outlier detection approach to use.")
@@ -509,18 +533,16 @@ def train_options(base_obj=None):
             step=5,
         )
 
-    state = get_as()
-    if len(state.data["outlier"]) and len(state.data["normal"]) > 1:
-        train_button = st.sidebar.button("Train Outlier Model", key="train_button")
-    else:
-        train_button = False
+    train_button = st.sidebar.button("Train Outlier Model", key="train_button")
 
     if train_button:
         st.session_state["old_points_before"] = st.session_state["number_points_before"]
         st.session_state["old_points_after"] = st.session_state["number_points_after"]
 
         if recursive_length_count(state.data, exclude_keys="selected"):
-            st.session_state["old_number_annotations"] = {k: len(v) for k, v in state.data.items()}
+            st.session_state[f"old_number_annotations_{dataset}_{series}"] = {
+                k: len(v) for k, v in state.data.items()
+            }
 
         with st.spinner("Constructing features..."):
             if method == "RF_1":
@@ -530,12 +552,18 @@ def train_options(base_obj=None):
             if method == "RF_1":
                 train_random_forest_classifier(obj)
 
-    if "last_model_name" in st.session_state:
-        st.sidebar.success(f"{st.session_state.last_model_name} finished training.")
+    if f"last_model_name_{dataset}_{series}" in st.session_state:
+        st.sidebar.success(
+            f"{st.session_state[f'last_model_name_{dataset}_{series}']} finished training."
+        )
         st.sidebar.download_button(
             "Download model",
-            pickle.dumps(st.session_state["model_library"][st.session_state["last_model_name"]]),
-            f"{st.session_state.last_model_name}.pkl",
+            pickle.dumps(
+                st.session_state["model_library"][
+                    st.session_state[f"last_model_name_{dataset}_{series}"]
+                ]
+            ),
+            f"{st.session_state[f'last_model_name_{dataset}_{series}']}.pkl",
         )
 
 
@@ -544,26 +572,6 @@ def get_predictions_callback(obj=None):
     set_session_state_items("page_index", 2)
     get_model_predictions(obj)
     set_session_state_items("prediction_models", {})
-
-
-def add_annotation_to_pred_data(base_obj=None):
-    obj = base_obj or st
-
-    if not st.session_state.annotation_data_loaded:
-        obj.error("No annotation data has been loaded in this session.")
-        return
-
-    if "Annotation Data" not in st.session_state.prediction_data:
-        st.session_state.prediction_data["Annotation Data"] = get_as().df.copy(deep=True)
-
-
-# def add_most_recent_model(base_obj=None):
-#     obj = base_obj or st
-#     if not st.session_state.last_model_name:
-#         obj.error("No model has been trained yet this session.")
-#         return
-#     model_name = st.session_state.last_model_name
-#     st.session_state.prediction_models[model_name] = st.session_state.classifier
 
 
 def add_uploaded_models(base_obj=None):
@@ -621,11 +629,7 @@ def add_session_dataset():
     session_ds = st.session_state["pred_session_ds_choice"]
     session_cols = st.session_state["pred_session_col_choice"]
 
-    st.session_state["prediction_data"][session_ds] = {}
-    for col in session_cols:
-        st.session_state["prediction_data"][session_ds][col] = st.session_state["data_store"][
-            session_ds
-        ][col]
+    st.session_state["prediction_data"][session_ds] = session_cols
 
 
 def prediction_options(base_obj=None):
@@ -672,9 +676,9 @@ def prediction_options(base_obj=None):
         st.info("Add datasets for outlier evaluation.")
         # c1, c2 = st.columns(2)
         ds_options = list(st.session_state["data_store"].keys())
-        if "last_model_name" in st.session_state:
+        if "most_recent_model" in st.session_state:
             idx = ds_options.index(
-                st.session_state["model_library"][st.session_state["last_model_name"]][
+                st.session_state["model_library"][st.session_state["most_recent_model"]][
                     "trained_on_dataset"
                 ]
             )
@@ -691,21 +695,21 @@ def prediction_options(base_obj=None):
             key="pred_session_ds_choice",
         )
         if ds_choice:
-            col_options = list(st.session_state["data_store"][ds_choice].columns)
-            if "last_model_name" in st.session_state:
+            col_options = list(st.session_state["data_store"][ds_choice].keys())
+            if "most_recent_model" in st.session_state:
                 if (
                     ds_choice
-                    == st.session_state["model_library"][st.session_state["last_model_name"]][
+                    == st.session_state["model_library"][st.session_state["most_recent_model"]][
                         "trained_on_dataset"
                     ]
                 ):
                     default = st.session_state["model_library"][
-                        st.session_state["last_model_name"]
+                        st.session_state["most_recent_model"]
                     ]["trained_on_series"]
                 else:
-                    default = None
+                    default = st.session_state["prediction_data"].get(ds_choice)
             else:
-                default = None
+                default = st.session_state["prediction_data"].get(ds_choice)
 
             session_ds_columns = st.multiselect(
                 "Pick columns",
@@ -723,7 +727,8 @@ def prediction_options(base_obj=None):
             on_change=add_uploaded_dataset,
         )
         st.subheader("Selected Series:")
-        st.json({k: list(v.keys()) for k, v in st.session_state["prediction_data"].items()})
+        st.json(st.session_state["prediction_data"])
+        # st.json({k: list(v.keys()) for k, v in st.session_state["prediction_data"].items()})
         if st.session_state.prediction_data:
             st.button(
                 "Clear selection",
@@ -737,21 +742,18 @@ def prediction_options(base_obj=None):
     )
 
 
-def remove_model_to_visualize(dataset_name, model_name):
-    st.session_state["models_to_visualize"][dataset_name].discard(model_name)
+def remove_model_to_visualize(dataset_name, series, model_name):
+    st.session_state["models_to_visualize"][dataset_name][series].discard(model_name)
 
     # if not recursive_length_count(st.session_state["models_to_visualize"]):
     # st.session_state["hide_choice_menus"] = False
 
 
-def prediction_summary_table(dataset_name: str, base_obj=None):
+def prediction_summary_table(dataset_name: str, series: str, base_obj=None):
     obj = base_obj or st
 
     DEFAULT_MARKER_COLORS = ["#e88b0b", "#1778dc", "#1bd476", "#d311e6"]
-    model_predictions: pd.DataFrame() = st.session_state["inference_results"].get(dataset_name)
-    if model_predictions is None:
-        return
-    model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
+    model_names = sorted(st.session_state["models_to_visualize"][dataset_name][series])
 
     if not model_names:
         return
@@ -777,49 +779,55 @@ def prediction_summary_table(dataset_name: str, base_obj=None):
         custom_text(model, base_obj=c1, font_size=15, centered=True)
         c2.button(
             "Remove",
-            key=f"remove_{model}_{dataset_name}",
+            key=f"remove_{model}_{dataset_name}_{series}",
             on_click=remove_model_to_visualize,
-            args=(dataset_name, model),
+            args=(dataset_name, series, model),
         )
         c4.json(st.session_state["model_library"][model]["params"], expanded=False)
         custom_text(
-            st.session_state["number_outliers"][dataset_name][model],
+            st.session_state["number_outliers"][dataset_name][series][model],
             base_obj=c5,
             font_size=20,
             centered=False,
         )
         custom_text(
-            len(st.session_state["inference_results"][dataset_name])
-            - st.session_state["number_outliers"][dataset_name][model],
+            len(st.session_state["inference_results"][dataset_name][series])
+            - st.session_state["number_outliers"][dataset_name][series][model],
             base_obj=c6,
             font_size=20,
             centered=False,
         )
         c7.color_picker(
             model,
-            key=f"color_{model}_{dataset_name}",
+            key=f"color_{model}_{dataset_name}_{series}",
             label_visibility="collapsed",
             value=DEFAULT_MARKER_COLORS[i],
         )
-        c7.write(st.session_state[f"color_{model}_{dataset_name}"])
         obj.markdown("***")
 
 
 def test_metrics(base_obj=None):
-    if "test_features" not in st.session_state:
+    obj = base_obj or st
+
+    state = get_as()
+    dataset = state.dataset
+    series = state.column
+    if f"last_model_name_{dataset}_{series}" not in st.session_state:
         return
 
-    obj = base_obj or st
-    custom_text(f"Most recent model: {st.session_state['last_model_name']}", base_obj=obj)
+    custom_text(
+        f"Most recent model: {st.session_state[f'last_model_name_{dataset}_{series}']}",
+        base_obj=obj,
+    )
     c1, c2, c3, c4 = obj.columns(4)
 
-    current_train_metrics = st.session_state["current_model_train_metrics"]
+    current_train_metrics = st.session_state[f"current_model_train_metrics_{dataset}_{series}"]
     prec = current_train_metrics["precision"]
     rec = current_train_metrics["recall"]
     f1 = current_train_metrics["f1"]
 
-    if "previous_model_train_metrics" in st.session_state:
-        old_metrics = st.session_state["previous_model_train_metrics"]
+    if f"previous_model_train_metrics_{dataset}_{series}" in st.session_state:
+        old_metrics = st.session_state[f"previous_model_train_metrics_{dataset}_{series}"]
         old_prec = old_metrics["precision"]
         old_rec = old_metrics["recall"]
         old_f1 = old_metrics["f1"]
@@ -847,16 +855,16 @@ def test_metrics(base_obj=None):
             prec[1],
             delta=out_prec_diff,
             delta_color="normal" if out_prec_diff != 0.0 else "off",
-            help="The ratio of true predicted positives to total predicted positives for the train set outliers. Represents the ability \
-                not to classify a normal sample as an outlier.",
+            help="""The ratio of true predicted positives to total predicted positives for the train set outliers.  
+            Represents the ability not to classify a normal sample as an outlier.""",
         )
         st.metric(
             "Recall Score",
             rec[1],
             delta=out_rec_diff,
             delta_color="normal" if out_rec_diff != 0.0 else "off",
-            help="The ratio of true predicted positives to total positives for the train set outliers. Represents the ability \
-                to correctly predict all the outliers.",
+            help="""The ratio of true predicted positives to total positives for the train set outliers.  
+            Represents the ability to correctly predict all the outliers.""",
         )
         st.metric(
             "F1 Score",
@@ -871,16 +879,16 @@ def test_metrics(base_obj=None):
             prec[0],
             delta=norm_prec_diff,
             delta_color="normal" if norm_prec_diff != 0.0 else "off",
-            help="The ratio of true predicted positives to total predicted positives for the train set normal points. Represents the ability \
-                not to classify an outlier sample as a normal point.",
+            help="""The ratio of true predicted positives to total predicted positives for the train set normal points.  
+            Represents the ability not to classify an outlier sample as a normal point.""",
         )
         st.metric(
             "Recall Score",
             rec[0],
             delta=norm_rec_diff,
             delta_color="normal" if norm_rec_diff != 0.0 else "off",
-            help="The ratio of true predicted positives to total positives for the train set normal points. Represents the ability \
-                to correctly predict all the normal points.",
+            help="""The ratio of true predicted positives to total positives for the train set normal points.  
+            Represents the ability to correctly predict all the normal points.""",
         )
         st.metric(
             "F1 Score",
@@ -890,23 +898,38 @@ def test_metrics(base_obj=None):
             help="The harmonic mean of the precision and recall for the train set normal points.",
         )
 
-    current_metrics = st.session_state["current_model_test_metrics"]
+    if f"current_model_test_metrics_{dataset}_{series}" not in st.session_state:
+        return
+
+    current_metrics = st.session_state[f"current_model_test_metrics_{dataset}_{series}"]
     prec = current_metrics["precision"]
     rec = current_metrics["recall"]
     f1 = current_metrics["f1"]
 
-    if "previous_model_test_metrics" in st.session_state:
-        old_metrics = st.session_state["previous_model_test_metrics"]
+    if f"previous_model_test_metrics_{dataset}_{series}" in st.session_state:
+        old_metrics = st.session_state[f"previous_model_test_metrics_{dataset}_{series}"]
         old_prec = old_metrics["precision"]
         old_rec = old_metrics["recall"]
         old_f1 = old_metrics["f1"]
 
-        out_prec_diff = (prec[1] - old_prec[1]).round(3)
-        out_rec_diff = (rec[1] - old_rec[1]).round(3)
-        out_f1_diff = (f1[1] - old_f1[1]).round(3)
-        norm_prec_diff = (prec[0] - old_prec[0]).round(3)
-        norm_rec_diff = (rec[0] - old_rec[0]).round(3)
-        norm_f1_diff = (f1[0] - old_f1[0]).round(3)
+        out_prec_diff = (
+            (prec[1] - old_prec[1]).round(3) if (len(prec) == 2) and (len(old_prec) == 2) else None
+        )
+        out_rec_diff = (
+            (rec[1] - old_rec[1]).round(3) if (len(rec) == 2) and (len(old_rec) == 2) else None
+        )
+        out_f1_diff = (
+            (f1[1] - old_f1[1]).round(3) if (len(f1) == 2) and (len(old_f1) == 2) else None
+        )
+        norm_prec_diff = (
+            (prec[0] - old_prec[0]).round(3) if (len(prec) == 2) and (len(old_prec) == 2) else None
+        )
+        norm_rec_diff = (
+            (rec[0] - old_rec[0]).round(3) if (len(rec) == 2) and (len(old_rec) == 2) else None
+        )
+        norm_f1_diff = (
+            (f1[0] - old_f1[0]).round(3) if (len(f1) == 2) and (len(old_f1) == 2) else None
+        )
 
     else:
         out_prec_diff, out_rec_diff, out_f1_diff, norm_prec_diff, norm_rec_diff, norm_f1_diff = (
@@ -918,91 +941,92 @@ def test_metrics(base_obj=None):
             None,
         )
 
-    with c3.expander("Test Set Outlier Metrics", expanded=True):
-        st.metric(
-            "Precision Score",
-            prec[1],
-            delta=out_prec_diff,
-            delta_color="normal" if out_prec_diff != 0.0 else "off",
-            help="The ratio of true predicted positives to total predicted positives for the test set outliers. Represents the ability \
-                not to classify a normal sample as an outlier.",
-        )
-        st.metric(
-            "Recall Score",
-            rec[1],
-            delta=out_rec_diff,
-            delta_color="normal" if out_rec_diff != 0.0 else "off",
-            help="The ratio of true predicted positives to total positives for the test set outliers. Represents the ability \
-                to correctly predict all the outliers.",
-        )
-        st.metric(
-            "F1 Score",
-            f1[1],
-            delta=out_f1_diff,
-            delta_color="normal" if out_f1_diff != 0.0 else "off",
-            help="The harmonic mean of the precision and recall for the outliers.",
-        )
-    with c4.expander("Test Set Normal Metrics", expanded=True):
-        st.metric(
-            "Precision Score",
-            prec[0],
-            delta=norm_prec_diff,
-            delta_color="normal" if norm_prec_diff != 0.0 else "off",
-            help="The ratio of true predicted positives to total predicted positives for the test set normal points. Represents the ability \
-                not to classify an outlier sample as a normal point.",
-        )
-        st.metric(
-            "Recall Score",
-            rec[0],
-            delta=norm_rec_diff,
-            delta_color="normal" if norm_rec_diff != 0.0 else "off",
-            help="The ratio of true predicted positives to total positives for the test set normal points. Represents the ability \
-                to correctly predict all the normal points.",
-        )
-        st.metric(
-            "F1 Score",
-            f1[0],
-            delta=norm_f1_diff,
-            delta_color="normal" if norm_f1_diff != 0.0 else "off",
-            help="The harmonic mean of the precision and recall for the normal points.",
-        )
+    if st.session_state[f"old_number_annotations_{dataset}_{series}"]["test_outlier"] > 0:
+        if st.session_state[f"old_number_annotations_{dataset}_{series}"]["test_normal"] > 0:
+            idx = 1
+        else:
+            idx = 0
+        with c3.expander("Test Set Outlier Metrics", expanded=True):
+            st.metric(
+                "Precision Score",
+                prec[idx],
+                delta=out_prec_diff,
+                delta_color="normal" if out_prec_diff != 0.0 else "off",
+                help="""The ratio of true predicted positives to total predicted positives for the test set outliers.  
+                Represents the ability not to classify a normal sample as an outlier.""",
+            )
+            st.metric(
+                "Recall Score",
+                rec[idx],
+                delta=out_rec_diff,
+                delta_color="normal" if out_rec_diff != 0.0 else "off",
+                help="""The ratio of true predicted positives to total positives for the test set outliers.  
+                Represents the ability to correctly predict all the outliers.""",
+            )
+            st.metric(
+                "F1 Score",
+                f1[idx],
+                delta=out_f1_diff,
+                delta_color="normal" if out_f1_diff != 0.0 else "off",
+                help="The harmonic mean of the precision and recall for the outliers.",
+            )
+    if st.session_state[f"old_number_annotations_{dataset}_{series}"]["test_normal"] > 0:
+        with c4.expander("Test Set Normal Metrics", expanded=True):
+            st.metric(
+                "Precision Score",
+                prec[0],
+                delta=norm_prec_diff,
+                delta_color="normal" if norm_prec_diff != 0.0 else "off",
+                help="""The ratio of true predicted positives to total predicted positives for the test set normal points.  
+                Represents the ability not to classify an outlier sample as a normal point.""",
+            )
+            st.metric(
+                "Recall Score",
+                rec[0],
+                delta=norm_rec_diff,
+                delta_color="normal" if norm_rec_diff != 0.0 else "off",
+                help="""The ratio of true predicted positives to total positives for the test set normal points.  
+                Represents the ability to correctly predict all the normal points.""",
+            )
+            st.metric(
+                "F1 Score",
+                f1[0],
+                delta=norm_f1_diff,
+                delta_color="normal" if norm_f1_diff != 0.0 else "off",
+                help="The harmonic mean of the precision and recall for the normal points.",
+            )
 
 
-def model_choice_callback(dataset_name: str):
-    st.session_state["models_to_visualize"][dataset_name] = set(
-        st.session_state[f"model_choice_{dataset_name}"]
+def model_choice_callback(dataset_name: str, series: str):
+    st.session_state["models_to_visualize"][dataset_name][series] = set(
+        st.session_state[f"model_choice_{dataset_name}_{series}"]
     )
 
 
-def model_choice_options(dataset_name: str):
-    if st.session_state["inference_results"].get(dataset_name) is None:
-        return
+def model_choice_options(dataset_name: str, series: str):
     st.info(
         f"Here you can choose which of the model predictions that exist for the datset \
-            '{dataset_name}' so far to visualize."
+            '{dataset_name}', series '{series}' so far to visualize."
     )
     st.multiselect(
         "Choose models for dataset",
         sorted(st.session_state["available_models"][dataset_name]),
-        key=f"model_choice_{dataset_name}",
-        default=sorted(st.session_state["models_to_visualize"][dataset_name]),
+        key=f"model_choice_{dataset_name}_{series}",
+        default=sorted(st.session_state["models_to_visualize"][dataset_name][series]),
         on_change=model_choice_callback,
-        args=(dataset_name,),
+        args=(dataset_name, series),
         max_selections=4,
     )
 
     st.markdown("***")
 
 
-def outlier_visualization_options(dataset_name: str):
-    # if st.session_state["inference_results"].get(dataset_name) is None:
-    # return
-
-    if not st.session_state["models_to_visualize"][dataset_name]:
+def outlier_visualization_options(dataset_name: str, series: str):
+    if not st.session_state["models_to_visualize"][dataset_name][series]:
         return
 
     form = st.form(
-        f"form_{dataset_name}",
+        f"form_{dataset_name}_{series}",
     )
     form.info(
         "Click on a bar in the distribution plot to view all outliers \
@@ -1014,7 +1038,7 @@ def outlier_visualization_options(dataset_name: str):
         min_value=10,
         max_value=1000,
         step=1,
-        key=f"num_outliers_{dataset_name}",
+        key=f"num_outliers_{dataset_name}_{series}",
     )
     form.slider(
         "Height of figures (px)",
@@ -1022,12 +1046,24 @@ def outlier_visualization_options(dataset_name: str):
         min_value=100,
         max_value=1500,
         step=100,
-        key=f"figure_height_{dataset_name}",
+        key=f"figure_height_{dataset_name}_{series}",
     )
 
     form.checkbox(
         "Only show time ranges containing outliers (predicted or annotated)",
-        key=f"only_show_ranges_with_outliers_{dataset_name}",
+        key=f"only_show_ranges_with_outliers_{dataset_name}_{series}",
+    )
+    c1, c2 = form.columns(2)
+
+    c1.checkbox(
+        "Hightlight missed test set outliers",
+        value=True,
+        key=f"highlight_test_{dataset_name}_{series}",
+    )
+    c2.checkbox(
+        "Hightlight missed train set outliers",
+        value=False,
+        key=f"highlight_train_{dataset_name}_{series}",
     )
 
     form.form_submit_button("Update Distribution Plot")
@@ -1035,13 +1071,16 @@ def outlier_visualization_options(dataset_name: str):
 
 def show_feature_importances(base_obj=None):
     obj = base_obj or st
-    if "last_model_name" not in st.session_state:
+    state = get_as()
+    dataset = state.dataset
+    series = state.column
+    if f"last_model_name_{dataset}_{series}" not in st.session_state:
         return
 
     with obj.expander("Feature Importances", expanded=True):
         c1, c2 = st.columns([2, 1])
         feature_importance_plot(c1)
-        c2.dataframe(st.session_state["current_importances"])
+        c2.dataframe(st.session_state[f"current_importances_{dataset}_{series}"])
 
 
 def add_slider_selected_points(dataset_name: str, model_name: str):
@@ -1053,10 +1092,10 @@ def add_slider_selected_points(dataset_name: str, model_name: str):
 
 
 def process_data_from_echarts_plot(
-    clicked_point: List | dict | None, dataset_name=None, base_obj=None
+    clicked_point: List | dict | None, dataset_name=None, series=None, base_obj=None
 ):
     obj = base_obj or st
-    state = get_as()
+    state = get_as(dataset_name, series)
     was_updated = False
 
     if (clicked_point is None) or ((clicked_point[1] == "brush") and (not clicked_point[0])):
@@ -1067,18 +1106,20 @@ def process_data_from_echarts_plot(
     if (
         (clicked_point[1] == "brush")
         and dataset_name
-        and st.session_state[f"only_select_outliers_{dataset_name}"]
+        and series
+        and st.session_state[f"only_select_outliers_{dataset_name}_{series}"]
     ):
-        model_names = sorted(st.session_state["models_to_visualize"][dataset_name])
+        model_names = sorted(st.session_state["models_to_visualize"][dataset_name][series])
 
-        state = get_as()
         relevant_outlier_idc = {
             d["seriesName"]: d["dataIndex"]
             for d in clicked_point[0]
             if d["seriesName"] in model_names
         }
         relevant_data_points = [
-            st.session_state["pred_outlier_tracker"][k].iloc[v].index.to_list()
+            st.session_state["pred_outlier_tracker"][dataset_name][series][k]
+            .iloc[v]
+            .index.to_list()
             for k, v in relevant_outlier_idc.items()
         ]
         relevant_data_points = set().union(*relevant_data_points)
@@ -1103,7 +1144,7 @@ def process_data_from_echarts_plot(
         st.experimental_rerun()
 
 
-def correction_options(dataset_name: str, base_obj=None):
+def correction_options(dataset_name: str, series: str, base_obj=None):
     obj = base_obj or st
     obj.subheader("Prediction correction:")
 
@@ -1143,39 +1184,39 @@ def correction_options(dataset_name: str, base_obj=None):
 
     c1, c2, c3, c4 = obj.columns(4)
 
-    state = get_as()
+    state = get_as(dataset_name, series)
 
     c1.button(
         "Mark Train Outlier",
         on_click=state.update_data,
         args=("outlier",),
         kwargs={"base_obj": obj},
-        key=f"pred_mark_outlier_{dataset_name}",
+        key=f"pred_mark_outlier_{dataset_name}_{series}",
     )
     c2.button(
         "Mark Train Normal",
         on_click=state.update_data,
         args=("normal",),
         kwargs={"base_obj": obj},
-        key=f"pred_mark_normal_{dataset_name}",
+        key=f"pred_mark_normal_{dataset_name}_{series}",
     )
     c3.button(
         "Mark Test Outlier",
         on_click=state.update_data,
         args=("test_outlier",),
         kwargs={"base_obj": obj},
-        key=f"pred_mark_test_outlier_{dataset_name}",
+        key=f"pred_mark_test_outlier_{dataset_name}_{series}",
     )
     c4.button(
         "Mark Test Normal",
         on_click=state.update_data,
         args=("test_normal",),
         kwargs={"base_obj": obj},
-        key=f"pred_mark_test_normal_{dataset_name}",
+        key=f"pred_mark_test_normal_{dataset_name}_{series}",
     )
     c1.button(
         "Clear Selection",
         on_click=state.clear_selection,
-        key=f"pred_clear_selection_{dataset_name}",
+        key=f"pred_clear_selection_{dataset_name}_{series}",
     )
     # c3.button("Clear All", on_click=state.clear_all)

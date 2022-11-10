@@ -12,14 +12,6 @@ from tsod.active_learning.data_structures import AnnotationState
 MODEL_OPTIONS = {"RF_1": "Random Forest Classifier"}
 
 
-SELECT_OPTIONS = {"Point": "zoom", "Box": "select", "Lasso": "lasso"}
-SELECT_INFO = {
-    "Point": "Select individual points, drag mouse to zoom in.",
-    "Box": "Draw Box to select all points in range.",
-    "Lasso": "Draw Lasso to select all points in range.",
-}
-
-
 def custom_text(
     text: str,
     font_size: int = 30,
@@ -91,18 +83,20 @@ def init_session_state():
         )
 
     ################################################
+    _add_to_ss_if_not_in_it("AS", defaultdict(dict))
 
-    _add_to_ss_if_not_in_it("data_store", {})
+    _add_to_ss_if_not_in_it("data_store", defaultdict(dict))
     # _add_to_ss_if_not_in_it("AS", AnnotationState(st.session_state["df_full"]))
     _add_to_ss_if_not_in_it("annotation_data_loaded", True)
     _add_to_ss_if_not_in_it("uploaded_annotation_data", {})
     _add_to_ss_if_not_in_it("prediction_models", {})
-    _add_to_ss_if_not_in_it("prediction_data", defaultdict(dict))
+    _add_to_ss_if_not_in_it("prediction_data", defaultdict(list))
     # _add_to_ss_if_not_in_it("last_model_name", None)
     _add_to_ss_if_not_in_it("use_date_picker", True)
-    _add_to_ss_if_not_in_it("inference_results", {})
-    _add_to_ss_if_not_in_it("number_outliers", defaultdict(dict))
-    _add_to_ss_if_not_in_it("uploaded_ds_features", {})
+    # _add_to_ss_if_not_in_it("inference_results", defaultdict(dict))
+    _add_to_ss_if_not_in_it("number_outliers", defaultdict(lambda: defaultdict(dict)))
+    _add_to_ss_if_not_in_it("inference_results", defaultdict(lambda: defaultdict(dict)))
+    _add_to_ss_if_not_in_it("uploaded_ds_features", defaultdict(dict))
     # _add_to_ss_if_not_in_it(
     #     "plot_start_date",
     #     st.session_state["df_full"].index.max().date() - datetime.timedelta(days=3),
@@ -110,7 +104,7 @@ def init_session_state():
     # _add_to_ss_if_not_in_it("plot_end_date", st.session_state["df_full"].index.max().date())
     _add_to_ss_if_not_in_it("date_shift_buttons_used", False)
     _add_to_ss_if_not_in_it("hide_choice_menus", False)
-    _add_to_ss_if_not_in_it("models_to_visualize", defaultdict(set))
+    _add_to_ss_if_not_in_it("models_to_visualize", defaultdict(lambda: defaultdict(set)))
     _add_to_ss_if_not_in_it("RF_features_computed_start", 0)
     _add_to_ss_if_not_in_it("RF_features_computed_end", 0)
     _add_to_ss_if_not_in_it("model_library", {})
@@ -118,6 +112,7 @@ def init_session_state():
     _add_to_ss_if_not_in_it("current_outlier_value_store", {})
     _add_to_ss_if_not_in_it("page_index", 0)
     _add_to_ss_if_not_in_it("expand_data_selection", False)
+    _add_to_ss_if_not_in_it("pred_outlier_tracker", defaultdict(dict))
 
 
 def set_session_state_items(
