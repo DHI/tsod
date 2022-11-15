@@ -6,7 +6,12 @@ from zoneinfo import ZoneInfo
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV
-from tsod.active_learning.utils import get_as, recursive_round, set_session_state_items
+from tsod.active_learning.utils import (
+    get_as,
+    recursive_round,
+    set_session_state_items,
+    recursive_length_count,
+)
 from sklearn.metrics import precision_recall_fscore_support
 
 
@@ -65,12 +70,25 @@ def get_class_labels_RF(points_before: int, points_after: int):
     return class_labels
 
 
-def construct_training_data_RF():
-    points_before = st.session_state["number_points_before"]
-    points_after = st.session_state["number_points_after"]
+def construct_training_data_RF(dataset: str | None = None, series: str | None = None):
+
+    points_before = (
+        st.session_state["number_points_before"]
+        if st.session_state.get("number_points_before") is not None
+        else st.session_state["model_library"][
+            st.session_state[f"last_model_name_{dataset}_{series}"]
+        ]["params"]["points_before"]
+    )
+    points_after = (
+        st.session_state["number_points_after"]
+        if st.session_state.get("number_points_after") is not None
+        else st.session_state["model_library"][
+            st.session_state[f"last_model_name_{dataset}_{series}"]
+        ]["params"]["points_after"]
+    )
     st.session_state["last_points_before"] = points_before
     st.session_state["last_points_after"] = points_after
-    state = get_as()
+    state = get_as(dataset, series)
     outliers = state.df_outlier
     if outliers.empty:
         return
@@ -109,11 +127,23 @@ def construct_training_data_RF():
     st.session_state["labels"] = labels
 
 
-def construct_test_data_RF():
-    points_before = st.session_state["number_points_before"]
-    points_after = st.session_state["number_points_after"]
+def construct_test_data_RF(dataset: str | None = None, series: str | None = None):
+    points_before = (
+        st.session_state["number_points_before"]
+        if st.session_state.get("number_points_before") is not None
+        else st.session_state["model_library"][
+            st.session_state[f"last_model_name_{dataset}_{series}"]
+        ]["params"]["points_before"]
+    )
+    points_after = (
+        st.session_state["number_points_after"]
+        if st.session_state.get("number_points_after") is not None
+        else st.session_state["model_library"][
+            st.session_state[f"last_model_name_{dataset}_{series}"]
+        ]["params"]["points_after"]
+    )
 
-    state = get_as()
+    state = get_as(dataset, series)
     dataset = state.dataset
     series = state.column
     outliers = state.df_test_outlier
@@ -159,15 +189,35 @@ def construct_test_data_RF():
     return True
 
 
-def train_random_forest_classifier(base_obj=None):
+def train_model(base_obj=None, dataset: str | None = None, series: str | None = None):
     obj = base_obj or st
 
-    state = get_as()
+    state = get_as(dataset, series)
+    if recursive_length_count(state.data, exclude_keys="selected"):
+        st.session_state[f"old_number_annotations_{state.dataset}_{state.column}"] = {
+            k: len(v) for k, v in state.data.items()
+        }
+
+    with st.spinner("Constructing features..."):
+        if st.session_state["last_method_choice"] == "RF_1":
+            construct_training_data_RF(dataset, series)
+            construct_test_data_RF(dataset, series)
+    with st.spinner("Training Model..."):
+        if st.session_state["last_method_choice"] == "RF_1":
+            train_random_forest_classifier(obj, dataset, series)
+
+
+def train_random_forest_classifier(
+    base_obj=None, dataset: str | None = None, series: str | None = None
+):
+    obj = base_obj or st
+
+    state = get_as(dataset, series)
     dataset = state.dataset
     series = state.column
 
     if "features" not in st.session_state:
-        st.warning("No features were created, not training a model.")
+        obj.warning("No features were created, not training a model.")
         return
     X = st.session_state["features"]
     y = st.session_state["labels"]
@@ -196,6 +246,7 @@ def train_random_forest_classifier(base_obj=None):
     model_name = f"RF_Classifier ({datetime.datetime.now(tz=ZoneInfo('Europe/Copenhagen')).strftime('%Y-%m-%d %H:%M:%S')})"
     st.session_state[f"last_model_name_{dataset}_{series}"] = model_name
     st.session_state["most_recent_model"] = model_name
+    st.session_state["models_trained_this_session"].update([model_name])
     # Update Test metrics
     if f"current_model_test_metrics_{dataset}_{series}" in st.session_state:
         st.session_state[f"previous_model_test_metrics_{dataset}_{series}"] = st.session_state[
@@ -238,7 +289,7 @@ def train_random_forest_classifier(base_obj=None):
 
     st.session_state["model_library"][model_name] = {
         "model": model,
-        "type": st.session_state["current_method_choice"],
+        "type": st.session_state["last_method_choice"],
         "params": {
             "points_before": st.session_state["last_points_before"],
             "points_after": st.session_state["last_points_after"],
@@ -247,14 +298,13 @@ def train_random_forest_classifier(base_obj=None):
         "trained_on_series": series,
     }
 
-    st.session_state["prediction_models"][st.session_state["most_recent_model"]] = st.session_state[
-        "model_library"
-    ][model_name]
+    st.session_state["prediction_models"][model_name] = st.session_state["model_library"][
+        model_name
+    ]
 
     st.session_state["prediction_data"][dataset] = [series]
-
     set_session_state_items("page_index", 1)
-    st.experimental_rerun()
+    # st.experimental_rerun()
 
 
 def get_model_predictions(base_obj=None):

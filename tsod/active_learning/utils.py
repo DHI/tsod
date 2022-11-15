@@ -71,16 +71,14 @@ def init_session_state():
         st.session_state["data_store"] = test
 
         _add_to_ss_if_not_in_it("AS", defaultdict(dict))
-        st.session_state["AS"]["fff"]["Water Level"] = AnnotationState("fff", "Water Level")
-        st.session_state["AS"]["ddd"]["Water Level"] = AnnotationState("ddd", "Water Level")
-        st.session_state["AS"]["ddd"]["another_column"] = AnnotationState("ddd", "another_column")
 
-        st.session_state["plot_start_date"] = st.session_state["AS"]["ddd"][
-            "Water Level"
-        ].df.index.max().date() - datetime.timedelta(days=3)
-        st.session_state["plot_end_date"] = (
-            st.session_state["AS"]["ddd"]["Water Level"].df.index.max().date()
-        )
+        for ds, ds_dict in test.items():
+            for series in ds_dict:
+                an_s = AnnotationState(ds, series)
+                an_s.update_plot(
+                    start_time=an_s.df.sort_index().index[-200], end_time=an_s.df.index.max()
+                )
+                st.session_state["AS"][ds][series] = an_s
 
     ################################################
     _add_to_ss_if_not_in_it("AS", defaultdict(dict))
@@ -97,12 +95,6 @@ def init_session_state():
     _add_to_ss_if_not_in_it("number_outliers", defaultdict(lambda: defaultdict(dict)))
     _add_to_ss_if_not_in_it("inference_results", defaultdict(lambda: defaultdict(dict)))
     _add_to_ss_if_not_in_it("uploaded_ds_features", defaultdict(dict))
-    # _add_to_ss_if_not_in_it(
-    #     "plot_start_date",
-    #     st.session_state["df_full"].index.max().date() - datetime.timedelta(days=3),
-    # )
-    # _add_to_ss_if_not_in_it("plot_end_date", st.session_state["df_full"].index.max().date())
-    _add_to_ss_if_not_in_it("date_shift_buttons_used", False)
     _add_to_ss_if_not_in_it("hide_choice_menus", False)
     _add_to_ss_if_not_in_it("models_to_visualize", defaultdict(lambda: defaultdict(set)))
     _add_to_ss_if_not_in_it("RF_features_computed_start", 0)
@@ -113,6 +105,10 @@ def init_session_state():
     _add_to_ss_if_not_in_it("page_index", 0)
     _add_to_ss_if_not_in_it("expand_data_selection", False)
     _add_to_ss_if_not_in_it("pred_outlier_tracker", defaultdict(dict))
+    _add_to_ss_if_not_in_it("models_trained_this_session", set())
+    _add_to_ss_if_not_in_it("current_series", None)
+    _add_to_ss_if_not_in_it("current_dataset", None)
+    _add_to_ss_if_not_in_it("last_method_choice", "RF_1")
 
 
 def set_session_state_items(

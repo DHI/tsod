@@ -4,6 +4,8 @@ from tsod.active_learning.components import (
     model_training,
     model_prediction,
     instructions,
+    annotation_suggestion,
+    dev_options,
 )
 from tsod.active_learning.utils import init_session_state
 from streamlit_option_menu import option_menu
@@ -21,8 +23,10 @@ def main():
         "Outlier Annotation": outlier_annotation,
         "Model Training": model_training,
         "Model Prediction": model_prediction,
+        "Annotation Suggestion": annotation_suggestion,
         "Instructions": instructions,
     }
+    icons = ["graph-up", "file-bar-graph", "lightbulb", "question-square", "info-circle"]
 
     with st.sidebar:
         choice = option_menu(
@@ -30,7 +34,7 @@ def main():
             list(func_mapping.keys()),
             # orientation="horizontal",
             default_index=st.session_state["page_index"],
-            icons=["graph-up", "file-bar-graph", "lightbulb", "info-circle"],
+            icons=icons,
             styles={
                 "container": {"padding": "0!important"},
                 # "container": {"padding": "0!important", "background-color": "#fafafa"},
@@ -47,7 +51,8 @@ def main():
             menu_icon="",
         )
 
-    func_mapping[choice]()
+    with dev_options(st.sidebar):
+        func_mapping[choice]()
 
 
 if __name__ == "__main__":

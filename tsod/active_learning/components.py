@@ -1,13 +1,11 @@
 import datetime
 import pickle
+from pathlib import Path
 from typing import Dict, List
 from collections import defaultdict
 import pandas as pd
 import streamlit as st
-from tsod.active_learning.modelling import (
-    construct_training_data_RF,
-    train_random_forest_classifier,
-)
+from tsod.active_learning.modelling import train_model
 from tsod.active_learning.utils import (
     get_as,
     set_session_state_items,
@@ -23,6 +21,7 @@ from tsod.active_learning.plotting import (
     get_echarts_plot_time_range,
     make_outlier_distribution_plot,
     make_time_range_outlier_plot,
+    make_annotation_suggestion_plot,
 )
 from tsod.active_learning.data_structures import plot_return_value_as_datetime
 from contextlib import nullcontext
@@ -35,36 +34,35 @@ def outlier_annotation():
     exp = st.sidebar.expander("Data Upload", expanded=not len(st.session_state["data_store"]))
     data_uploader(exp)
     st.sidebar.title("Annotation Controls")
-    with dev_options(st.sidebar):
-        data_selection(st.sidebar)
-        state = get_as()
-        if not state:
-            return
-        create_annotation_plot_buttons(st.sidebar)
-        with st.sidebar.expander("Time Range Selection", expanded=True):
-            time_range_selection()
+    data_selection(st.sidebar)
+    state = get_as()
+    if not state:
+        return
+    create_annotation_plot_buttons(st.sidebar)
+    with st.sidebar.expander("Time Range Selection", expanded=True):
+        time_range_selection()
 
-        create_save_load_buttons(st.sidebar)
+    create_save_load_buttons(st.sidebar)
 
-        plot = get_echarts_plot_time_range(
-            state.start,
-            state.end,
-            state.column,
-            True,
-            f"Outlier Annotation - {state.dataset} - {state.column}",
-        )
+    plot = get_echarts_plot_time_range(
+        state.start,
+        state.end,
+        state.column,
+        True,
+        f"Outlier Annotation - {state.dataset} - {state.column}",
+    )
 
-        clicked_point = st_pyecharts(
-            plot,
-            height=1000,
-            theme="dark",
-            events={
-                "click": "function(params) { return [params.data[0], 'click'] }",
-                "brushselected": "function(params) { return [params.batch[0].selected, 'brush'] }",
-                # "brushselected": """function(params) { return [params.batch[0].selected.filter( obj => {return obj.seriesName === 'Datapoints'})[0].dataIndex, 'brush'] }""",
-            },
-        )
-        process_data_from_echarts_plot(clicked_point)
+    clicked_point = st_pyecharts(
+        plot,
+        height=800,
+        theme="dark",
+        events={
+            "click": "function(params) { return [params.data[0], 'click'] }",
+            "brushselected": "function(params) { return [params.batch[0].selected, 'brush'] }",
+            # "brushselected": """function(params) { return [params.batch[0].selected.filter( obj => {return obj.seriesName === 'Datapoints'})[0].dataIndex, 'brush'] }""",
+        },
+    )
+    process_data_from_echarts_plot(clicked_point)
 
 
 def model_training():
@@ -75,71 +73,172 @@ def model_training():
         in the 'Outlier Annotation' - page."""
         )
         return
-    # set_session_state_items("page_index", 1)
     fix_random_seeds()
-    with dev_options(st.sidebar):
-        data_selection(st.sidebar)
-        show_annotation_summary()
-        # c1, c2, c3 = st.columns(3)
-        train_options()
-        test_metrics()
-        show_feature_importances()
+    data_selection(st.sidebar)
+    show_annotation_summary()
+    # c1, c2, c3 = st.columns(3)
+    train_options()
+    test_metrics()
+    show_feature_importances()
 
 
 def model_prediction():
     st.sidebar.title("Prediction Controls")
-    with dev_options(st.sidebar):
-        prediction_options(st.sidebar)
+    prediction_options(st.sidebar)
 
-        if not st.session_state["inference_results"]:
-            st.info(
-                "To see and interact with model predictions, please choose one or multiple models and datasets \
-                in the sidebar, then click 'Generate Predictions.'"
-            )
-        for dataset_name, series_dict in st.session_state["inference_results"].items():
-            # for dataset_name, series_list in st.session_state["prediction_data"].items():
-            # if st.session_state["inference_results"].get(dataset_name) is None:
-            # continue
-            for series in series_dict.keys():
-                # for series in series_list:
-                # if st.session_state["inference_results"].get(dataset_name).get(series) is None:
-                # continue
-                with st.expander(
-                    f"{dataset_name} - {series} - Visualization Options", expanded=True
-                ):
-                    st.subheader(f"{dataset_name} - {series}")
-                    model_choice_options(dataset_name, series)
-                    prediction_summary_table(dataset_name, series)
-                    outlier_visualization_options(dataset_name, series)
-                if not st.session_state["models_to_visualize"][dataset_name][series]:
-                    continue
-                with st.expander(f"{dataset_name} - {series} - Graphs", expanded=True):
-                    start_time, end_time = make_outlier_distribution_plot(dataset_name, series)
-                    if start_time is None:
-                        if f"last_clicked_range_{dataset_name}_{series}" in st.session_state:
-                            start_time, end_time = st.session_state[
-                                f"last_clicked_range_{dataset_name}_{series}"
-                            ]
-                        else:
-                            continue
-                    st.checkbox(
-                        "Area select: Only select predicted outliers",
-                        True,
-                        key=f"only_select_outliers_{dataset_name}_{series}",
-                    )
-                    clicked_point = make_time_range_outlier_plot(
-                        dataset_name, series, start_time, end_time
-                    )
-                    # pass in dataset_name to activate checking for "select only outliers"
-                    process_data_from_echarts_plot(clicked_point, dataset_name, series)
-                    correction_options(dataset_name, series)
+    if not st.session_state["inference_results"]:
+        st.info(
+            "To see and interact with model predictions, please choose one or multiple models and datasets \
+            in the sidebar, then click 'Generate Predictions.'"
+        )
+    for dataset_name, series_dict in st.session_state["inference_results"].items():
+        for series in series_dict.keys():
+
+            with st.expander(f"{dataset_name} - {series} - Visualization Options", expanded=True):
+                st.subheader(f"{dataset_name} - {series}")
+                model_choice_options(dataset_name, series)
+                prediction_summary_table(dataset_name, series)
+                outlier_visualization_options(dataset_name, series)
+            with st.expander(f"{dataset_name} - {series} - Retraining options", expanded=True):
+                retrain_options(dataset_name, series)
+            if not st.session_state["models_to_visualize"][dataset_name][series]:
+                continue
+            with st.expander(f"{dataset_name} - {series} - Graphs", expanded=True):
+                start_time, end_time = make_outlier_distribution_plot(dataset_name, series)
+                if start_time is None:
+                    if f"last_clicked_range_{dataset_name}_{series}" in st.session_state:
+                        start_time, end_time = st.session_state[
+                            f"last_clicked_range_{dataset_name}_{series}"
+                        ]
+                    else:
+                        continue
+                st.checkbox(
+                    "Area select: Only select predicted outliers",
+                    True,
+                    key=f"only_select_outliers_{dataset_name}_{series}",
+                )
+                clicked_point = make_time_range_outlier_plot(
+                    dataset_name, series, start_time, end_time
+                )
+                # pass in dataset_name to activate checking for "select only outliers"
+                process_data_from_echarts_plot(clicked_point, dataset_name, series)
+                correction_options(dataset_name, series)
 
 
 def instructions():
-    with open("tsod/active_learning/instructions.md", "r") as f:
-        data = f.read()
+    instruction_files = sorted(Path("tsod/active_learning/instructions").glob("*.md"))
 
-    st.markdown(data)
+    titles = [f.stem.replace("_", " ").title() for f in instruction_files]
+    tabs = st.tabs(titles)
+
+    for i, f in enumerate(instruction_files):
+        data = f.open().read()
+        tabs[i].markdown(f"## {titles[i][2:]}")
+        tabs[i].markdown(data)
+
+
+def annotation_suggestion():
+    # for now only allow annotation suggestion for models trained in the current session
+    if not (("most_recent_model" in st.session_state) and (st.session_state["inference_results"])):
+        st.info(
+            """Annotation suggestion requires at least one model trained this session.  
+        If a model was trained and it was used to generate predictions for a dataset, annotation suggestion will become available here."""
+        )
+        return
+
+    st.sidebar.title("Suggestion Controls")
+    session_models = sorted(st.session_state["models_trained_this_session"], reverse=True)
+    model = st.sidebar.selectbox("Choose model", options=session_models)
+
+    num_points = st.sidebar.slider(
+        "Number of points to show on each side of the candidate",
+        min_value=10,
+        max_value=1000,
+        value=50,
+        step=10,
+        key="suggestion_number_of_points",
+    )
+
+    dataset = st.session_state["model_library"][model]["trained_on_dataset"]
+    series = st.session_state["model_library"][model]["trained_on_series"]
+
+    state = get_as(dataset, series)
+
+    base_df = st.session_state["inference_results"][dataset][series]
+    # candidates are all datapoints that are not already annotated
+    df_not_annotated: pd.DataFrame = base_df[
+        ~base_df.index.isin(state.all_indices - state.selection)
+    ]
+    # sort by "model uncertainty" => lower = more uncertain
+    df_not_annotated.sort_values(f"certainty_{model}", inplace=True)
+    int_idx = state.df.index.get_loc(df_not_annotated.index[0])
+    start_time = state.df.index[max(int_idx - num_points, 0)]
+    end_time = state.df.index[min(int_idx + num_points, len(state.df) - 1)]
+    x_value = state.df.index[int_idx]
+    y_value = state.df[series][int_idx]
+
+    cert_value = int((df_not_annotated[f"certainty_{model}"][0] / 0.5) * 100)
+
+    c1, c2 = st.columns([6, 1])
+    with c1:
+        make_annotation_suggestion_plot(start_time, end_time, dataset, series, (x_value, y_value))
+    c2.markdown("<br>", unsafe_allow_html=True)
+    c2.button("Yes", on_click=state.update_data, args=("outlier", [x_value]))
+    c2.button("No", on_click=state.update_data, args=("normal", [x_value]))
+    c2.metric("Model certainty", f"{cert_value} %")
+
+    st.info(
+        """The presented datapoints are chosen based on the 'model certainty'
+    of the predictions. Uncertainty simply describes the degree of disagreement between
+    the individual tree classifiers. The points with the lowest certainty will be prompted first."""
+    )
+
+    retrain_options(dataset, series)
+
+
+def retrain_options(dataset: str, series: str):
+    deltas = get_annotation_deltas(dataset, series)
+    if (
+        (f"last_model_name_{dataset}_{series}" not in st.session_state)
+        or (f"old_number_annotations_{dataset}_{series}" not in st.session_state)
+        or (not any(abs(v) > 0 for v in deltas.values()))
+    ):
+        c1, c2 = st.columns([1, 3])
+        c2.info(
+            """Once you have added further annotations, you can use this button
+        to quickly retrain the last model and use it to generate new predictions."""
+        )
+        disabled = True
+
+    else:
+        c1, c2, c3, c4, c5 = st.columns([2, 1, 1, 1, 1])
+
+        c2.metric("New marked Train Outlier", deltas["outlier"])
+        c3.metric("New marked Train Normal", deltas["normal"])
+        c4.metric("New marked Test Outlier", deltas["test_outlier"])
+        c5.metric("New marked Test Normal", deltas["test_normal"])
+        disabled = False
+
+    c1.button(
+        "Retrain most recent model with new data",
+        key=f"retrain_{dataset}_{series}",
+        on_click=retrain_and_repredict,
+        args=(dataset, series),
+        disabled=disabled,
+        help="""Use this button to simplify your workflow and retrain the last model trained on this dataset & series
+            (using the added annotation data), generate new predictions and visualize them.""",
+    )
+
+
+def dataset_choice_callback():
+    ds = st.session_state["dataset_choice"]
+    st.session_state["current_dataset"] = ds
+
+
+def series_choice_callback():
+    series = st.session_state["column_choice"]
+    st.session_state["current_series"] = series
+    set_session_state_items("expand_data_selection", False)
 
 
 def data_selection(base_obj=None):
@@ -147,101 +246,187 @@ def data_selection(base_obj=None):
 
     with obj.expander("Data selection", expanded=st.session_state["expand_data_selection"]):
 
+        datasets = list(st.session_state["data_store"].keys())
         dataset_choice = st.selectbox(
             label="Select dataset",
-            options=list(st.session_state["data_store"].keys()),
-            index=0,
-            # index=len(st.session_state["data_store"]) - 1,
+            options=datasets,
+            index=datasets.index(st.session_state["current_dataset"])
+            if st.session_state["current_dataset"] is not None
+            else len(datasets) - 1,
             disabled=len(st.session_state["data_store"]) < 2,
+            on_change=dataset_choice_callback,
             key="dataset_choice",
         )
         if not dataset_choice:
             return
+        columns = list(st.session_state["data_store"][dataset_choice].keys())
+        current_series = st.session_state["current_series"]
         column_choice = st.selectbox(
             "Select Series",
-            list(st.session_state["data_store"][dataset_choice].keys()),
+            columns,
+            index=columns.index(current_series)
+            if current_series is not None and current_series in columns
+            else len(columns) - 1,
             disabled=len(st.session_state["data_store"][dataset_choice]) < 2,
-            on_change=set_session_state_items,
-            args=("expand_data_selection", False),
+            on_change=series_choice_callback,
             key="column_choice",
         )
 
         st.session_state[f"column_choice_{dataset_choice}"] = column_choice
 
 
-def time_range_selection(base_obj=None) -> pd.DataFrame:
+def retrain_and_repredict(dataset: str, series: str, base_obj=None):
+
     obj = base_obj or st
-    data = get_as().df
-    # data = st.session_state["df_full"]
-    dates = obj.date_input(
-        "Graph Date Range",
-        value=(st.session_state.plot_start_date, st.session_state.plot_end_date),
-        min_value=data.index.min(),
-        max_value=data.index.max(),
-        on_change=set_session_state_items,
-        args=(["use_date_picker", "date_shift_buttons_used"], [True, False]),
-    )
-    if not st.session_state.date_shift_buttons_used:
-        if len(dates) == 2:
-            start_date, end_date = dates
-            st.session_state.plot_start_date = start_date
-            st.session_state.plot_end_date = end_date
-        else:
-            start_date = dates[0]
-            end_date = st.session_state.plot_end_date
-    else:
-        start_date = st.session_state.plot_start_date
-        end_date = st.session_state.plot_end_date
-    inp_col_1, inp_col_2 = obj.columns(2)
+    fix_random_seeds()
 
-    start_time = inp_col_1.time_input("Start time", value=datetime.time(0, 0, 0))
-    end_time = inp_col_2.time_input("End time", value=datetime.time(23, 59, 59))
+    train_model(obj, dataset, series)
 
+    get_predictions_callback(obj)
+
+
+def show_all_callback():
     state = get_as()
 
-    if st.session_state.use_date_picker:
-        inp_col_1.button(
-            "Show All", on_click=set_session_state_items, args=("use_date_picker", False)
+    st.session_state["start_time"] = state.start
+    st.session_state["end_time"] = state.end
+    set_session_state_items("use_date_picker", False)
+
+
+def back_to_selected_time_callback():
+    state = get_as()
+    state.update_plot(st.session_state["start_time"], st.session_state["end_time"])
+    set_session_state_items("use_date_picker", True)
+
+
+def calendar_callback():
+    dates = st.session_state["calendar"]
+    if len(dates) < 2:
+        return
+    state = get_as()
+
+    current_start_time = state.start
+    current_end_time = state.end
+    start_date, end_date = dates
+
+    new_start = current_start_time.replace(
+        year=start_date.year, month=start_date.month, day=start_date.day
+    )
+    new_end = current_end_time.replace(year=end_date.year, month=end_date.month, day=end_date.day)
+    state.update_plot(new_start, new_end)
+
+
+def time_callback():
+    start_time = st.session_state["start_time_widget"]
+    end_time = st.session_state["end_time_widget"]
+    state = get_as()
+
+    current_start_time = state.start
+    current_end_time = state.end
+
+    new_start = current_start_time.replace(hour=start_time.hour, minute=start_time.minute)
+    new_end = current_end_time.replace(hour=end_time.hour, minute=end_time.minute)
+    state.update_plot(new_start, new_end)
+
+
+def time_range_selection(base_obj=None) -> pd.DataFrame:
+    obj = base_obj or st
+    state = get_as()
+    if (state.df.index.max() - state.df.index.min()).days > 1:
+        obj.date_input(
+            "Graph Date Range",
+            value=(state.start.date(), state.end.date()),
+            min_value=state.df.index.min(),
+            max_value=state.df.index.max(),
+            on_change=calendar_callback,
+            key="calendar",
         )
-        c1, c2, c3, c4 = obj.columns(4)
-        c1.button("- 1d", on_click=shift_plot_window, args=(-1,))
-        c2.button("+ 1d", on_click=shift_plot_window, args=(1,))
-        c3.button("- 1w", on_click=shift_plot_window, args=(-7,))
-        c4.button("+ 1w", on_click=shift_plot_window, args=(7,))
-        start_dt = datetime.datetime.combine(start_date, start_time)
-        end_dt = datetime.datetime.combine(end_date, end_time)
+    inp_col_1, inp_col_2 = obj.columns(2)
+
+    inp_col_1.time_input(
+        "Start time",
+        value=state.start.time(),
+        on_change=time_callback,
+        key="start_time_widget",
+    )
+    inp_col_2.time_input(
+        "End time",
+        value=state.end.time(),
+        on_change=time_callback,
+        key="end_time_widget",
+    )
+    if st.session_state["use_date_picker"]:
+        inp_col_1.button("Show All", on_click=show_all_callback)
+        c1, c2 = obj.columns(2)
+        c1.button(
+            "Shift back",
+            on_click=shift_plot_window,
+            args=("backwards",),
+            help="""Moves the displayed plot time range backwards, while keeping the range equal.  
+        This can be used to iterate over the dataset in chunks of any size.""",
+        )
+        c2.button(
+            "Shift forward",
+            on_click=shift_plot_window,
+            args=("forward",),
+            help="""Moves the displayed plot time range forward, while keeping the range equal.  
+        This can be used to iterate over the dataset in chunks of any size.""",
+        )
+
     else:
-        start_dt = state.df.index.min()
-        end_dt = state.df.index.max()
+        state.update_plot(state.df.index.min(), state.df.index.max())
         obj.button(
             "Back to previous selection",
-            on_click=set_session_state_items,
-            args=("use_date_picker", True),
+            on_click=back_to_selected_time_callback,
         )
 
-    state.update_plot(start_dt, end_dt)
+    form = obj.form(key="time_range_form")
+
+    form.number_input(
+        "Set number of datapoints",
+        min_value=0,
+        max_value=len(state.df),
+        value=len(state.df_plot),
+        step=100,
+        help="""Control the number of datapoints shown in the plot window.  
+            When changed, the currently set end timestamp will remain the same.""",
+        key="time_range_slider",
+    )
+    form.form_submit_button("Update", on_click=shift_plot_window_number_of_points)
 
 
-def shift_plot_window(days: int):
-    current_start = st.session_state.plot_start_date
-    current_end = st.session_state.plot_end_date
+def shift_plot_window_number_of_points():
+    state = get_as()
+    number_points = st.session_state["time_range_slider"]
+    current_end_time = state.end
+    current_end_idx = state.df.sort_index().index.get_loc(current_end_time)
+    new_start_idx = current_end_idx - number_points + 1
+    new_start_time = state.df.sort_index().index[new_start_idx]
+    state.update_plot(start_time=new_start_time)
+
+
+def shift_plot_window(direction: str):
+    state = get_as()
+    current_start = state.start
+    current_end = state.end
 
     current_range = current_end - current_start
-    df = get_as().df
 
-    new_start = current_start + datetime.timedelta(days)
-    new_end = current_end + datetime.timedelta(days)
+    if direction == "forward":
+        new_start = current_start + current_range
+        new_end = current_end + current_range
+    else:
+        new_start = current_start - current_range
+        new_end = current_end - current_range
 
-    if new_start < df.index.min():
-        new_start = df.index.min()
+    if new_start < state.df.index.min():
+        new_start = state.df.index.min()
         new_end = new_start + current_range
-    if new_end > df.index.max():
-        new_end = df.index.max()
+    if new_end > state.df.index.max():
+        new_end = state.df.index.max()
         new_start = new_end - current_range
 
-    set_session_state_items("plot_start_date", new_start)
-    set_session_state_items("plot_end_date", new_end)
-    set_session_state_items("date_shift_buttons_used", True)
+    state.update_plot(new_start, new_end)
 
 
 def create_annotation_plot_buttons(base_obj=None):
@@ -427,6 +612,21 @@ def create_save_load_buttons(base_obj=None):
     obj.markdown("***")
 
 
+def get_annotation_deltas(dataset: str, series: str):
+    annotation_keys = ["outlier", "normal", "test_outlier", "test_normal"]
+    state = get_as(dataset, series)
+    if f"old_number_annotations_{dataset}_{series}" in st.session_state:
+        deltas = {
+            k: len(state.data[k])
+            - st.session_state[f"old_number_annotations_{dataset}_{series}"][k]
+            for k in annotation_keys
+        }
+    else:
+        deltas = {k: None for k in annotation_keys}
+
+    return deltas
+
+
 def show_annotation_summary(base_obj=None):
     obj = base_obj or st
     with obj.expander("Annotation Info", expanded=True):
@@ -439,15 +639,7 @@ def show_annotation_summary(base_obj=None):
         custom_text("Training Data", 15, base_obj=c1, centered=False)
         custom_text("Test Data", 15, base_obj=c2, centered=False)
 
-        annotation_keys = ["outlier", "normal", "test_outlier", "test_normal"]
-        if f"old_number_annotations_{dataset}_{series}" in st.session_state:
-            deltas = {
-                k: len(state.data[k])
-                - st.session_state[f"old_number_annotations_{dataset}_{series}"][k]
-                for k in annotation_keys
-            }
-        else:
-            deltas = {k: None for k in annotation_keys}
+        deltas = get_annotation_deltas(dataset, series)
 
         c1.metric(
             "Total labelled Outlier",
@@ -491,6 +683,11 @@ def show_annotation_summary(base_obj=None):
         obj.subheader(f"Current model: {st.session_state[f'last_model_name_{dataset}_{series}']}")
 
 
+def save_method():
+    method = st.session_state["current_method_choice"]
+    st.session_state["last_method_choice"] = method
+
+
 def train_options(base_obj=None):
     obj = base_obj or st
 
@@ -502,11 +699,12 @@ def train_options(base_obj=None):
 
     with st.sidebar.expander("Modelling Options", expanded=True):
         st.info("Here you can choose what type of outlier detection approach to use.")
-        method = st.selectbox(
+        st.selectbox(
             "Choose OD method",
             options=list(MODEL_OPTIONS.keys()),
             key="current_method_choice",
             format_func=lambda x: MODEL_OPTIONS.get(x),
+            on_change=save_method,
         )
 
     with st.sidebar.expander("Feature Options", expanded=True):
@@ -519,7 +717,7 @@ def train_options(base_obj=None):
             min_value=1,
             value=st.session_state.get("old_points_before")
             if st.session_state.get("old_points_before") is not None
-            else 1,
+            else 10,
             key="number_points_before",
             step=5,
         )
@@ -533,38 +731,40 @@ def train_options(base_obj=None):
             step=5,
         )
 
+    auto_generate = st.sidebar.checkbox(
+        "Auto generate predictions for entire annotation series",
+        value=True,
+        help="""Often the next step after training a model is looking at its prediction distribution
+        over the entire annotated dataset-series combination. 
+        By checking this box, predictions for the relevant series will be generated after training, 
+        so the results can be viewed / compared straight away in the 'Model Prediction' - page.""",
+    )
     train_button = st.sidebar.button("Train Outlier Model", key="train_button")
 
     if train_button:
         st.session_state["old_points_before"] = st.session_state["number_points_before"]
         st.session_state["old_points_after"] = st.session_state["number_points_after"]
 
-        if recursive_length_count(state.data, exclude_keys="selected"):
-            st.session_state[f"old_number_annotations_{dataset}_{series}"] = {
-                k: len(v) for k, v in state.data.items()
-            }
-
-        with st.spinner("Constructing features..."):
-            if method == "RF_1":
-                construct_training_data_RF()
-                construct_test_data_RF()
-        with st.spinner("Training Model..."):
-            if method == "RF_1":
-                train_random_forest_classifier(obj)
-
+        train_model(obj)
+        if auto_generate:
+            get_predictions_callback(obj)
+            set_session_state_items("page_index", 1)
+        st.experimental_rerun()
     if f"last_model_name_{dataset}_{series}" in st.session_state:
         st.sidebar.success(
             f"{st.session_state[f'last_model_name_{dataset}_{series}']} finished training."
         )
-        st.sidebar.download_button(
-            "Download model",
-            pickle.dumps(
-                st.session_state["model_library"][
-                    st.session_state[f"last_model_name_{dataset}_{series}"]
-                ]
-            ),
-            f"{st.session_state[f'last_model_name_{dataset}_{series}']}.pkl",
-        )
+    if st.session_state["models_trained_this_session"]:
+        with st.sidebar.expander("Model Download", expanded=True):
+            model_choice = st.selectbox(
+                "Choose Model",
+                options=sorted(st.session_state["models_trained_this_session"], reverse=True),
+            )
+            st.download_button(
+                "Download model",
+                pickle.dumps(st.session_state["model_library"][model_choice]),
+                f"{model_choice}.pkl",
+            )
 
 
 def get_predictions_callback(obj=None):
@@ -638,7 +838,6 @@ def prediction_options(base_obj=None):
     c.button("Generate Predictions", on_click=get_predictions_callback, args=(obj,))
 
     with obj.expander("Model Choice", expanded=True):
-        # with obj.expander("Model Choice", expanded=not st.session_state["hide_choice_menus"]):
         st.subheader("Choose Models")
         st.info(
             "Add models with which to generate predictions. The most recently trained model is automatically added."
@@ -654,7 +853,6 @@ def prediction_options(base_obj=None):
             on_change=add_session_models,
             key="session_models_to_add",
         )
-        # c1.button("Add most recently trained model", on_click=add_most_recent_model, args=(obj,))
         st.file_uploader(
             "Select model from disk",
             type="pkl",
@@ -1030,7 +1228,7 @@ def outlier_visualization_options(dataset_name: str, series: str):
     )
     form.info(
         "Click on a bar in the distribution plot to view all outliers \
-        in that time period. Each time period is chosen so it contains the same number of datapoints. That number can be adjusted here."
+        in that time period. Each time period is chosen so it contains the same number of datapoints."
     )
     form.slider(
         "Number of datapoints per bar",
@@ -1039,6 +1237,7 @@ def outlier_visualization_options(dataset_name: str, series: str):
         max_value=1000,
         step=1,
         key=f"num_outliers_{dataset_name}_{series}",
+        help="""Adjust the number of datapoints each bar represents.""",
     )
     form.slider(
         "Height of figures (px)",
@@ -1052,19 +1251,31 @@ def outlier_visualization_options(dataset_name: str, series: str):
     form.checkbox(
         "Only show time ranges containing outliers (predicted or annotated)",
         key=f"only_show_ranges_with_outliers_{dataset_name}_{series}",
+        help="""Depending on how well a model is already trainied, there might be many
+        time ranges that do not contain any predictied outliers.  
+        By setting this option, these ranges are not included on the x axis in the distribution plot.""",
     )
-    c1, c2 = form.columns(2)
 
-    c1.checkbox(
-        "Hightlight missed test set outliers",
-        value=True,
-        key=f"highlight_test_{dataset_name}_{series}",
-    )
-    c2.checkbox(
-        "Hightlight missed train set outliers",
-        value=False,
-        key=f"highlight_train_{dataset_name}_{series}",
-    )
+    state = get_as(dataset_name, series)
+
+    c1, c2 = form.columns(2)
+    if state.test_outlier:
+
+        c1.checkbox(
+            "Hightlight missed test set outliers",
+            value=True,
+            key=f"highlight_test_{dataset_name}_{series}",
+            help="""If this is set, time ranges that contain annotated test outliers
+        which the models did not classify as such are marked for easy identification.""",
+        )
+    if state.outlier:
+        c2.checkbox(
+            "Hightlight missed train set outliers",
+            value=False,
+            key=f"highlight_train_{dataset_name}_{series}",
+            help="""If this is set, time ranges that contain annotated train outliers
+        which the models did not classify as such are marked for easy identification.""",
+        )
 
     form.form_submit_button("Update Distribution Plot")
 

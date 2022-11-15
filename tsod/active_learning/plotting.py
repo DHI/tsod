@@ -177,8 +177,6 @@ def make_outlier_distribution_plot(dataset_name: str, series: str):
     if st.session_state[f"only_show_ranges_with_outliers_{dataset_name}_{series}"]:
         df_counts = df_counts[df_counts.any(axis=1)]
 
-    # st.session_state[f"current_ranges_counts_{dataset_name}"] = df_counts
-
     bar = (
         Bar()
         .add_xaxis(df_counts.index.to_list())
@@ -186,6 +184,7 @@ def make_outlier_distribution_plot(dataset_name: str, series: str):
             title_opts=opts.TitleOpts(
                 title="Distribution of outliers per model",
                 subtitle="Click on bar to isolate time range",
+                padding=15,
             ),
             xaxis_opts=opts.AxisOpts(
                 is_scale=True,
@@ -241,33 +240,35 @@ def make_outlier_distribution_plot(dataset_name: str, series: str):
 
     for m in model_names:
         if not (
-            st.session_state[f"highlight_train_{dataset_name}_{series}"]
-            or st.session_state[f"highlight_test_{dataset_name}_{series}"]
+            st.session_state.get(f"highlight_train_{dataset_name}_{series}")
+            or st.session_state.get(f"highlight_test_{dataset_name}_{series}")
         ):
             break
         df_missed = df_counts[df_counts[f"{m} Missed Train Outliers"] > 0]
-        if df_missed.empty:
-            continue
-        if st.session_state[f"highlight_train_{dataset_name}_{series}"]:
-            effect_scatter = (EffectScatter().add_xaxis(df_missed.index.tolist())).add_yaxis(
-                f"{m} Missed Training Outliers",
-                df_missed[m].tolist(),
-                label_opts=opts.LabelOpts(is_show=False),
-                tooltip_opts=opts.TooltipOpts(is_show=False),
-                symbol="triangle",
-            )
-            bar = bar.overlap(effect_scatter)
-            colors.append(st.session_state[f"color_{m}_{dataset_name}_{series}"])
-        if st.session_state[f"highlight_test_{dataset_name}_{series}"]:
-            effect_scatter = (EffectScatter().add_xaxis(df_missed.index.tolist())).add_yaxis(
-                f"{m} Missed Test Outliers",
-                df_missed[m].tolist(),
-                label_opts=opts.LabelOpts(is_show=False),
-                tooltip_opts=opts.TooltipOpts(is_show=False),
-            )
-
-            bar = bar.overlap(effect_scatter)
-            colors.append(st.session_state[f"color_{m}_{dataset_name}_{series}"])
+        if st.session_state.get(f"highlight_train_{dataset_name}_{series}"):
+            df_missed = df_counts[df_counts[f"{m} Missed Train Outliers"] > 0]
+            if not df_missed.empty:
+                effect_scatter = (EffectScatter().add_xaxis(df_missed.index.tolist())).add_yaxis(
+                    f"{m} Missed Training Outliers",
+                    df_missed[m].tolist(),
+                    label_opts=opts.LabelOpts(is_show=False),
+                    tooltip_opts=opts.TooltipOpts(is_show=False),
+                    symbol="triangle",
+                )
+                bar = bar.overlap(effect_scatter)
+                colors.append(st.session_state[f"color_{m}_{dataset_name}_{series}"])
+        if st.session_state.get(f"highlight_test_{dataset_name}_{series}"):
+            df_missed = df_counts[df_counts[f"{m} Missed Test Outliers"] > 0]
+            if not df_missed.empty:
+                effect_scatter = (EffectScatter().add_xaxis(df_missed.index.tolist())).add_yaxis(
+                    f"{m} Missed Test Outliers",
+                    df_missed[m].tolist(),
+                    label_opts=opts.LabelOpts(is_show=False),
+                    tooltip_opts=opts.TooltipOpts(is_show=False),
+                    symbol_size=15,
+                )
+                bar = bar.overlap(effect_scatter)
+                colors.append(st.session_state[f"color_{m}_{dataset_name}_{series}"])
 
     bar.set_colors(colors)
 
@@ -293,6 +294,81 @@ def make_outlier_distribution_plot(dataset_name: str, series: str):
         return start_time, end_time
 
     return _get_start_and_end_date(clicked_range)
+
+
+def make_annotation_suggestion_plot(
+    start_time, end_time, dataset_name, series, point_to_highlight: tuple
+):
+    state = get_as(dataset_name, series)
+    state.update_plot(start_time, end_time)
+
+    x_data = state.df_plot.index.to_list()
+    y_data = state.df_plot[series].to_list()
+    plot = (
+        Line()
+        .add_xaxis(x_data)
+        .add_yaxis(
+            series,
+            y_data,
+            color="yellow",
+            label_opts=opts.LabelOpts(is_show=False),
+            is_symbol_show=False,
+        )
+        .set_global_opts(
+            title_opts=opts.TitleOpts(
+                title="Is this point an outlier?",
+                subtitle="Labels generated here will be added directly to the training data.",
+                padding=15,
+            ),
+            yaxis_opts=opts.AxisOpts(
+                type_="value",
+                name=series,
+                name_rotate=90,
+                name_location="middle",
+                name_gap=50,
+            ),
+            xaxis_opts=opts.AxisOpts(
+                type_="time",
+                is_scale=True,
+                name="Date & Time",
+                name_location="middle",
+                name_gap=-20,
+            ),
+            datazoom_opts=opts.DataZoomOpts(type_="inside", range_start=0, range_end=100),
+            legend_opts=opts.LegendOpts(pos_top=40, pos_right=10, orient="vertical"),
+            tooltip_opts=opts.TooltipOpts(axis_pointer_type="line", trigger="axis"),
+        )
+    )
+
+    scatter = (
+        Scatter()
+        .add_xaxis(x_data)
+        .add_yaxis(
+            "Datapoints",
+            y_data,
+            label_opts=opts.LabelOpts(is_show=False),
+            symbol_size=3,
+            itemstyle_opts=opts.ItemStyleOpts(color="#dce4e3"),
+            is_selected=len(x_data) < 10000,
+            tooltip_opts=opts.TooltipOpts(is_show=False),
+        )
+    )
+    plot = plot.overlap(scatter)
+    effect_scatter = (
+        EffectScatter()
+        .add_xaxis([point_to_highlight[0]])
+        .add_yaxis(
+            "Candidate",
+            [point_to_highlight[1]],
+            label_opts=opts.LabelOpts(is_show=False),
+            tooltip_opts=opts.TooltipOpts(is_show=False),
+            symbol_size=30,
+            symbol="pin",
+        )
+    )
+    plot = plot.overlap(effect_scatter)
+
+    st_pyecharts(plot, theme="dark", height="600px")
 
 
 def get_echarts_plot_time_range(
@@ -324,6 +400,7 @@ def get_echarts_plot_time_range(
             title_opts=opts.TitleOpts(
                 title=plot_title,
                 subtitle="Click on points or markers to select them. Activate different selection modes in the toolbar.",
+                padding=15,
             ),
             yaxis_opts=opts.AxisOpts(
                 type_="value",

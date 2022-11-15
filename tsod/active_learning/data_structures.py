@@ -7,9 +7,7 @@ import streamlit as st
 
 class AnnotationState:
     def __init__(self, dataset: str, column: str) -> None:
-        # def __init__(self, df_full: pd.DataFrame) -> None:
         self.df = st.session_state["data_store"][dataset][column]
-        # self.df = df_full
         self.dataset = dataset
         self.column = column
         self.data = defaultdict(set)
@@ -19,20 +17,9 @@ class AnnotationState:
         self.df_test_outlier = pd.DataFrame()
         self.df_test_normal = pd.DataFrame()
         self.df_plot = pd.DataFrame()
-        self.start = None
-        self.end = None
+        self.start: datetime.datetime | None = None
+        self.end: datetime.datetime | None = None
         self._download_data = {}
-
-    @classmethod
-    def from_other_state(cls, other):
-        state = cls(other.df)
-        state.__dict__ = other.__dict__
-
-        return state
-
-    # @property
-    # def download_data(self):
-    # return pickle.dumps(self._download_data)
 
     @property
     def all_indices(self):
@@ -94,15 +81,21 @@ class AnnotationState:
             if not data_to_add:
                 self.clear_selection()
 
-    def update_plot(self, start_time: datetime.datetime, end_time: datetime.datetime):
+    def update_plot(
+        self, start_time: datetime.datetime | None = None, end_time: datetime.datetime | None = None
+    ):
+        if not start_time:
+            start_time = self.start
+        if not end_time:
+            end_time = self.end
         if (
             (not self.start and not self.end)
             or (start_time != self.start)
             or (end_time != self.end)
         ):
             self.df_plot = self.df[self.df.index.to_series().between(start_time, end_time)]
-            self.start = start_time
-            self.end = end_time
+            self.start = self.df_plot.index.min()
+            self.end = self.df_plot.index.max()
 
             for key in self.data:
                 self._update_plot_df(key)

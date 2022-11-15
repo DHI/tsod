@@ -74,7 +74,6 @@ def data_upload_callback_old(base_obj=None):
     dataframe = pd.DataFrame()
     st.write(datafiles)
     file_handle = "_".join(sorted([Path(f.name).stem for f in datafiles]))
-    st.session_state["test"] = file_handle
     for file in datafiles:
         if (
             file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -217,7 +216,7 @@ def data_upload_callback(base_obj=None):
     for i, file in enumerate(datafiles):
         if file.name.endswith(".csv"):
             df = pd.read_csv(file)
-        elif Path(file.name).suffix.lower() in ("xls", "xlsx"):
+        elif Path(file.name).suffix.lower() in (".xls", ".xlsx"):
             df = pd.read_excel(file)
         elif file.name.endswith(".dfs0"):
             data = file.getvalue()
@@ -294,13 +293,11 @@ def data_upload_callback(base_obj=None):
     dataframe.index.name = None
     if len(dataframe.columns) > 1:
         st.session_state["expand_data_selection"] = True
-    # st.session_state["data_store"][file_handle] = dataframe
 
     if len(st.session_state["data_store"]) > 1:
         st.session_state["expand_data_selection"] = True
 
-    st.session_state["plot_start_date"] = dataframe.index.max().date() - datetime.timedelta(days=3)
-    st.session_state["plot_end_date"] = dataframe.index.max().date()
+    st.session_state["current_dataset"] = file_handle
 
     obj.success("Data uploaded and validated", icon="✅")
     obj.write(f"Total rows: {len(dataframe)}")
@@ -311,5 +308,10 @@ def data_upload_callback(base_obj=None):
     for col in unique_columns:
         sub_df = dataframe[[col]]
         sub_df = sub_df[~sub_df[col].isna()]
+        start_time = sub_df.sort_index().index[-200]
+        end_time = sub_df.index.max()
         st.session_state["data_store"][file_handle][col] = sub_df
-        st.session_state["AS"][file_handle][col] = AnnotationState(file_handle, col)
+        an_st = AnnotationState(file_handle, col)
+        an_st.update_plot(start_time, end_time)
+
+        st.session_state["AS"][file_handle][col] = an_st
