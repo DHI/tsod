@@ -42,7 +42,7 @@ def get_as(
     dataset: str | None = None, column: str | None = None, return_all_columns: bool = False
 ) -> AnnotationState:
     if not dataset:
-        dataset = st.session_state["current_dataset"]
+        dataset = st.session_state.get("current_dataset")
         # dataset = st.session_state["dataset_choice"]
         if not dataset:
             return None
