@@ -1,3 +1,7 @@
+import sys
+
+sys.path.append("/app/tsod")
+
 import streamlit as st
 from tsod.active_learning.components import (
     FUNC_MAPPING,

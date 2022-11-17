@@ -640,7 +640,6 @@ def annotation_file_upload_callback(base_obj=None):
                 state.update_data(key, df.index.to_list())
 
 
-
 def dev_options(base_obj=None):
     if os.environ.get("TSOD_DEV_MODE", "false") == "false":
         return nullcontext()
@@ -853,14 +852,14 @@ def train_options(base_obj=None):
         st.sidebar.success(
             f"{st.session_state[f'last_model_name_{dataset}_{series}']} finished training."
         )
-    if (
-        st.session_state[f"last_model_name_{dataset}_{series}"]
-        in st.session_state["inference_results"][dataset][series].columns
-    ):
-        st.sidebar.success(
-            f"Predictions for model {st.session_state[f'last_model_name_{dataset}_{series}']} \
-            have been generated and can be viewed on the 'Model Prediction' - page."
-        )
+        if (
+            st.session_state[f"last_model_name_{dataset}_{series}"]
+            in st.session_state["inference_results"][dataset][series].columns
+        ):
+            st.sidebar.success(
+                f"Predictions for model {st.session_state[f'last_model_name_{dataset}_{series}']} \
+                have been generated and can be viewed on the 'Model Prediction' - page."
+            )
     if st.session_state["models_trained_this_session"]:
         with st.sidebar.expander("Model Download", expanded=True):
             model_choice = st.selectbox(
