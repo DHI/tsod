@@ -8,6 +8,6 @@ streamlit-echarts
 streamlit_profiler
 streamlit-option-menu
 ipykernel
-sklearn
+scikit-learn
 mikeio
 openpyxl
