@@ -1,10 +1,6 @@
 import streamlit as st
 from tsod.active_learning.components import (
-    outlier_annotation,
-    model_training,
-    model_prediction,
-    instructions,
-    annotation_suggestion,
+    FUNC_MAPPING,
     dev_options,
 )
 from tsod.active_learning.utils import init_session_state
@@ -19,19 +15,12 @@ def main():
     )
     init_session_state()
 
-    func_mapping = {
-        "Outlier Annotation": outlier_annotation,
-        "Model Training": model_training,
-        "Model Prediction": model_prediction,
-        "Annotation Suggestion": annotation_suggestion,
-        "Instructions": instructions,
-    }
     icons = ["graph-up", "file-bar-graph", "lightbulb", "question-square", "info-circle"]
 
     with st.sidebar:
         choice = option_menu(
             "Time Series Outlier Detection",
-            list(func_mapping.keys()),
+            list(FUNC_MAPPING.keys()),
             # orientation="horizontal",
             default_index=st.session_state["page_index"],
             icons=icons,
@@ -50,9 +39,8 @@ def main():
             },
             menu_icon="",
         )
-
     with dev_options(st.sidebar):
-        func_mapping[choice]()
+        FUNC_MAPPING[choice]()
 
 
 if __name__ == "__main__":

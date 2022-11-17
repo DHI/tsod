@@ -177,7 +177,7 @@ def data_upload_callback_old(base_obj=None):
 
 def data_uploader(base_obj=None):
     obj = base_obj or st
-    form = obj.form("data_upload_form")
+    form = obj.form("data_upload_form", clear_on_submit=True)
     form.file_uploader(
         label="Upload data from disk",
         accept_multiple_files=True,
@@ -298,6 +298,7 @@ def data_upload_callback(base_obj=None):
         st.session_state["expand_data_selection"] = True
 
     st.session_state["current_dataset"] = file_handle
+    st.session_state["current_series"] = sorted(unique_columns)[0]
 
     obj.success("Data uploaded and validated", icon="✅")
     obj.write(f"Total rows: {len(dataframe)}")

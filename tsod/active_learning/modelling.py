@@ -303,8 +303,6 @@ def train_random_forest_classifier(
     ]
 
     st.session_state["prediction_data"][dataset] = [series]
-    set_session_state_items("page_index", 1)
-    # st.experimental_rerun()
 
 
 def get_model_predictions(base_obj=None):
@@ -388,8 +386,8 @@ def get_model_predictions_RF():
                     st.session_state["number_outliers"][dataset_name][series][model_name] = len(
                         results.nonzero()[0].tolist()
                     )
-                    st.session_state["available_models"][dataset_name].update([model_name])
+                    st.session_state["available_models"][dataset_name][series].update([model_name])
 
                     st.session_state["models_to_visualize"][dataset_name][series] = set(
-                        sorted(st.session_state["available_models"][dataset_name])[-2:]
+                        sorted(st.session_state["available_models"][dataset_name][series])[-2:]
                     )

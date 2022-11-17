@@ -604,9 +604,5 @@ def feature_importance_plot(base_obj=None):
             "xanchor": "center",
             "yanchor": "top",
         },
-        # title_text=f"Feature importances {st.session_state['last_model_name']}",
     )
-    # with obj:
-    # st_pyecharts(bar, theme="dark")
-    # obj.bar_chart(df_new, x=["Feature importance"])
     obj.plotly_chart(fig, use_container_width=True)

@@ -1,5 +1,6 @@
 import datetime
 import pickle
+import os
 from pathlib import Path
 from typing import Dict, List
 from collections import defaultdict
@@ -138,6 +139,8 @@ def instructions():
 
 
 def annotation_suggestion():
+    set_session_state_items("page_index", FUNC_IDX_MAPPING["Annotation Suggestion"])
+
     # for now only allow annotation suggestion for models trained in the current session
     if not (("most_recent_model" in st.session_state) and (st.session_state["inference_results"])):
         st.info(
@@ -169,6 +172,12 @@ def annotation_suggestion():
     df_not_annotated: pd.DataFrame = base_df[
         ~base_df.index.isin(state.all_indices - state.selection)
     ]
+    # also filter out skipped values
+    df_not_annotated = df_not_annotated[
+        ~df_not_annotated.index.isin(
+            [p[0] for p in st.session_state["suggested_points_with_annotation"][dataset][series]]
+        )
+    ]
     # sort by "model uncertainty" => lower = more uncertain
     df_not_annotated.sort_values(f"certainty_{model}", inplace=True)
     int_idx = state.df.index.get_loc(df_not_annotated.index[0])
@@ -183,9 +192,23 @@ def annotation_suggestion():
     with c1:
         make_annotation_suggestion_plot(start_time, end_time, dataset, series, (x_value, y_value))
     c2.markdown("<br>", unsafe_allow_html=True)
-    c2.button("Yes", on_click=state.update_data, args=("outlier", [x_value]))
-    c2.button("No", on_click=state.update_data, args=("normal", [x_value]))
+    c2.button(
+        "Yes", on_click=annotation_suggestion_callback, args=(dataset, series, "outlier", x_value)
+    )
+    c2.button(
+        "No", on_click=annotation_suggestion_callback, args=(dataset, series, "normal", x_value)
+    )
     c2.metric("Model certainty", f"{cert_value} %")
+    c2.button(
+        "Skip", on_click=annotation_suggestion_callback, args=(dataset, series, "skipped", x_value)
+    )
+    c2.button(
+        "Back to previous",
+        on_click=back_to_previous_suggestion_callback,
+        args=(dataset, series),
+        disabled=len(st.session_state["suggested_points_with_annotation"][dataset][series]) < 1,
+        help="Go back to the previous prompt (thereby removing its label).",
+    )
 
     st.info(
         """The presented datapoints are chosen based on the 'model certainty'
@@ -194,6 +217,41 @@ def annotation_suggestion():
     )
 
     retrain_options(dataset, series)
+    # if model was retrained, we need to rerun to switch to the predictions page
+    if st.session_state["page_index"] != FUNC_IDX_MAPPING["Annotation Suggestion"]:
+        st.experimental_rerun()
+
+
+def annotation_suggestion_callback(dataset, series, annotation_type, value):
+    state = get_as(dataset, series)
+    if annotation_type in state.data:
+        state.update_data(annotation_type, [value])
+    st.session_state["suggested_points_with_annotation"][dataset][series].append(
+        (value, annotation_type)
+    )
+
+
+def back_to_previous_suggestion_callback(dataset, series):
+    value_to_remove = st.session_state["suggested_points_with_annotation"][dataset][series].pop()
+    state = get_as(dataset, series)
+    key = value_to_remove[1]
+    if key == "skipped":
+        return
+
+    state.data[key].discard(value_to_remove[0])
+    state._update_df(key)
+    state._update_plot_df(key)
+
+
+FUNC_MAPPING = {
+    "1. Outlier Annotation": outlier_annotation,
+    "2. Model Training": model_training,
+    "3. Model Prediction": model_prediction,
+    "Annotation Suggestion": annotation_suggestion,
+    "Instructions": instructions,
+}
+
+FUNC_IDX_MAPPING = {k: i for i, k in enumerate(FUNC_MAPPING.keys())}
 
 
 def retrain_options(dataset: str, series: str):
@@ -283,6 +341,8 @@ def retrain_and_repredict(dataset: str, series: str, base_obj=None):
     train_model(obj, dataset, series)
 
     get_predictions_callback(obj)
+
+    st.session_state["suggested_points_with_annotation"][dataset][series].clear()
 
 
 def show_all_callback():
@@ -436,10 +496,32 @@ def create_annotation_plot_buttons(base_obj=None):
 
     obj.subheader("Actions")
 
+    disabled = len(state.selection) < 1
+    if disabled:
+        obj.info("Select points first, then annotate them using these buttons.")
+
     custom_text("Training Data", 15, True, base_obj=obj)
     c_1, c_2 = obj.columns(2)
-    c_1.button("Mark selection Outlier", on_click=state.update_data, args=("outlier",))
-    c_2.button("Mark selection Normal", on_click=state.update_data, args=("normal",))
+    c_1.button(
+        "Mark selection Outlier",
+        on_click=state.update_data,
+        args=("outlier",),
+        disabled=disabled,
+        help=None
+        if disabled
+        else """Use this button to annotate all selected points as outliers
+        to be used for training.""",
+    )
+    c_2.button(
+        "Mark selection Normal",
+        on_click=state.update_data,
+        args=("normal",),
+        disabled=disabled,
+        help=None
+        if disabled
+        else """Use this button to annotate all selected points as normal points
+        to be used for training.""",
+    )
     custom_text("Test Data", 15, True, base_obj=obj)
     c_1, c_2 = obj.columns(2)
     c_1.button(
@@ -447,18 +529,32 @@ def create_annotation_plot_buttons(base_obj=None):
         on_click=state.update_data,
         args=("test_outlier",),
         key="mark_test_outlier",
+        disabled=disabled,
+        help=None
+        if disabled
+        else """Use this button to annotate all selected points as outliers
+        to be used in the test set.  
+        This means they will not be used for training, but instead to evalutate the
+        performance of the trained model.""",
     )
     c_2.button(
         "Mark selection Normal",
         on_click=state.update_data,
         args=("test_normal",),
         key="mark_test_normal",
+        disabled=disabled,
+        help=None
+        if disabled
+        else """Use this button to annotate all selected points as normal
+        points to be used in the test set.  
+        This means they will not be used for training, but instead to evalutate the
+        performance of the trained model.""",
     )
     obj.markdown("***")
     c_1, c_2 = obj.columns(2)
 
-    c_1.button("Clear Selection", on_click=state.clear_selection)
-    c_2.button("Clear All", on_click=state.clear_all)
+    c_1.button("Clear Selection", on_click=state.clear_selection, disabled=len(state.selection) < 1)
+    c_2.button("Clear All", on_click=state.clear_all, disabled=len(state.all_indices) < 1)
 
     obj.markdown("***")
 
@@ -544,7 +640,10 @@ def annotation_file_upload_callback(base_obj=None):
                 state.update_data(key, df.index.to_list())
 
 
+
 def dev_options(base_obj=None):
+    if os.environ.get("TSOD_DEV_MODE", "false") == "false":
+        return nullcontext()
     obj = base_obj or st
     with obj.expander("Dev Options"):
         dev_col_1, dev_col_2 = st.columns(2)
@@ -748,11 +847,19 @@ def train_options(base_obj=None):
         train_model(obj)
         if auto_generate:
             get_predictions_callback(obj)
-            set_session_state_items("page_index", 1)
+        set_session_state_items("page_index", FUNC_IDX_MAPPING["2. Model Training"])
         st.experimental_rerun()
     if f"last_model_name_{dataset}_{series}" in st.session_state:
         st.sidebar.success(
             f"{st.session_state[f'last_model_name_{dataset}_{series}']} finished training."
+        )
+    if (
+        st.session_state[f"last_model_name_{dataset}_{series}"]
+        in st.session_state["inference_results"][dataset][series].columns
+    ):
+        st.sidebar.success(
+            f"Predictions for model {st.session_state[f'last_model_name_{dataset}_{series}']} \
+            have been generated and can be viewed on the 'Model Prediction' - page."
         )
     if st.session_state["models_trained_this_session"]:
         with st.sidebar.expander("Model Download", expanded=True):
@@ -769,7 +876,7 @@ def train_options(base_obj=None):
 
 def get_predictions_callback(obj=None):
     # set_session_state_items("hide_choice_menus", True)
-    set_session_state_items("page_index", 2)
+    set_session_state_items("page_index", FUNC_IDX_MAPPING["3. Model Prediction"])
     get_model_predictions(obj)
     set_session_state_items("prediction_models", {})
 
@@ -792,20 +899,6 @@ def add_uploaded_models(base_obj=None):
         st.session_state["model_library"][data.name] = model_data
 
 
-def add_uploaded_dataset(base_obj=None):
-    obj = base_obj or st
-
-    if not st.session_state["uploaded_datasets"]:
-        return
-
-    for data in st.session_state.uploaded_datasets:
-        try:
-            df = pd.read_csv("data/Elev_NW1.csv", index_col=0, parse_dates=True)
-            st.session_state["prediction_data"][data.name] = df
-        except Exception:
-            obj.error(f"Could not read file {data.name}.")
-
-
 def add_session_models():
     to_add = st.session_state["session_models_to_add"]
     uploaded_models = {
@@ -815,14 +908,6 @@ def add_session_models():
         k: st.session_state["model_library"][k] for k in to_add
     }
     st.session_state["prediction_models"].update(uploaded_models)
-
-    # for model_name in to_add:
-    #     if model_name in st.session_state["prediction_models"]:
-    #         continue
-
-    #     st.session_state["prediction_models"][model_name] = st.session_state["model_library"][
-    #         model_name
-    #     ]
 
 
 def add_session_dataset():
@@ -854,7 +939,7 @@ def prediction_options(base_obj=None):
             key="session_models_to_add",
         )
         st.file_uploader(
-            "Select model from disk",
+            "Or / and select model from disk (optional)",
             type="pkl",
             on_change=add_uploaded_models,
             key="current_uploaded_models",
@@ -869,10 +954,8 @@ def prediction_options(base_obj=None):
                 "Clear selection", on_click=set_session_state_items, args=("prediction_models", {})
             )
     with obj.expander("Data Choice", expanded=True):
-        # with obj.expander("Data Choice", expanded=not st.session_state["hide_choice_menus"]):
         st.subheader("Select Data")
-        st.info("Add datasets for outlier evaluation.")
-        # c1, c2 = st.columns(2)
+        st.info("Choose datasets for outlier evaluation.")
         ds_options = list(st.session_state["data_store"].keys())
         if "most_recent_model" in st.session_state:
             idx = ds_options.index(
@@ -886,7 +969,7 @@ def prediction_options(base_obj=None):
             else:
                 idx = None
         ds_choice = st.selectbox(
-            label="Select datasets created this session",
+            label="Select datasets uploaded this session",
             options=ds_options,
             index=idx,
             disabled=len(st.session_state["data_store"]) < 2,
@@ -916,14 +999,6 @@ def prediction_options(base_obj=None):
                 on_change=add_session_dataset,
                 key="pred_session_col_choice",
             )
-        # c1.button("Add Annotation Data", on_click=add_annotation_to_pred_data)
-        # add_annotation_to_pred_data()
-        st.file_uploader(
-            "Select dataset from disk",
-            accept_multiple_files=True,
-            key="uploaded_datasets",
-            on_change=add_uploaded_dataset,
-        )
         st.subheader("Selected Series:")
         st.json(st.session_state["prediction_data"])
         # st.json({k: list(v.keys()) for k, v in st.session_state["prediction_data"].items()})
@@ -1016,6 +1091,10 @@ def test_metrics(base_obj=None):
     custom_text(
         f"Most recent model: {st.session_state[f'last_model_name_{dataset}_{series}']}",
         base_obj=obj,
+    )
+    obj.info(
+        """All displayed metrics have a max value of 1 (best possible result)
+    and min value of 0 (worst possible result)."""
     )
     c1, c2, c3, c4 = obj.columns(4)
 
@@ -1202,13 +1281,18 @@ def model_choice_callback(dataset_name: str, series: str):
 
 
 def model_choice_options(dataset_name: str, series: str):
-    st.info(
-        f"Here you can choose which of the model predictions that exist for the datset \
-            '{dataset_name}', series '{series}' so far to visualize."
-    )
+    if (dataset_name == list(st.session_state["inference_results"].keys())[0]) and (
+        series == list(st.session_state["inference_results"][dataset_name].keys())[0]
+    ):
+        st.info(
+            f"""Below you can choose from all models which have generated 
+        predictions for this series.  
+        Add them to the selection to visualize their results. 
+        By default, the two most recently trained models are selected."""
+        )
     st.multiselect(
         "Choose models for dataset",
-        sorted(st.session_state["available_models"][dataset_name]),
+        sorted(st.session_state["available_models"][dataset_name][series]),
         key=f"model_choice_{dataset_name}_{series}",
         default=sorted(st.session_state["models_to_visualize"][dataset_name][series]),
         on_change=model_choice_callback,
