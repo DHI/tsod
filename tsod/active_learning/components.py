@@ -309,7 +309,7 @@ def data_selection(base_obj=None):
             label="Select dataset",
             options=datasets,
             index=datasets.index(st.session_state["current_dataset"])
-            if st.session_state["current_dataset"] is not None
+            if st.session_state.get("current_dataset") is not None
             else len(datasets) - 1,
             disabled=len(st.session_state["data_store"]) < 2,
             on_change=dataset_choice_callback,
