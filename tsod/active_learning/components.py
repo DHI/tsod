@@ -38,6 +38,7 @@ def outlier_annotation():
     data_selection(st.sidebar)
     state = get_as()
     if not state:
+        st.info("Upload your data to get started!")
         return
     create_annotation_plot_buttons(st.sidebar)
     with st.sidebar.expander("Time Range Selection", expanded=True):

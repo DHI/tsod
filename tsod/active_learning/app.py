@@ -1,5 +1,6 @@
 import sys
 
+# quick hack to fix python path on streamlit cloud, I'm sure there's a better way
 sys.path.append("/app/tsod")
 
 import streamlit as st
