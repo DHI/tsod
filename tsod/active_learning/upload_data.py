@@ -298,7 +298,7 @@ def data_upload_callback(base_obj=None):
         st.session_state["expand_data_selection"] = True
 
     st.session_state["current_dataset"] = file_handle
-    st.session_state["current_series"] = sorted(unique_columns)[0]
+    st.session_state["current_series"][file_handle] = sorted(unique_columns)[0]
 
     obj.success("Data uploaded and validated", icon="✅")
     obj.write(f"Total rows: {len(dataframe)}")
@@ -309,10 +309,6 @@ def data_upload_callback(base_obj=None):
     for col in unique_columns:
         sub_df = dataframe[[col]]
         sub_df = sub_df[~sub_df[col].isna()]
-        start_time = sub_df.sort_index().index[-200]
-        end_time = sub_df.index.max()
         st.session_state["data_store"][file_handle][col] = sub_df
         an_st = AnnotationState(file_handle, col)
-        an_st.update_plot(start_time, end_time)
-
-        st.session_state["AS"][file_handle][col] = an_st
+        st.session_state["annotation_state_store"][file_handle][col] = an_st

@@ -46,12 +46,12 @@ def get_as(
         # dataset = st.session_state["dataset_choice"]
         if not dataset:
             return None
-    ds_dict = st.session_state["AS"].get(dataset)
+    ds_dict = st.session_state["annotation_state_store"].get(dataset)
 
     if not column:
         if return_all_columns:
             return ds_dict
-        column = st.session_state[f"column_choice_{dataset}"]
+        column = st.session_state["current_series"][dataset]
     if not ds_dict:
         return None
     return ds_dict.get(column)
@@ -63,30 +63,30 @@ def _add_to_ss_if_not_in_it(key: str, init_value: Any):
 
 
 def init_session_state():
-    if os.environ.get("TSOD_DEV_MODE", "false") == "true":
-        ######### for dev, remove ###################
-        if "data_store" not in st.session_state:
-            import pickle
+    # if os.environ.get("TSOD_DEV_MODE", "false") == "true":
+    ######### for dev, remove ###################
+    # if "data_store" not in st.session_state:
+    #     import pickle
 
-            with open("dev_data.pkl", "rb") as f:
-                test = pickle.load(f)
-            st.session_state["data_store"] = test
+    #     with open("dev_data.pkl", "rb") as f:
+    #         test = pickle.load(f)
+    #     st.session_state["data_store"] = test
 
-            _add_to_ss_if_not_in_it("AS", defaultdict(dict))
+    #     _add_to_ss_if_not_in_it("annotation_state_store", defaultdict(dict))
 
-            for ds, ds_dict in test.items():
-                for series in ds_dict:
-                    an_s = AnnotationState(ds, series)
-                    an_s.update_plot(
-                        start_time=an_s.df.sort_index().index[-200], end_time=an_s.df.index.max()
-                    )
-                    st.session_state["AS"][ds][series] = an_s
+    #     for ds, ds_dict in test.items():
+    #         for series in ds_dict:
+    #             an_s = AnnotationState(ds, series)
+    #             an_s.update_plot(
+    #                 start_time=an_s.df.sort_index().index[-200], end_time=an_s.df.index.max()
+    #             )
+    #             st.session_state["annotation_state_store"][ds][series] = an_s
 
-            _add_to_ss_if_not_in_it("current_dataset", "ddd")
-            _add_to_ss_if_not_in_it("current_series", "Water Level")
+    #     _add_to_ss_if_not_in_it("current_dataset", "ddd")
 
-        ################################################
-    _add_to_ss_if_not_in_it("AS", defaultdict(dict))
+    ################################################
+    _add_to_ss_if_not_in_it("annotation_state_store", defaultdict(dict))
+    _add_to_ss_if_not_in_it("current_series", {})
 
     _add_to_ss_if_not_in_it("data_store", defaultdict(dict))
     _add_to_ss_if_not_in_it("annotation_data_loaded", True)

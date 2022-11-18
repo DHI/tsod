@@ -21,6 +21,11 @@ class AnnotationState:
         self.end: datetime.datetime | None = None
         self._download_data = {}
 
+        start_time = self.df.sort_index().index[-200]
+        end_time = self.df.index.max()
+
+        self.update_plot(start_time, end_time)
+
     @property
     def all_indices(self):
         return self.selection.union(self.outlier, self.normal, self.test_outlier, self.test_normal)

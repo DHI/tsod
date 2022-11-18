@@ -4,10 +4,7 @@ import sys
 sys.path.append("/app/tsod")
 
 import streamlit as st
-from tsod.active_learning.components import (
-    FUNC_MAPPING,
-    dev_options,
-)
+from tsod.active_learning.components import FUNC_MAPPING, dev_options
 from tsod.active_learning.utils import init_session_state
 from streamlit_option_menu import option_menu
 
@@ -26,12 +23,10 @@ def main():
         choice = option_menu(
             "Time Series Outlier Detection",
             list(FUNC_MAPPING.keys()),
-            # orientation="horizontal",
             default_index=st.session_state["page_index"],
             icons=icons,
             styles={
                 "container": {"padding": "0!important"},
-                # "container": {"padding": "0!important", "background-color": "#fafafa"},
                 "icon": {"color": "orange", "font-size": "15px"},
                 "menu-title": {"font-size": "18px"},
                 "nav-link": {

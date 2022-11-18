@@ -5,18 +5,17 @@ from pathlib import Path
 from typing import Dict, List
 from collections import defaultdict
 import pandas as pd
+import numpy as np
 import streamlit as st
 from tsod.active_learning.modelling import train_model
 from tsod.active_learning.utils import (
     get_as,
     set_session_state_items,
     custom_text,
-    recursive_length_count,
     MODEL_OPTIONS,
     fix_random_seeds,
-    _add_to_ss_if_not_in_it,
 )
-from tsod.active_learning.modelling import get_model_predictions, construct_test_data_RF
+from tsod.active_learning.modelling import get_model_predictions
 from tsod.active_learning.plotting import (
     feature_importance_plot,
     get_echarts_plot_time_range,
@@ -24,7 +23,7 @@ from tsod.active_learning.plotting import (
     make_time_range_outlier_plot,
     make_annotation_suggestion_plot,
 )
-from tsod.active_learning.data_structures import plot_return_value_as_datetime
+from tsod.active_learning.data_structures import plot_return_value_as_datetime, AnnotationState
 from contextlib import nullcontext
 from streamlit_profiler import Profiler
 from streamlit_echarts import st_pyecharts
@@ -38,7 +37,12 @@ def outlier_annotation():
     data_selection(st.sidebar)
     state = get_as()
     if not state:
-        st.info("Upload your data to get started!")
+        st.info(
+            """Upload your data to get started!  
+        If you just want to try out the application, you can also use some
+        randomly generated time series data by clicking the button below."""
+        )
+        st.button("Add generated data", on_click=generate_example_data)
         return
     create_annotation_plot_buttons(st.sidebar)
     with st.sidebar.expander("Time Range Selection", expanded=True):
@@ -294,9 +298,9 @@ def dataset_choice_callback():
     st.session_state["current_dataset"] = ds
 
 
-def series_choice_callback():
+def series_choice_callback(dataset: str):
     series = st.session_state["column_choice"]
-    st.session_state["current_series"] = series
+    st.session_state["current_series"][dataset] = series
     set_session_state_items("expand_data_selection", False)
 
 
@@ -319,7 +323,7 @@ def data_selection(base_obj=None):
         if not dataset_choice:
             return
         columns = list(st.session_state["data_store"][dataset_choice].keys())
-        current_series = st.session_state["current_series"]
+        current_series = st.session_state["current_series"][dataset_choice]
         column_choice = st.selectbox(
             "Select Series",
             columns,
@@ -328,6 +332,7 @@ def data_selection(base_obj=None):
             else len(columns) - 1,
             disabled=len(st.session_state["data_store"][dataset_choice]) < 2,
             on_change=series_choice_callback,
+            args=(dataset_choice,),
             key="column_choice",
         )
 
@@ -488,6 +493,40 @@ def shift_plot_window(direction: str):
         new_start = new_end - current_range
 
     state.update_plot(new_start, new_end)
+
+
+def generate_example_data():
+    fix_random_seeds()
+
+    dti = pd.date_range("2018-01-01", periods=5000, freq="10min")
+
+    # generate some simple sine data
+    cycles = 50
+    resolution = 5000  # how many datapoints to generate
+    length = np.pi * 2 * cycles
+    data = np.sin(np.arange(0, length, length / resolution))
+
+    # add some random noise, which is not outliers
+    data = data + np.random.normal(0, 0.005, data.shape)
+
+    # add some randomly generated outliers
+    oulier_idc = np.random.randint(0, data.size, 200)
+    data[oulier_idc] *= np.random.normal(0, 2, oulier_idc.shape)
+
+    data_2 = np.cos(np.arange(0, length, length / resolution))
+    data_2 = data_2 + np.random.normal(0, 0.005, data_2.shape)
+    oulier_idc = np.random.randint(0, data_2.size, 500)
+    data_2[oulier_idc] *= np.random.normal(0, 1, oulier_idc.shape)
+
+    df = pd.DataFrame({"Example Series 1": data, "Example Series 2": data_2}, index=dti)
+
+    for c in df.columns:
+        st.session_state["data_store"]["Example Dataset"][c] = df[[c]]
+        an_st = AnnotationState("Example Dataset", c)
+        st.session_state["annotation_state_store"]["Example Dataset"][c] = an_st
+
+    st.session_state["current_dataset"] = "Example Dataset"
+    st.session_state["current_series"]["Example Dataset"] = "Example Series 1"
 
 
 def create_annotation_plot_buttons(base_obj=None):
@@ -665,8 +704,8 @@ def dev_options(base_obj=None):
     if show_ss:
         st.write(st.session_state)
     if show_as:
-        st.write(st.session_state["AS"])
-        # st.write(st.session_state["AS"]["ddd"]["Water Level"].df)
+        st.write(st.session_state["annotation_state_store"])
+        # st.write(st.session_state["annotation_state_store"]["ddd"]["Water Level"].df)
 
     return Profiler() if profile else nullcontext()
 
