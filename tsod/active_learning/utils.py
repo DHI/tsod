@@ -30,20 +30,11 @@ def custom_text(
     return obj.markdown(md, unsafe_allow_html=True)
 
 
-@st.cache(allow_output_mutation=True)
-def load_data(file_name: str = "TODO"):
-    df = pd.read_csv("data/Elev_NW1.csv", index_col=0, parse_dates=True)
-    df["Water Level"] = df["Water Level"].astype(np.float16)
-    # df["ts"] = df.index.values.astype(np.int64) // 10**6
-    return df
-
-
 def get_as(
     dataset: str | None = None, column: str | None = None, return_all_columns: bool = False
 ) -> AnnotationState:
     if not dataset:
         dataset = st.session_state.get("current_dataset")
-        # dataset = st.session_state["dataset_choice"]
         if not dataset:
             return None
     ds_dict = st.session_state["annotation_state_store"].get(dataset)
@@ -63,26 +54,27 @@ def _add_to_ss_if_not_in_it(key: str, init_value: Any):
 
 
 def init_session_state():
-    # if os.environ.get("TSOD_DEV_MODE", "false") == "true":
-    ######### for dev, remove ###################
-    # if "data_store" not in st.session_state:
-    #     import pickle
+    if os.environ.get("TSOD_DEV_MODE", "false") == "true":
+        ######## for dev, remove ###################
+        if "data_store" not in st.session_state:
+            import pickle
 
-    #     with open("dev_data.pkl", "rb") as f:
-    #         test = pickle.load(f)
-    #     st.session_state["data_store"] = test
+            with open("dev_data.pkl", "rb") as f:
+                test = pickle.load(f)
+            st.session_state["data_store"] = test
 
-    #     _add_to_ss_if_not_in_it("annotation_state_store", defaultdict(dict))
+            _add_to_ss_if_not_in_it("annotation_state_store", defaultdict(dict))
 
-    #     for ds, ds_dict in test.items():
-    #         for series in ds_dict:
-    #             an_s = AnnotationState(ds, series)
-    #             an_s.update_plot(
-    #                 start_time=an_s.df.sort_index().index[-200], end_time=an_s.df.index.max()
-    #             )
-    #             st.session_state["annotation_state_store"][ds][series] = an_s
+            for ds, ds_dict in test.items():
+                for series in ds_dict:
+                    an_s = AnnotationState(ds, series)
+                    st.session_state["annotation_state_store"][ds][series] = an_s
 
-    #     _add_to_ss_if_not_in_it("current_dataset", "ddd")
+            _add_to_ss_if_not_in_it("current_dataset", "ddd")
+            _add_to_ss_if_not_in_it("current_series", {})
+
+            st.session_state["current_series"]["ddd"] = "Water Level"
+            st.session_state["current_series"]["fff"] = "Water Level"
 
     ################################################
     _add_to_ss_if_not_in_it("annotation_state_store", defaultdict(dict))
@@ -109,6 +101,8 @@ def init_session_state():
     _add_to_ss_if_not_in_it("pred_outlier_tracker", defaultdict(dict))
     _add_to_ss_if_not_in_it("models_trained_this_session", set())
     _add_to_ss_if_not_in_it("last_method_choice", "RF_1")
+    _add_to_ss_if_not_in_it("download_datasets", {})
+    _add_to_ss_if_not_in_it("cleaned_dataset_counter", defaultdict(lambda: 1))
     _add_to_ss_if_not_in_it(
         "suggested_points_with_annotation", defaultdict(lambda: defaultdict(list))
     )

@@ -22,12 +22,13 @@ from tsod.active_learning.plotting import (
     make_outlier_distribution_plot,
     make_time_range_outlier_plot,
     make_annotation_suggestion_plot,
+    make_removed_outliers_example_plots,
 )
 from tsod.active_learning.data_structures import plot_return_value_as_datetime, AnnotationState
 from contextlib import nullcontext
 from streamlit_profiler import Profiler
 from streamlit_echarts import st_pyecharts
-from tsod.active_learning.upload_data import data_uploader
+from tsod.active_learning.upload_data import data_uploader, add_new_data
 
 
 def outlier_annotation():
@@ -38,7 +39,7 @@ def outlier_annotation():
     state = get_as()
     if not state:
         st.info(
-            """Upload your data to get started!  
+            """Upload your data to get started (using 'Data Upload' in the sidebar)!  
         If you just want to try out the application, you can also use some
         randomly generated time series data by clicking the button below."""
         )
@@ -122,6 +123,11 @@ def model_prediction():
                     "Area select: Only select predicted outliers",
                     True,
                     key=f"only_select_outliers_{dataset_name}_{series}",
+                    help="""To select multiple points at once you might want to use
+                    one of the area select options.  
+                    This checkbox controls whether these selection methods only select
+                    datapoints where outliers were predicted (markers) or all datapoints
+                    in range.""",
                 )
                 clicked_point = make_time_range_outlier_plot(
                     dataset_name, series, start_time, end_time
@@ -248,15 +254,198 @@ def back_to_previous_suggestion_callback(dataset, series):
     state._update_plot_df(key)
 
 
+def data_download():
+    if not (st.session_state["model_library"] and st.session_state["data_store"]):
+        st.info(
+            """Once a model was trained or uploaded and a dataset was created,
+        you will be able to use your models to remove outliers and download
+        the resulting data here. """
+        )
+        return
+
+    st.sidebar.subheader("Download Controls")
+
+    dataset = st.sidebar.selectbox(
+        "Select source dataset",
+        options=list(st.session_state["data_store"].keys()),
+        index=list(st.session_state["data_store"].keys()).index(
+            st.session_state["current_dataset"]
+        ),
+        disabled=len(st.session_state["data_store"]) < 2,
+        key="download_dataset",
+    )
+
+    series = st.sidebar.multiselect(
+        "Select series to remove outliers from",
+        options=list(st.session_state["data_store"][dataset].keys()),
+        default=st.session_state["current_series"][dataset],
+        disabled=len(st.session_state["data_store"][dataset]) < 2,
+        key="download_series",
+        help="""The final dataset will keep all columns it had when it was uploaded.  
+        Here you can choose which of those columns should be cleaned of outliers.  
+        You might want to use different models to clean different series.""",
+    )
+    if not series:
+        st.sidebar.warning("Please select at least one series.")
+        return
+
+    st.sidebar.selectbox(
+        "Select model to use for outlier identification",
+        options=sorted(st.session_state["model_library"].keys()),
+        index=sorted(st.session_state["model_library"].keys()).index(
+            st.session_state["most_recent_model"]
+        )
+        if "most_recent_model" in st.session_state
+        else len(st.session_state["model_library"]) - 1,
+        disabled=len(st.session_state["model_library"]) < 2,
+        key="download_model",
+    )
+
+    method = st.sidebar.radio(
+        "Select how to handle predicted outliers",
+        options=list(REMOVAL_METHODS.keys()),
+        key="download_method",
+    )
+
+    st.sidebar.button(
+        "Update Preview" if "df_before" in st.session_state else "Preview",
+        on_click=remove_outliers,
+        help="""Creates a preview by sampling three predicted outliers per  
+        series and overlaying a series with the outliers removed according  
+        to the chosen method.""",
+    )
+
+    if f"df_after_{dataset}" in st.session_state:
+        with st.sidebar.expander("Save cleaned data as dataset", expanded=True):
+            if "_cleaned_" in dataset:
+                stem = dataset.split("_cleaned")[0]
+                default_ds_name = (
+                    f"{stem}_cleaned_{st.session_state['cleaned_dataset_counter'][stem]}"
+                )
+            else:
+                default_ds_name = (
+                    f"{dataset}_cleaned_{st.session_state['cleaned_dataset_counter'][dataset]}"
+                )
+            new_ds_name = st.text_input(
+                "Enter dataset name",
+                value=default_ds_name,
+                max_chars=30,
+                key="cleaned_dataset_to_add",
+                help="""Save cleaned data as a new dataset.  
+                You can then use this dataset to remove more outliers using  
+                another model, add further annotations or download it.""",
+            )
+            if (new_ds_name == "") or (new_ds_name == " "):
+                st.warning("Please enter a name.")
+            if new_ds_name in st.session_state["data_store"]:
+                st.warning("A dataset with this name already exists.")
+            st.button("Add", on_click=add_cleaned_dataset, args=(dataset,))
+
+
 FUNC_MAPPING = {
     "1. Outlier Annotation": outlier_annotation,
     "2. Model Training": model_training,
     "3. Model Prediction": model_prediction,
     "Annotation Suggestion": annotation_suggestion,
+    "Data Download": data_download,
     "Instructions": instructions,
 }
 
 FUNC_IDX_MAPPING = {k: i for i, k in enumerate(FUNC_MAPPING.keys())}
+
+
+def add_cleaned_dataset(original_dataset: str):
+    ds_name = st.session_state["cleaned_dataset_to_add"]
+    if (ds_name == "") or (ds_name == " ") or (ds_name in st.session_state["data_store"]):
+        return
+
+    df_new = st.session_state[f"df_after_{original_dataset}"]
+    if "_cleaned_" in original_dataset:
+        stem = original_dataset.split("_cleaned")[0]
+        st.session_state["cleaned_dataset_counter"][stem] += 1
+    else:
+        st.session_state["cleaned_dataset_counter"][original_dataset] += 1
+    add_new_data(df_new, ds_name)
+
+
+def remove_outliers():
+    dataset: str = st.session_state["download_dataset"]
+    series: List = st.session_state["download_series"]
+    model: str = st.session_state["download_model"]
+    method: str = st.session_state["download_method"]
+
+    st.session_state["prediction_data"] = defaultdict(list)
+    st.session_state["prediction_data"][dataset] = series
+    st.session_state["prediction_models"][model] = st.session_state["model_library"][model]
+
+    get_predictions_callback()
+    set_session_state_items("page_index", FUNC_IDX_MAPPING["Data Download"])
+
+    # reconstruct a single dataframe from all series
+    df = pd.DataFrame()
+    for s in series:
+        df_to_add: pd.DataFrame = st.session_state["inference_results"][dataset][s]
+        model_columns = [c for c in df_to_add.columns if model in c]
+        df_to_add = df_to_add[model_columns + [s]]
+        df_to_add.rename(columns=lambda c: f"{s}_{c}" if c in model_columns else c, inplace=True)
+        df = df.merge(
+            df_to_add,
+            left_index=True,
+            right_index=True,
+            how="outer",
+        )
+
+    # add other series that belong to the dataset, but should not be cleaned
+    other_series = [s for s in st.session_state["data_store"][dataset] if s not in series]
+    for s in other_series:
+        df = df.merge(
+            st.session_state["data_store"][dataset][s],
+            left_index=True,
+            right_index=True,
+            how="outer",
+        )
+
+    df.sort_index(inplace=True, ascending=True)
+    df_before = df.copy(deep=True)
+    df_new = REMOVAL_METHODS[method](df)
+
+    df_new.dropna(how="all", inplace=True, subset=series + other_series)
+
+    make_removed_outliers_example_plots(df_before, df_new)
+
+    st.session_state[f"df_before_{dataset}"] = df_before[series + other_series]
+    st.session_state[f"df_after_{dataset}"] = df_new[series + other_series]
+
+
+def remove_all_outliers(df: pd.DataFrame) -> pd.DataFrame:
+    series: List = st.session_state["download_series"]
+    model: str = st.session_state["download_model"]
+
+    for s in series:
+        model_column = f"{s}_{model}"
+        mask = df[model_column] == 1
+        df.loc[mask, s] = np.nan
+
+    return df
+
+
+def linear_outlier_interpolation(df: pd.DataFrame) -> pd.DataFrame:
+    series: List = st.session_state["download_series"]
+    model: str = st.session_state["download_model"]
+
+    for s in series:
+        model_column = f"{s}_{model}"
+        mask = df[model_column] == 1
+        df.loc[mask, s] = np.nan
+        df[s] = df[s].interpolate()
+
+    return df
+
+
+REMOVAL_METHODS = {
+    "Delete outliers completely": remove_all_outliers,
+    "Linear interpolation": linear_outlier_interpolation,
+}
 
 
 def retrain_options(dataset: str, series: str):
@@ -322,8 +511,8 @@ def data_selection(base_obj=None):
         )
         if not dataset_choice:
             return
-        columns = list(st.session_state["data_store"][dataset_choice].keys())
-        current_series = st.session_state["current_series"][dataset_choice]
+        columns = sorted(st.session_state["data_store"][dataset_choice].keys())
+        current_series = st.session_state["current_series"].get(dataset_choice)
         column_choice = st.selectbox(
             "Select Series",
             columns,
@@ -1041,7 +1230,7 @@ def prediction_options(base_obj=None):
         st.subheader("Selected Series:")
         st.json(st.session_state["prediction_data"])
         # st.json({k: list(v.keys()) for k, v in st.session_state["prediction_data"].items()})
-        if st.session_state.prediction_data:
+        if st.session_state["prediction_data"]:
             st.button(
                 "Clear selection",
                 on_click=set_session_state_items,

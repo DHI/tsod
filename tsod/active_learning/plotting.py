@@ -35,75 +35,6 @@ MARKER_HOVER = {
 }
 
 
-@st.experimental_memo(persist="disk", show_spinner=False)
-def create_cachable_line_plot(
-    start_time, end_time, data_file_identifier: str = "TODO"
-) -> go.Figure:
-    with st.spinner("Fetching updated annotation plot..."):
-        plot_data = get_as().df_plot
-        timestamps = plot_data.index.to_list()
-
-        return px.line(
-            plot_data,
-            x=timestamps,
-            y="Water Level",
-            markers=True,
-        )
-
-
-def create_annotation_plot(base_obj=None) -> go.Figure:
-    obj = base_obj or st
-    obj.subheader("Data selection options")
-    selection_method = obj.selectbox("Data Selection Method", list(SELECT_OPTIONS.keys()))
-    obj.info(SELECT_INFO[selection_method])
-    obj.markdown("***")
-    state = get_as()
-
-    fig = create_cachable_line_plot(state.start, state.end)
-
-    for series_name in state.data:
-        if not hasattr(state, f"df_plot_{series_name}"):
-            continue
-        df_series: pd.DataFrame = getattr(state, f"df_plot_{series_name}")
-        if df_series.empty:
-            continue
-
-        fig.add_trace(
-            go.Scatter(
-                mode="markers",
-                x=df_series.index,
-                y=df_series["Water Level"],
-                name=f"{series_name.replace('_', ' ').title()} ({len(df_series)})",
-                marker=dict(
-                    color=ANNOTATION_COLORS[series_name],
-                    size=MARKER_SIZES[series_name],
-                    line=dict(color="Black", width=1),
-                ),
-            )
-        )
-
-    fig.update_layout(dragmode=SELECT_OPTIONS[selection_method])
-    fig.update_layout(
-        xaxis=dict(
-            rangeselector=dict(
-                buttons=list(
-                    [
-                        dict(count=1, label="1d", step="day", stepmode="backward"),
-                        dict(count=7, label="1w", step="day", stepmode="backward"),
-                        dict(count=1, label="1m", step="month", stepmode="backward"),
-                        dict(count=1, label="1y", step="year", stepmode="backward"),
-                        dict(step="all"),
-                    ]
-                )
-            ),
-            # rangeslider=dict(visible=True, autorange=True),
-            type="date",
-        ),
-    )
-
-    return fig
-
-
 @st.cache(persist=True, max_entries=100, show_spinner=False)
 def cachable_get_outlier_counts(
     dataset_name: str,
@@ -606,3 +537,96 @@ def feature_importance_plot(base_obj=None):
         },
     )
     obj.plotly_chart(fig, use_container_width=True)
+
+
+def make_removed_outliers_example_plots(df_before: pd.DataFrame, df_new: pd.DataFrame):
+    dataset: str = st.session_state["download_dataset"]
+    series: List = st.session_state["download_series"]
+    model: str = st.session_state["download_model"]
+
+    st.header(f"Outlier removal preview - {model}")
+
+    c1, c2 = st.columns(2)
+    c1.metric("Current number of total rows in dataset (all series)", len(df_before))
+    c2.metric("Total number of rows after outlier removal (all series)", len(df_new))
+
+    for s in series:
+        outlier_mask = df_before[f"{s}_{model}"] == 1
+        number_outlier = outlier_mask.sum()
+        number_to_show = min(number_outlier, 3)
+        changes_sample = (
+            df_before[df_before[f"{s}_{model}"] == 1].sample(number_to_show, random_state=1).index
+        )
+
+        st.subheader(s)
+
+        cols = st.columns(3)
+        cols[0].metric("Number of predicted outliers in this series", number_outlier)
+        cols[1].metric("Number of non-NaN entries before", len(df_before[~df_before[s].isna()]))
+        cols[2].metric("Number of non-NaN entries after", len(df_new[~df_new[s].isna()]))
+
+        if not number_outlier:
+            continue
+
+        for i in range(number_to_show):
+            int_idx = df_before.index.get_loc(changes_sample[i])
+            start_idx = max(0, int_idx - 20)
+            end_idx = min(len(df_before) - 1, int_idx + 20)
+            start_time = df_before.index[start_idx]
+            end_time = df_before.index[end_idx]
+            df_plot_before = df_before[df_before.index.to_series().between(start_time, end_time)][
+                [s]
+            ].dropna()
+            df_plot_new = df_new[df_new.index.to_series().between(start_time, end_time)][
+                [s]
+            ].dropna()
+
+            plot = (
+                Line()
+                .add_xaxis(df_plot_before.index.tolist())
+                .add_yaxis(
+                    "Before",
+                    df_plot_before[s].tolist(),
+                    label_opts=opts.LabelOpts(is_show=False),
+                    is_symbol_show=False,
+                )
+            )
+            plot = plot.overlap(
+                Line()
+                .add_xaxis(df_plot_new.index.tolist())
+                .add_yaxis(
+                    "After",
+                    df_plot_new[s].tolist(),
+                    label_opts=opts.LabelOpts(is_show=False),
+                    is_symbol_show=False,
+                )
+            )
+
+            plot.set_global_opts(
+                title_opts=opts.TitleOpts(
+                    title=f"Sample # {i+1}",
+                    padding=15,
+                ),
+                yaxis_opts=opts.AxisOpts(
+                    type_="value",
+                    name=s,
+                    name_rotate=90,
+                    name_location="middle",
+                    name_gap=50,
+                ),
+                xaxis_opts=opts.AxisOpts(
+                    type_="time",
+                    is_scale=True,
+                    name="Date & Time",
+                    name_location="middle",
+                    name_gap=-20,
+                ),
+                datazoom_opts=opts.DataZoomOpts(type_="inside", range_start=30, range_end=70),
+                legend_opts=opts.LegendOpts(pos_top=40, pos_right=10, orient="vertical"),
+                tooltip_opts=opts.TooltipOpts(axis_pointer_type="line", trigger="axis"),
+            )
+
+            plot.set_colors(["Yellow", "Green"])
+
+            with cols[i]:
+                st_pyecharts(plot, theme="dark")

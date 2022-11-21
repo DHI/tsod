@@ -297,18 +297,24 @@ def data_upload_callback(base_obj=None):
     if len(st.session_state["data_store"]) > 1:
         st.session_state["expand_data_selection"] = True
 
-    st.session_state["current_dataset"] = file_handle
-    st.session_state["current_series"][file_handle] = sorted(unique_columns)[0]
-
     obj.success("Data uploaded and validated", icon="✅")
     obj.write(f"Total rows: {len(dataframe)}")
     obj.write("NaN values:")
     obj.write(dataframe.isna().sum())
 
-    # add new annotation state instance for each column
-    for col in unique_columns:
-        sub_df = dataframe[[col]]
+    add_new_data(dataframe, file_handle)
+
+
+def add_new_data(df: pd.DataFrame, dataset_name: str):
+    """Splits a dataframe into its individual series, adds those series
+    to the data store and instantiates new AnnotationState instances for them."""
+
+    for col in df:
+        sub_df = df[[col]]
         sub_df = sub_df[~sub_df[col].isna()]
-        st.session_state["data_store"][file_handle][col] = sub_df
-        an_st = AnnotationState(file_handle, col)
-        st.session_state["annotation_state_store"][file_handle][col] = an_st
+        st.session_state["data_store"][dataset_name][col] = sub_df
+        an_st = AnnotationState(dataset_name, col)
+        st.session_state["annotation_state_store"][dataset_name][col] = an_st
+
+    st.session_state["current_dataset"] = dataset_name
+    st.session_state["current_series"][dataset_name] = sorted(df.columns)[0]

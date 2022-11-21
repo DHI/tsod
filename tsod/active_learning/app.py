@@ -17,7 +17,14 @@ def main():
     )
     init_session_state()
 
-    icons = ["graph-up", "file-bar-graph", "lightbulb", "question-square", "info-circle"]
+    icons = [
+        "graph-up",
+        "file-bar-graph",
+        "lightbulb",
+        "question-square",
+        "download",
+        "info-circle",
+    ]
 
     with st.sidebar:
         choice = option_menu(
