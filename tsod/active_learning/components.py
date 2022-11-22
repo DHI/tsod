@@ -40,18 +40,33 @@ def outlier_annotation():
     data_selection(st.sidebar)
     state = get_as()
     if not state:
+        if st.session_state["page_index"] != FUNC_IDX_MAPPING["1. Outlier Annotation"]:
+            st.session_state["page_index"] = FUNC_IDX_MAPPING["1. Outlier Annotation"]
+            st.experimental_rerun()
         st.info(
             """Upload your data to get started (using 'Data Upload' in the sidebar)!  
         If you just want to try out the application, you can also use some
         randomly generated time series data by clicking the button below."""
         )
         st.button("Add generated data", on_click=generate_example_data)
+        st.markdown("***")
+
+        st.warning(
+            """For first time users: It is recommended to check out the 
+        instructions before starting."""
+        )
+        st.button(
+            "View instructions",
+            on_click=set_session_state_items,
+            args=("page_index", FUNC_IDX_MAPPING["Instructions"]),
+        )
         return
-    create_annotation_plot_buttons(st.sidebar)
+    with st.sidebar.expander("Actions", expanded=True):
+        create_annotation_plot_buttons()
     with st.sidebar.expander("Time Range Selection", expanded=True):
         time_range_selection()
-
-    create_save_load_buttons(st.sidebar)
+    with st.sidebar.expander("Save / load previous", expanded=True):
+        create_save_load_buttons()
 
     plot = get_echarts_plot_time_range(
         state.start,
@@ -150,17 +165,17 @@ def model_prediction():
 def instructions():
     instruction_files = sorted(Path("tsod/active_learning/instructions").glob("*.md"))
 
-    titles = [f.stem.replace("_", " ").title() for f in instruction_files]
+    titles = [f.stem.replace("_", " ").title()[2:] for f in instruction_files]
     tabs = st.tabs(titles)
 
     for i, f in enumerate(instruction_files):
         data = f.open().read()
-        tabs[i].markdown(f"## {titles[i][2:]}")
+        tabs[i].markdown(f"## {titles[i]}")
         tabs[i].markdown(data)
 
 
 def annotation_suggestion():
-    set_session_state_items("page_index", FUNC_IDX_MAPPING["Annotation Suggestion"])
+    # set_session_state_items("page_index", FUNC_IDX_MAPPING["Annotation Suggestion"])
 
     # for now only allow annotation suggestion for models trained in the current session
     if not (("most_recent_model" in st.session_state) and (st.session_state["inference_results"])):
@@ -237,9 +252,9 @@ def annotation_suggestion():
     the individual tree classifiers. The points with the lowest certainty will be prompted first."""
     )
 
-    retrain_options(dataset, series)
+    was_retrained = retrain_options(dataset, series)
     # if model was retrained, we need to rerun to switch to the predictions page
-    if st.session_state["page_index"] != FUNC_IDX_MAPPING["Annotation Suggestion"]:
+    if was_retrained:
         st.experimental_rerun()
 
 
@@ -537,7 +552,7 @@ def retrain_options(dataset: str, series: str):
         c5.metric("New marked Test Normal", deltas["test_normal"])
         disabled = False
 
-    c1.button(
+    was_retrained = c1.button(
         "Retrain most recent model with new data",
         key=f"retrain_{dataset}_{series}",
         on_click=retrain_and_repredict,
@@ -546,6 +561,7 @@ def retrain_options(dataset: str, series: str):
         help="""Use this button to simplify your workflow and retrain the last model trained on this dataset & series
             (using the added annotation data), generate new predictions and visualize them.""",
     )
+    return was_retrained
 
 
 def dataset_choice_callback():
@@ -789,8 +805,6 @@ def create_annotation_plot_buttons(base_obj=None):
 
     state = get_as()
 
-    obj.subheader("Actions")
-
     disabled = len(state.selection) < 1
     if disabled:
         obj.info("Select points first, then annotate them using these buttons.")
@@ -850,8 +864,6 @@ def create_annotation_plot_buttons(base_obj=None):
 
     c_1.button("Clear Selection", on_click=state.clear_selection, disabled=len(state.selection) < 1)
     c_2.button("Clear All", on_click=state.clear_all, disabled=len(state.all_indices) < 1)
-
-    obj.markdown("***")
 
 
 def validate_uploaded_file_contents(base_obj=None):
@@ -967,7 +979,6 @@ def dev_options(base_obj=None):
 
 def create_save_load_buttons(base_obj=None):
     obj = base_obj or st
-    obj.subheader("Save / load previous")
     state = get_as()
     obj.info(
         f"""Current dataset:  
