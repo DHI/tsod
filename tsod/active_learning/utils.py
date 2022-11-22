@@ -101,7 +101,6 @@ def init_session_state():
     _add_to_ss_if_not_in_it("pred_outlier_tracker", defaultdict(dict))
     _add_to_ss_if_not_in_it("models_trained_this_session", set())
     _add_to_ss_if_not_in_it("last_method_choice", "RF_1")
-    _add_to_ss_if_not_in_it("download_datasets", {})
     _add_to_ss_if_not_in_it("cleaned_dataset_counter", defaultdict(lambda: 1))
     _add_to_ss_if_not_in_it(
         "suggested_points_with_annotation", defaultdict(lambda: defaultdict(list))

@@ -1,34 +1,37 @@
 import datetime
-import pickle
 import os
+import pickle
+from collections import defaultdict
+from contextlib import nullcontext
+from io import BytesIO
 from pathlib import Path
 from typing import Dict, List
-from collections import defaultdict
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 import streamlit as st
-from tsod.active_learning.modelling import train_model
-from tsod.active_learning.utils import (
-    get_as,
-    set_session_state_items,
-    custom_text,
-    MODEL_OPTIONS,
-    fix_random_seeds,
-)
-from tsod.active_learning.modelling import get_model_predictions
+import xlsxwriter
+from streamlit_echarts import st_pyecharts
+from streamlit_profiler import Profiler
+
+from tsod.active_learning.data_structures import AnnotationState, plot_return_value_as_datetime
+from tsod.active_learning.modelling import get_model_predictions, train_model
 from tsod.active_learning.plotting import (
     feature_importance_plot,
     get_echarts_plot_time_range,
-    make_outlier_distribution_plot,
-    make_time_range_outlier_plot,
     make_annotation_suggestion_plot,
+    make_outlier_distribution_plot,
     make_removed_outliers_example_plots,
+    make_time_range_outlier_plot,
 )
-from tsod.active_learning.data_structures import plot_return_value_as_datetime, AnnotationState
-from contextlib import nullcontext
-from streamlit_profiler import Profiler
-from streamlit_echarts import st_pyecharts
-from tsod.active_learning.upload_data import data_uploader, add_new_data
+from tsod.active_learning.upload_data import add_new_data, data_uploader
+from tsod.active_learning.utils import (
+    MODEL_OPTIONS,
+    custom_text,
+    fix_random_seeds,
+    get_as,
+    set_session_state_items,
+)
 
 
 def outlier_annotation():
@@ -335,11 +338,62 @@ def data_download():
                 You can then use this dataset to remove more outliers using  
                 another model, add further annotations or download it.""",
             )
+            disabled = False
             if (new_ds_name == "") or (new_ds_name == " "):
                 st.warning("Please enter a name.")
+                disabled = True
             if new_ds_name in st.session_state["data_store"]:
                 st.warning("A dataset with this name already exists.")
-            st.button("Add", on_click=add_cleaned_dataset, args=(dataset,))
+                disabled = True
+            st.button(
+                "Add dataset", on_click=add_cleaned_dataset, args=(dataset,), disabled=disabled
+            )
+
+    with st.sidebar.expander("Download a dataset", expanded=True):
+        ds_to_download = st.selectbox(
+            "Select dataset to download",
+            options=sorted(st.session_state["data_store"].keys()),
+            index=list(st.session_state["data_store"].keys()).index(
+                st.session_state["current_dataset"]
+            ),
+        )
+        file_format = st.radio("Select output file format", options=["csv", "xlsx"])
+
+        file_name = f"{ds_to_download}.{file_format}"
+
+        st.download_button(
+            "Download dataset",
+            file_name=file_name,
+            data=get_data_to_download(ds_to_download, file_format),
+        )
+
+
+@st.cache
+def get_data_to_download(dataset: str, file_format: str):
+    df_download = pd.DataFrame()
+    for df_series in st.session_state["data_store"][dataset].values():
+        df_download = df_download.merge(
+            df_series,
+            left_index=True,
+            right_index=True,
+            how="outer",
+        )
+
+    df_download.dropna(how="all", inplace=True)
+
+    if file_format == "csv":
+        return df_download.to_csv().encode("utf-8")
+
+    elif file_format == "xlsx":
+        output = BytesIO()
+        writer = pd.ExcelWriter(output, engine="xlsxwriter")
+        df_download.to_excel(writer, sheet_name="Sheet1")
+        workbook = writer.book
+        worksheet = writer.sheets["Sheet1"]
+        format1 = workbook.add_format({"num_format": "0.00"})
+        worksheet.set_column("A:A", None, format1)
+        writer.save()
+        return output.getvalue()
 
 
 FUNC_MAPPING = {
