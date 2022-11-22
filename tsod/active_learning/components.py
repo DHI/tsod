@@ -265,97 +265,101 @@ def back_to_previous_suggestion_callback(dataset, series):
 
 
 def data_download():
+    removal_possible = True
     if not (st.session_state["model_library"] and st.session_state["data_store"]):
         st.info(
             """Once a model was trained or uploaded and a dataset was created,
         you will be able to use your models to remove outliers and download
         the resulting data here. """
         )
-        return
+        removal_possible = False
 
     st.sidebar.subheader("Download Controls")
 
-    dataset = st.sidebar.selectbox(
-        "Select source dataset",
-        options=list(st.session_state["data_store"].keys()),
-        index=list(st.session_state["data_store"].keys()).index(
-            st.session_state["current_dataset"]
-        ),
-        disabled=len(st.session_state["data_store"]) < 2,
-        key="download_dataset",
-    )
-
-    series = st.sidebar.multiselect(
-        "Select series to remove outliers from",
-        options=list(st.session_state["data_store"][dataset].keys()),
-        default=st.session_state["current_series"][dataset],
-        disabled=len(st.session_state["data_store"][dataset]) < 2,
-        key="download_series",
-        help="""The final dataset will keep all columns it had when it was uploaded.  
-        Here you can choose which of those columns should be cleaned of outliers.  
-        You might want to use different models to clean different series.""",
-    )
-    if not series:
-        st.sidebar.warning("Please select at least one series.")
-        return
-
-    st.sidebar.selectbox(
-        "Select model to use for outlier identification",
-        options=sorted(st.session_state["model_library"].keys()),
-        index=sorted(st.session_state["model_library"].keys()).index(
-            st.session_state["most_recent_model"]
+    if removal_possible:
+        dataset = st.sidebar.selectbox(
+            "Select source dataset",
+            options=list(st.session_state["data_store"].keys()),
+            index=list(st.session_state["data_store"].keys()).index(
+                st.session_state["current_dataset"]
+            ),
+            disabled=len(st.session_state["data_store"]) < 2,
+            key="download_dataset",
         )
-        if "most_recent_model" in st.session_state
-        else len(st.session_state["model_library"]) - 1,
-        disabled=len(st.session_state["model_library"]) < 2,
-        key="download_model",
-    )
 
-    method = st.sidebar.radio(
-        "Select how to handle predicted outliers",
-        options=list(REMOVAL_METHODS.keys()),
-        key="download_method",
-    )
+        series = st.sidebar.multiselect(
+            "Select series to remove outliers from",
+            options=list(st.session_state["data_store"][dataset].keys()),
+            default=st.session_state["current_series"][dataset],
+            disabled=len(st.session_state["data_store"][dataset]) < 2,
+            key="download_series",
+            help="""The final dataset will keep all columns it had when it was uploaded.  
+            Here you can choose which of those columns should be cleaned of outliers.  
+            You might want to use different models to clean different series.""",
+        )
+        if not series:
+            st.sidebar.warning("Please select at least one series.")
+            return
 
-    st.sidebar.button(
-        "Update Preview" if "df_before" in st.session_state else "Preview",
-        on_click=remove_outliers,
-        help="""Creates a preview by sampling three predicted outliers per  
-        series and overlaying a series with the outliers removed according  
-        to the chosen method.""",
-    )
-
-    if f"df_after_{dataset}" in st.session_state:
-        with st.sidebar.expander("Save cleaned data as dataset", expanded=True):
-            if "_cleaned_" in dataset:
-                stem = dataset.split("_cleaned")[0]
-                default_ds_name = (
-                    f"{stem}_cleaned_{st.session_state['cleaned_dataset_counter'][stem]}"
-                )
-            else:
-                default_ds_name = (
-                    f"{dataset}_cleaned_{st.session_state['cleaned_dataset_counter'][dataset]}"
-                )
-            new_ds_name = st.text_input(
-                "Enter dataset name",
-                value=default_ds_name,
-                max_chars=30,
-                key="cleaned_dataset_to_add",
-                help="""Save cleaned data as a new dataset.  
-                You can then use this dataset to remove more outliers using  
-                another model, add further annotations or download it.""",
+        st.sidebar.selectbox(
+            "Select model to use for outlier identification",
+            options=sorted(st.session_state["model_library"].keys()),
+            index=sorted(st.session_state["model_library"].keys()).index(
+                st.session_state["most_recent_model"]
             )
-            disabled = False
-            if (new_ds_name == "") or (new_ds_name == " "):
-                st.warning("Please enter a name.")
-                disabled = True
-            if new_ds_name in st.session_state["data_store"]:
-                st.warning("A dataset with this name already exists.")
-                disabled = True
-            st.button(
-                "Add dataset", on_click=add_cleaned_dataset, args=(dataset,), disabled=disabled
-            )
+            if "most_recent_model" in st.session_state
+            else len(st.session_state["model_library"]) - 1,
+            disabled=len(st.session_state["model_library"]) < 2,
+            key="download_model",
+        )
 
+        method = st.sidebar.radio(
+            "Select how to handle predicted outliers",
+            options=list(REMOVAL_METHODS.keys()),
+            key="download_method",
+        )
+
+        st.sidebar.button(
+            "Update Preview" if "df_before" in st.session_state else "Preview",
+            on_click=remove_outliers,
+            help="""Creates a preview by sampling three predicted outliers per  
+            series and overlaying a series with the outliers removed according  
+            to the chosen method.""",
+        )
+
+        if f"df_after_{dataset}" in st.session_state:
+            with st.sidebar.expander("Save cleaned data as dataset", expanded=True):
+                if "_cleaned_" in dataset:
+                    stem = dataset.split("_cleaned")[0]
+                    default_ds_name = (
+                        f"{stem}_cleaned_{st.session_state['cleaned_dataset_counter'][stem]}"
+                    )
+                else:
+                    default_ds_name = (
+                        f"{dataset}_cleaned_{st.session_state['cleaned_dataset_counter'][dataset]}"
+                    )
+                new_ds_name = st.text_input(
+                    "Enter dataset name",
+                    value=default_ds_name,
+                    max_chars=30,
+                    key="cleaned_dataset_to_add",
+                    help="""Save cleaned data as a new dataset.  
+                    You can then use this dataset to remove more outliers using  
+                    another model, add further annotations or download it.""",
+                )
+                disabled = False
+                if (new_ds_name == "") or (new_ds_name == " "):
+                    st.warning("Please enter a name.")
+                    disabled = True
+                if new_ds_name in st.session_state["data_store"]:
+                    st.warning("A dataset with this name already exists.")
+                    disabled = True
+                st.button(
+                    "Add dataset", on_click=add_cleaned_dataset, args=(dataset,), disabled=disabled
+                )
+
+    if not st.session_state["data_store"]:
+        return
     with st.sidebar.expander("Download a dataset", expanded=True):
         ds_to_download = st.selectbox(
             "Select dataset to download",
@@ -363,6 +367,7 @@ def data_download():
             index=list(st.session_state["data_store"].keys()).index(
                 st.session_state["current_dataset"]
             ),
+            disabled=len(st.session_state["data_store"]) < 2,
         )
         file_format = st.radio("Select output file format", options=["csv", "xlsx"])
 
