@@ -93,7 +93,6 @@ def model_training():
 
 def model_prediction():
     st.sidebar.title("Prediction Controls")
-    prediction_options(st.sidebar)
 
     if not st.session_state["data_store"]:
         st.info(
@@ -101,6 +100,8 @@ def model_prediction():
         interact with model predictions."""
         )
         return
+
+    prediction_options(st.sidebar)
 
     if not st.session_state["inference_results"]:
         st.info(
@@ -1255,7 +1256,7 @@ def prediction_options(base_obj=None):
             if len(ds_options):
                 idx = len(ds_options) - 1
             else:
-                idx = None
+                idx = 0
         ds_choice = st.selectbox(
             label="Select datasets uploaded this session",
             options=ds_options,
