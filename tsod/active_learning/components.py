@@ -96,6 +96,13 @@ def model_prediction():
     st.sidebar.title("Prediction Controls")
     prediction_options(st.sidebar)
 
+    if not st.session_state["data_store"]:
+        st.info(
+            """Please upload a dataset in order to generate and 
+        interact with model predictions."""
+        )
+        return
+
     if not st.session_state["inference_results"]:
         st.info(
             "To see and interact with model predictions, please choose one or multiple models and datasets \
