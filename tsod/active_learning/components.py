@@ -61,7 +61,11 @@ def outlier_annotation():
             on_click=set_session_state_items,
             args=("page_index", FUNC_IDX_MAPPING["Instructions"]),
         )
-        st.image(str(MEDIA_PATH / "workflow.png"), use_column_width=True)
+        st.image(
+            str(MEDIA_PATH / "workflow.png"),
+            use_column_width=True,
+            caption="Basic workflow suggestion",
+        )
         return
     with st.sidebar.expander("Actions", expanded=True):
         create_annotation_plot_buttons()
@@ -173,6 +177,17 @@ def instructions():
     for i, f in enumerate(instruction_files):
         data = f.open().read()
         tabs[i].markdown(f"## {titles[i]}")
+        # ugly way to get the image in there, won't be displayed if just included in the markdown file
+        if i == 0:
+            data_1, _, data_2 = data.split("[invisible]: <> (Image streamlit hack)")
+            tabs[i].markdown(data_1)
+            tabs[i].image(
+                str(MEDIA_PATH / "workflow.png"),
+                use_column_width=False,
+                caption="Basic workflow suggestion",
+            )
+            tabs[i].markdown(data_2)
+            continue
         tabs[i].markdown(data)
 
 
