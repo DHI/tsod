@@ -60,6 +60,7 @@ def outlier_annotation():
             on_click=set_session_state_items,
             args=("page_index", FUNC_IDX_MAPPING["Instructions"]),
         )
+        st.image("tsod/active_learning/media/workflow.png", use_column_width=True)
         return
     with st.sidebar.expander("Actions", expanded=True):
         create_annotation_plot_buttons()
