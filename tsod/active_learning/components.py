@@ -5,7 +5,7 @@ from collections import defaultdict
 from contextlib import nullcontext
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -31,6 +31,7 @@ from tsod.active_learning.utils import (
     get_as,
     set_session_state_items,
 )
+from tsod.active_learning import MEDIA_PATH
 
 
 def outlier_annotation():
@@ -60,7 +61,7 @@ def outlier_annotation():
             on_click=set_session_state_items,
             args=("page_index", FUNC_IDX_MAPPING["Instructions"]),
         )
-        st.image("tsod/active_learning/media/workflow.png", use_column_width=True)
+        st.image(str(MEDIA_PATH / "workflow.png"), use_column_width=True)
         return
     with st.sidebar.expander("Actions", expanded=True):
         create_annotation_plot_buttons()
@@ -469,7 +470,7 @@ def remove_outliers():
         df_to_add: pd.DataFrame = st.session_state["inference_results"][dataset][s]
         model_columns = [c for c in df_to_add.columns if model in c]
         df_to_add = df_to_add[model_columns + [s]]
-        df_to_add.rename(columns=lambda c: f"{s}_{c}" if c in model_columns else c, inplace=True)
+        df_to_add = df_to_add.rename(columns=lambda c: f"{s}_{c}" if c in model_columns else c)
         df = df.merge(
             df_to_add,
             left_index=True,
