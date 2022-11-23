@@ -898,9 +898,9 @@ def validate_uploaded_file_contents(base_obj=None):
                 values_match = (
                     df[column]
                     .astype(float)
-                    .isin(state[column].df[column].values)
+                    .round(10)
+                    .isin(state[column].df[column].round(10).values)
                     .all()
-                    # df["Water Level"].astype(float).isin(state.df["Water Level"].values).all()
                 )
                 index_match = df.index.isin(state[column].df.index).all()
 
