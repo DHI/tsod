@@ -1,19 +1,27 @@
+import streamlit as st
+from tsod.active_learning import MEDIA_PATH
+
+
+def general():
+    st.markdown(
+        """
 Welcome to the Time Series Outlier Detection web app!  
-This project is a human-in-the-loop system for detecting outliers in time series, allowing for the cleaning of noisy datasets, which is often a requirement before the dataset can be used further (e.g. for training ML-models).
+This project is a human-in-the-loop system for detecting outliers in time series, 
+allowing for the cleaning of noisy datasets, which is often a requirement before the dataset can be used further (e.g. for training ML-models).
 
 ### General notes
 
 - This app is currently a simple web app without user identification or saving of intermediate results. That means that if you refresh the page, you will start from scratch again. However, the app does allow for the download and upload of annotations, models and datasets so you may use them again at a later time.
 - It is possible to upload multiple datasets containing multiple series (columns) each. You can add annotations and train models on every individual series. Is is currently not possible to train a single model using features from multiple series (multivariate outlier prediction). However, this is one of the possible future improvements.
 ### Recommended workflow
+    """
+    )
 
-[invisible]: <> (Image streamlit hack)
-![workflow](../media/workflow.png)
+    st.image(str(MEDIA_PATH / "workflow.png"), use_column_width=True)
 
-[invisible]: <> (Image streamlit hack)
-
-
-There are several ways of training your outlier detection models. Which one of those works best depends very much on your use case, however here are a few general guidelines. For more details on each step, please find the designated page instructions in the other tabs.
+    st.markdown(
+        """
+    There are several ways of training your outlier detection models. Which one of those works best depends very much on your use case, however here are a few general guidelines. For more details on each step, please find the designated page instructions in the other tabs.
 
 1. Upload your data (under *Data Upload* in the sidebar in the *Outlier Annotation*-page). There are a number of formats supported, see the instructions on Outlier Annotation.
 2. Add some annotations for one of your series. If you have previously annotated and saved that series, remember to upload your annotations file from disk (under *Save / load previous* in the sidebar in the *Outlier Annotation*-page). No need to add too many annotations in the first iteration, better to train a model quickly to gain insights into what the model has learned.
@@ -25,3 +33,39 @@ There are several ways of training your outlier detection models. Which one of t
 8. After having added some further annotations, you can train another model iteration. For this, either head back to the *Model Training*-page. If you don't want to change any model parameters, you can also click on 'Retain most recent model with new data' (available on both the *Model Prediction* and the *Annotation suggestion*-page). This will train a new model using the same parameters as before, generate new predictions and bring you to the prediction page for comparison.
 9. Repeat the circle of adding annotations, retraining and evaluating the results until you are satisfied.
 10. To remove outliers from any of your datasets/series, head to the *Data Download*-page. There you can create new datasets by removing predicted outliers, as well as download any dataset you have uploaded/created.
+    """
+    )
+
+
+def outlier_annotation():
+    st.markdown(
+        """
+    The *Outlier Annotation*-page is designated to the manual adding of annotations to any series. As the "entrypoint" of the app, it also holds the functionality to upload datasets.  
+The main window will always only contain an interactive plot window. In the sidebar, you'll find all widgets related to interacting with the annotation process. 
+
+### Main plot window
+
+
+    """
+    )
+
+
+def model_training():
+    ...
+
+
+def model_prediction():
+    ...
+
+
+def annotaion_suggestion():
+    ...
+
+
+INSTRCUTION_DICT = {
+    "General": general,
+    "Outlier Annotation": outlier_annotation,
+    "Model Training": model_training,
+    "Model Prediction": model_prediction,
+    "Annotation Suggestion": annotaion_suggestion,
+}
