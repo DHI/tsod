@@ -30,8 +30,12 @@ from tsod.active_learning.utils import (
     fix_random_seeds,
     get_as,
     set_session_state_items,
+    ss_recursive_df_memory_usage,
+    recursive_ss_search,
+    show_memory_usage,
 )
 from tsod.active_learning import MEDIA_PATH
+from tsod.active_learning.instructions import INSTRCUTION_DICT
 
 
 def outlier_annotation():
@@ -169,26 +173,12 @@ def model_prediction():
 
 
 def instructions():
-    instruction_files = sorted(Path("tsod/active_learning/instructions").glob("*.md"))
+    tabs = st.tabs(list(INSTRCUTION_DICT.keys()))
 
-    titles = [f.stem.replace("_", " ").title()[2:] for f in instruction_files]
-    tabs = st.tabs(titles)
-
-    for i, f in enumerate(instruction_files):
-        data = f.open().read()
-        tabs[i].markdown(f"## {titles[i]}")
-        # ugly way to get the image in there, won't be displayed if just included in the markdown file
-        if i == 0:
-            data_1, _, data_2 = data.split("[invisible]: <> (Image streamlit hack)")
-            tabs[i].markdown(data_1)
-            tabs[i].image(
-                str(MEDIA_PATH / "workflow.png"),
-                use_column_width=False,
-                caption="Basic workflow suggestion",
-            )
-            tabs[i].markdown(data_2)
-            continue
-        tabs[i].markdown(data)
+    for i, (k, instruction_func) in enumerate(INSTRCUTION_DICT.items()):
+        with tabs[i]:
+            st.header(k)
+            instruction_func()
 
 
 def annotation_suggestion():
@@ -595,7 +585,7 @@ def series_choice_callback(dataset: str):
 def data_selection(base_obj=None):
     obj = base_obj or st
 
-    with obj.expander("Data selection", expanded=st.session_state["expand_data_selection"]):
+    with obj.expander("Data Selection", expanded=st.session_state["expand_data_selection"]):
 
         datasets = list(st.session_state["data_store"].keys())
         dataset_choice = st.selectbox(
@@ -939,25 +929,16 @@ def validate_uploaded_file_contents(base_obj=None):
                     f"File {file_number + 1}: Loaded {count} annotations for series {c}.", icon="✅"
                 )
 
-            st.session_state.uploaded_annotation_data[uploaded_file.name] = data
+            st.session_state["uploaded_annotation_data"][uploaded_file.name] = data
 
     st.session_state["uploaded_annotation_data"] = data_to_load_if_file_ok
-
-    # if not file_failed:
-
-    # if file_failed:
-
-    # else:
-    #     st.session_state.uploaded_annotation_data[uploaded_file.name] = data
-    # obj.success(f"{uploaded_file.name}: Loaded.", icon="✅")
 
 
 def annotation_file_upload_callback(base_obj=None):
     obj = base_obj or st
     validate_uploaded_file_contents(obj)
-    # state = get_as()
 
-    for column, data_list in st.session_state.uploaded_annotation_data.items():
+    for column, data_list in st.session_state["uploaded_annotation_data"].items():
         state = get_as(column=column)
         for data in data_list:
             for key, df in data.items():
@@ -968,28 +949,24 @@ def dev_options(base_obj=None):
     if os.environ.get("TSOD_DEV_MODE", "false") == "false":
         return nullcontext()
     obj = base_obj or st
-    with obj.expander("Dev Options"):
+    exp = obj.expander("Dev Options")
+    with exp:
         dev_col_1, dev_col_2 = st.columns(2)
         profile = dev_col_1.checkbox("Profile Code", value=False)
+        show_total_mem = dev_col_2.checkbox("Show total Memory Usage", value=False)
+        show_ss = dev_col_1.button("Show full Session State")
+        show_mem = dev_col_2.checkbox("Show mem. usage of dfs")
         search_str = dev_col_1.text_input("Search SS", max_chars=25, value="")
-        show_ss = dev_col_2.button("Show Session State")
-        show_as = dev_col_2.button("Show Annotation State")
-    if len(search_str) > 1:
-        matches = [k for k in st.session_state.keys() if search_str.lower() in k.lower()]
-        df_matches = [m for m in matches if isinstance(st.session_state[m], pd.DataFrame)]
-        non_df_matches = [m for m in matches if m not in df_matches]
-        for m in df_matches:
-            st.write(m)
-            st.table(st.session_state[m].head())
-        if non_df_matches:
-            st.write({k: st.session_state[k] for k in non_df_matches})
 
-        # st.write({k: st.session_state[k] for k in ss_options if search_str.lower() in k.lower()})
+    if len(search_str) > 1:
+        recursive_ss_search(search_str, base_obj=exp)
+    if show_mem:
+        st.write(ss_recursive_df_memory_usage())
+    if show_total_mem:
+        show_memory_usage(exp)
+
     if show_ss:
         st.write(st.session_state)
-    if show_as:
-        st.write(st.session_state["annotation_state_store"])
-        # st.write(st.session_state["annotation_state_store"]["ddd"]["Water Level"].df)
 
     return Profiler() if profile else nullcontext()
 

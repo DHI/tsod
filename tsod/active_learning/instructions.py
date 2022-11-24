@@ -38,15 +38,52 @@ allowing for the cleaning of noisy datasets, which is often a requirement before
 
 
 def outlier_annotation():
+
     st.markdown(
         """
     The *Outlier Annotation*-page is designated to the manual adding of annotations to any series. As the "entrypoint" of the app, it also holds the functionality to upload datasets.  
 The main window will always only contain an interactive plot window. In the sidebar, you'll find all widgets related to interacting with the annotation process. 
+"""
+    )
+    st.markdown("***")
+    c1, c2 = st.columns([3, 1])
 
+    c1.markdown(
+        """
+### Uploading Data
+
+The first field in the sidebar allows you to upload your datasets. For trying out the app, you can also click on 'Add generated data' to add a toy dataset with two random series.  
+
+Currently, the following file formats are supported for uploading your data from disk: 
+- CSV
+- XLSX / XLS
+- DFS0
+
+If your dataset is split into multiple files, you select all files and they will be merged into a single dataset. However, the data needs to be consistent (may not contain multiple values for the same timestamp for the same series). A variety of different timestamp formats are supported.  
+Optionally, you can give your dataset a name for easy identification, otherwise it will receive a handle based on the names of the uploaded files.  
+To finish, click on 'Upload'. Once your files have been validated and merged, you will be able to select your dataset under *Data Selection* in the sidebar.
+
+"""
+    )
+    c2.image(
+        str(MEDIA_PATH / "data_upload.png"),
+        use_column_width=True,
+        # width=400,
+        caption="The 'Data Upload' field.",
+    )
+    st.markdown("***")
+    c1, c2 = st.columns([3, 1])
+    c1.markdown(
+        """
 ### Main plot window
 
 
     """
+    )
+    c2.image(
+        str(MEDIA_PATH / "selection_options.png"),
+        use_column_width=True,
+        caption="You can change data selection modes in the top right corner of the main plot window.",
     )
 
 
