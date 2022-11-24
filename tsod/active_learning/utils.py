@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 from collections import defaultdict
 from tsod.active_learning.data_structures import AnnotationState
+import psutil
 
 MODEL_OPTIONS = {"RF_1": "Random Forest Classifier"}
 
@@ -54,29 +55,6 @@ def _add_to_ss_if_not_in_it(key: str, init_value: Any):
 
 
 def init_session_state():
-    if os.environ.get("TSOD_DEV_MODE", "false") == "true":
-        ######## for dev, remove ###################
-        if "data_store" not in st.session_state:
-            import pickle
-
-            with open("dev_data.pkl", "rb") as f:
-                test = pickle.load(f)
-            st.session_state["data_store"] = test
-
-            _add_to_ss_if_not_in_it("annotation_state_store", defaultdict(dict))
-
-            for ds, ds_dict in test.items():
-                for series in ds_dict:
-                    an_s = AnnotationState(ds, series)
-                    st.session_state["annotation_state_store"][ds][series] = an_s
-
-            _add_to_ss_if_not_in_it("current_dataset", "ddd")
-            _add_to_ss_if_not_in_it("current_series", {})
-
-            st.session_state["current_series"]["ddd"] = "Water Level"
-            st.session_state["current_series"]["fff"] = "Water Level"
-
-    ################################################
     _add_to_ss_if_not_in_it("annotation_state_store", defaultdict(dict))
     _add_to_ss_if_not_in_it("current_series", {})
 
@@ -175,6 +153,59 @@ def recursive_round(data: Dict, decimals: int = 3):
             local_data[k] = recursive_round(v)
 
     return local_data
+
+
+def ss_recursive_df_memory_usage(base_dict=None):
+    if base_dict is None:
+        base_dict = st.session_state
+    out = {}
+    for k, v in base_dict.items():
+        if isinstance(v, dict):
+            out[k] = ss_recursive_df_memory_usage(v)
+        else:
+            if isinstance(v, pd.DataFrame):
+                out[k] = f"{round(v.memory_usage(deep=True).sum() / (2**20), 2)} MB"
+
+    return {k: v for k, v in out.items() if v != {}}
+
+
+def recursive_ss_search(search_str: str, base_dict=None, base_obj=None, recursion_count: int = 1):
+    obj = base_obj or st
+    if base_dict is None:
+        base_dict = st.session_state
+
+    matches = {k: v for k, v in base_dict.items() if search_str.lower() in k.lower()}
+    if not matches:
+        return
+    if len(matches) > 1:
+        st.write(matches)
+        return
+
+    for k, v in matches.items():
+        if not isinstance(v, dict):
+            if isinstance(v, pd.DataFrame):
+                st.write(k, v.head(30))
+            else:
+                st.write(k, v)
+            return
+
+        st.write({k: {k_2: type(v_2) for k_2, v_2 in v.items()}})
+        sub_key = obj.text_input("Enter sub key", key=f"dev_input_{recursion_count}")
+        if len(sub_key) > 0:
+            recursive_ss_search(sub_key, v, obj, recursion_count + 1)
+
+
+def show_memory_usage(base_obj=None):
+    obj = base_obj or st
+    mem = psutil.virtual_memory()
+    obj.write(
+        {
+            "Total memory": f"{round(mem.total / (1024.0 ** 3), 2)} GB",
+            "Used memory": f"{round(mem.used / (1024.0 ** 3), 2)} GB",
+            "Free memory": f"{round(mem.free / (1024.0 ** 3), 2)} GB",
+            "Percent used": f"{mem.percent} %",
+        }
+    )
 
 
 def fix_random_seeds(seed=30):
