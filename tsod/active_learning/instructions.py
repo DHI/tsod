@@ -77,13 +77,50 @@ To finish, click on 'Upload'. Once your files have been validated and merged, yo
         """
 ### Main plot window
 
-
+The main plot window will display the selected series for the selected time interval. By default, the plot will contain a series displaying only your actual datapoints, as well as a series containing the connecting line. This is purely for convenience reasons, individual points are always selected by clicking on the datapoints.  
+As soon as you selected at least one point, you will see your selection marked in purple (also a new entry will be added in the legend).  
+Once you add annotations, they will be marked as a new series as well.  
+To select multiple neighboring points at once, it is easier to use the 'Horizontally Select' or 'Box Select' - options by activating them in the top right corner of the plot window. 
     """
     )
     c2.image(
         str(MEDIA_PATH / "selection_options.png"),
         use_column_width=True,
         caption="You can change data selection modes in the top right corner of the main plot window.",
+    )
+    st.markdown("***")
+    c1, c2 = st.columns([3, 1])
+
+    c1.markdown(
+        """
+### Annotation Controls
+
+**Actions**
+
+This fields allows you to choose what to do with your selection. Your selection has two label options (Outlier or Normal) and can be assigned to either the train or the test set.  
+'Clear Selection' removes your entire selection, but keeps all points annotated thus far. 'Clear All' resets your annotation state, removing selected as well as annotated points. 
+
+**Time Range Selection**
+
+This field offers control over the time range that is displayed in the main plot window.  
+In order to assure that the app works with datasets on any time scale (nanoseconds to decades), when first loading in a new dataset, a time range will automatically be chosen so that the main plot contains the last 200 points of data.  
+If your selected series spans a time range of more than a day, a calender widget will be available to select start & end date, as well as two time widgets for setting start & end time.  
+You can also directly set the number of datapoints the plot should contain, using the number input on the bottom of the field.  
+'Show All' will display the entire series (not recommended for large number of points).  
+The 'Shift back' and 'Shift forward' - buttons are useful for stepping through your data in equal time steps. As any initial visualization starts at the end of the timestamp index, clicking on 'Shift back' will determine the current range that is being displayed and then update the plot backwards in time, keeping the range equal (the previous start timestamp will become the new end timestamp).  
+**Recommended workflow for stepping through your dataset:**  
+Select an appropriate time range that makes outliers easily visible for you => step through the dataset using the Shift buttons and add annotations.
+
+**Save / load previous**
+
+To continue annotations in a different session, you might want to download your current progress. Click the 'Download Annotations' - button to save your annotations for the current dataset to disk as binary data.  
+Use the 'Upload Annotations' - uploader to add previously created annotations. This assumes that you already have the correct dataset loaded, the actual data is not saved together with the annotations. 
+    """
+    )
+    c2.image(
+        str(MEDIA_PATH / "time_range_selection.png"),
+        use_column_width=True,
+        caption="Select a time range that fits your data and lets you easily identify outliers. Then step through your dataset while keeping that range.",
     )
 
 
