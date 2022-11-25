@@ -259,7 +259,9 @@ def train_random_forest_classifier(
     model = clf.best_estimator_
 
     train_preds = model.predict(X)
-    train_prec, train_rec, train_f1, train_support = precision_recall_fscore_support(y, train_preds)
+    train_prec, train_rec, train_f1, train_support = precision_recall_fscore_support(
+        y, train_preds, zero_division=1
+    )
     st.session_state[f"current_model_train_metrics_{dataset}_{series}"] = recursive_round(
         {"precision": train_prec, "recall": train_rec, "f1": train_f1}
     )
@@ -268,7 +270,9 @@ def train_random_forest_classifier(
         X_test = st.session_state[f"test_features_{dataset}_{series}"]
         y_test = st.session_state["test_labels"]
         test_preds = model.predict(X_test)
-        test_prec, test_rec, test_f1, support = precision_recall_fscore_support(y_test, test_preds)
+        test_prec, test_rec, test_f1, support = precision_recall_fscore_support(
+            y_test, test_preds, zero_division=1
+        )
         st.session_state[f"current_model_test_metrics_{dataset}_{series}"] = recursive_round(
             {"precision": test_prec, "recall": test_rec, "f1": test_f1}
         )
