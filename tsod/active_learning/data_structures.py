@@ -21,7 +21,7 @@ class AnnotationState:
         self.end: datetime.datetime | None = None
         self._download_data = {}
 
-        start_time = self.df.sort_index().index[-200]
+        start_time = self.df.sort_index().index[-min(200, len(self.df))]
         end_time = self.df.index.max()
 
         self.update_plot(start_time, end_time)
