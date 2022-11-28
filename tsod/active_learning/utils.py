@@ -184,9 +184,14 @@ def recursive_ss_search(search_str: str, base_dict=None, base_obj=None, recursio
     for k, v in matches.items():
         if not isinstance(v, dict):
             if isinstance(v, pd.DataFrame):
-                st.write(k, v.head(30))
+                st.write(k)
+                st.write(v.head(30))
+            elif isinstance(v, AnnotationState):
+                st.write(k)
+                st.write(v.__dict__)
             else:
-                st.write(k, v)
+                st.write(k)
+                st.write(v)
             return
 
         st.write({k: {k_2: type(v_2) for k_2, v_2 in v.items()}})
