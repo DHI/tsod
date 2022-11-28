@@ -306,6 +306,9 @@ def data_upload_callback(base_obj=None):
 
     # For deployment 'logging'
     print("A new dataset was successfully uploaded.")
+    import logging
+
+    logging.info("A new dataset was successfully uploaded.")
 
 
 def add_new_data(df: pd.DataFrame, dataset_name: str):
