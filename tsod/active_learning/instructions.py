@@ -125,7 +125,43 @@ Use the 'Upload Annotations' - uploader to add previously created annotations. T
 
 
 def model_training():
-    ...
+    st.markdown(
+        """
+    The *Model Training*-page is designated to choosing modelling methods & hyperparameters, training models and evaluating their performances. . In the sidebar, you'll find all widgets related to the training process. 
+"""
+    )
+    st.markdown("***")
+    c1, c2 = st.columns([3, 1])
+    c1.markdown(
+        """
+    ### Training Controls
+
+**Data Selection:**  
+If you have annotated multiple datasets or one dataset containing multiple series, you can choose your training series here. By default, the last series you have added annotations for is selected.  
+
+**Modelling Options:**  
+Choose which modelling approach to use to predict outliers (more below).
+
+**Feature Options:**  
+Control some basic, model-specific feature parameters (more below):
+
+To start training, click on 'Train Outlier Model' on the bottom of the sidebar.  
+The checkbox 'Auto generate predictions for entire annotation series' (selected by default) simply means that after training, the newly trained model will be used to create predictions for the entire selected series. This is just a convenience option, as this would be the most common next step in the suggested workflow anyway. 
+
+### Modelling Options
+
+Right now, only one supervised learning method is implemented for outlier prediction. More are to follow in the future.  
+For each annotated point (outlier or normal), a set of features is generated that is fed to the model to predict whether the point is an outlier or not.
+
+
+**Random Forest Classifier**
+
+The feature set is constructed by taking the x points before the annotated point, the y points after and normalizing them using the value of the annotated point. This way the model can only look at the relative changes of a series leading up to or after the point in question.  
+If you are interested in building any kind of 'real time' outlier detection model, set the number of points after to 0 (default).  
+The model using the feature set is a simple sklearn Random Forest Classifier. Behind the scenes, the random seeds are fixed for reproducible results and a small hyperparameter search is performed for cross validation.  
+Training times depend on the number of annotated points, but should generally never be longer than a minute. 
+    """
+    )
 
 
 def model_prediction():
