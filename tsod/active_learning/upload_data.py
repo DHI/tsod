@@ -1,12 +1,14 @@
-import streamlit as st
-import mikeio
-import pandas as pd
+import logging
 from pathlib import Path
-from dateutil.parser._parser import ParserError
+
 import dateutil
+import mikeio
 import numpy as np
+import pandas as pd
+import streamlit as st
+from dateutil.parser._parser import ParserError
+
 from tsod.active_learning.data_structures import AnnotationState
-import datetime
 
 
 def datetime_unififer(data=pd.DataFrame, date_column=str, base_obj=None):
@@ -305,9 +307,6 @@ def data_upload_callback(base_obj=None):
     add_new_data(dataframe, file_handle)
 
     # For deployment 'logging'
-    print("A new dataset was successfully uploaded.")
-    import logging
-
     logging.info("A new dataset was successfully uploaded.")
 
 

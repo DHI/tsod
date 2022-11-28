@@ -1,18 +1,21 @@
-from typing import Dict, List
-import streamlit as st
-import pandas as pd
 import datetime
+import logging
+from typing import Dict, List
 from zoneinfo import ZoneInfo
+
 import numpy as np
+import pandas as pd
+import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import precision_recall_fscore_support
 from sklearn.model_selection import RandomizedSearchCV
+
 from tsod.active_learning.utils import (
     get_as,
+    recursive_length_count,
     recursive_round,
     set_session_state_items,
-    recursive_length_count,
 )
-from sklearn.metrics import precision_recall_fscore_support
 
 
 def get_neighboring_points(
@@ -205,6 +208,8 @@ def train_model(base_obj=None, dataset: str | None = None, series: str | None = 
     with st.spinner("Training Model..."):
         if st.session_state["last_method_choice"] == "RF_1":
             train_random_forest_classifier(obj, dataset, series)
+
+        logging.info("A new model was trained successfully.")
 
 
 def train_random_forest_classifier(

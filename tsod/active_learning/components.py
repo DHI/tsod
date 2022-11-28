@@ -1,10 +1,10 @@
 import datetime
+import logging
 import os
 import pickle
 from collections import defaultdict
 from contextlib import nullcontext
 from io import BytesIO
-from pathlib import Path
 from typing import List
 
 import numpy as np
@@ -13,7 +13,9 @@ import streamlit as st
 from streamlit_echarts import st_pyecharts
 from streamlit_profiler import Profiler
 
+from tsod.active_learning import MEDIA_PATH
 from tsod.active_learning.data_structures import AnnotationState, plot_return_value_as_datetime
+from tsod.active_learning.instructions import INSTRCUCTION_DICT
 from tsod.active_learning.modelling import get_model_predictions, train_model
 from tsod.active_learning.plotting import (
     feature_importance_plot,
@@ -29,13 +31,11 @@ from tsod.active_learning.utils import (
     custom_text,
     fix_random_seeds,
     get_as,
-    set_session_state_items,
-    ss_recursive_df_memory_usage,
     recursive_ss_search,
+    set_session_state_items,
     show_memory_usage,
+    ss_recursive_df_memory_usage,
 )
-from tsod.active_learning import MEDIA_PATH
-from tsod.active_learning.instructions import INSTRCUTION_DICT
 
 
 def outlier_annotation():
@@ -110,7 +110,6 @@ def model_training():
     fix_random_seeds()
     data_selection(st.sidebar)
     show_annotation_summary()
-    # c1, c2, c3 = st.columns(3)
     train_options()
     test_metrics()
     show_feature_importances()
@@ -173,9 +172,9 @@ def model_prediction():
 
 
 def instructions():
-    tabs = st.tabs(list(INSTRCUTION_DICT.keys()))
+    tabs = st.tabs(list(INSTRCUCTION_DICT.keys()))
 
-    for i, (k, instruction_func) in enumerate(INSTRCUTION_DICT.items()):
+    for i, (k, instruction_func) in enumerate(INSTRCUCTION_DICT.items()):
         with tabs[i]:
             st.header(k)
             instruction_func()
@@ -399,6 +398,8 @@ def data_download():
             "Download dataset",
             file_name=file_name,
             data=get_data_to_download(ds_to_download, file_format),
+            on_click=logging.info,
+            args=("A dataset was successfully downloaded.",),
         )
 
 
