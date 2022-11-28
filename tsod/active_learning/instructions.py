@@ -127,7 +127,7 @@ Use the 'Upload Annotations' - uploader to add previously created annotations. T
 def model_training():
     st.markdown(
         """
-    The *Model Training*-page is designated to choosing modelling methods & hyperparameters, training models and evaluating their performances. . In the sidebar, you'll find all widgets related to the training process. 
+    The *Model Training*-page is designated to choosing modelling methods & hyperparameters, training models and evaluating their performances. In the sidebar, you'll find all widgets related to the training process. 
 """
     )
     st.markdown("***")
@@ -165,14 +165,21 @@ Training times depend on the number of annotated points, but should generally ne
 
 
 def model_prediction():
-    ...
+    st.markdown(
+        """
+    The *Model Prediction*-page is designated to creating & visualizing the predictions of any trained or uploaded model on any series. In the sidebar, you'll find all widgets related the generation of predictions.  
+    The main window serves the visualizations for each selected series, while the sidebar is used to generate new predictions.
+"""
+    )
+    st.markdown("***")
+    c1, c2 = st.columns([3, 1])
 
 
 def annotaion_suggestion():
     ...
 
 
-INSTRCUTION_DICT = {
+INSTRUCTION_DICT = {
     "General": general,
     "Outlier Annotation": outlier_annotation,
     "Model Training": model_training,

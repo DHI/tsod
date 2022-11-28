@@ -15,7 +15,7 @@ from streamlit_profiler import Profiler
 
 from tsod.active_learning import MEDIA_PATH
 from tsod.active_learning.data_structures import AnnotationState, plot_return_value_as_datetime
-from tsod.active_learning.instructions import INSTRCUCTION_DICT
+from tsod.active_learning.instructions import INSTRUCTION_DICT
 from tsod.active_learning.modelling import get_model_predictions, train_model
 from tsod.active_learning.plotting import (
     feature_importance_plot,
@@ -172,9 +172,9 @@ def model_prediction():
 
 
 def instructions():
-    tabs = st.tabs(list(INSTRCUCTION_DICT.keys()))
+    tabs = st.tabs(list(INSTRUCTION_DICT.keys()))
 
-    for i, (k, instruction_func) in enumerate(INSTRCUCTION_DICT.items()):
+    for i, (k, instruction_func) in enumerate(INSTRUCTION_DICT.items()):
         with tabs[i]:
             st.header(k)
             instruction_func()
