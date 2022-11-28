@@ -304,6 +304,9 @@ def data_upload_callback(base_obj=None):
 
     add_new_data(dataframe, file_handle)
 
+    # For deployment 'logging'
+    print("A new dataset was successfully uploaded.")
+
 
 def add_new_data(df: pd.DataFrame, dataset_name: str):
     """Splits a dataframe into its individual series, adds those series
