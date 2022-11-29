@@ -729,7 +729,7 @@ def time_range_selection(base_obj=None) -> pd.DataFrame:
 
     form.number_input(
         "Set number of datapoints",
-        min_value=0,
+        min_value=2,
         max_value=len(state.df),
         value=len(state.df_plot),
         step=100,
@@ -1293,7 +1293,7 @@ def prediction_options(base_obj=None):
                 default = st.session_state["prediction_data"].get(ds_choice)
 
             session_ds_columns = st.multiselect(
-                "Pick columns",
+                "Pick series",
                 options=col_options,
                 default=default,
                 on_change=add_session_dataset,
@@ -1614,7 +1614,8 @@ def outlier_visualization_options(dataset_name: str, series: str):
         "Click on a bar in the distribution plot to view all outliers \
         in that time period. Each time period is chosen so it contains the same number of datapoints."
     )
-    form.slider(
+    c1, c2 = form.columns(2)
+    c1.slider(
         "Number of datapoints per bar",
         value=300,
         min_value=10,
@@ -1623,7 +1624,7 @@ def outlier_visualization_options(dataset_name: str, series: str):
         key=f"num_outliers_{dataset_name}_{series}",
         help="""Adjust the number of datapoints each bar represents.""",
     )
-    form.slider(
+    c2.slider(
         "Height of figures (px)",
         value=600,
         min_value=100,

@@ -113,7 +113,7 @@ def make_outlier_distribution_plot(dataset_name: str, series: str):
         .add_xaxis(df_counts.index.to_list())
         .set_global_opts(
             title_opts=opts.TitleOpts(
-                title="Distribution of outliers per model",
+                title="Distribution Plot - Number of outliers per model",
                 subtitle="Click on bar to isolate time range",
                 padding=15,
             ),
@@ -364,13 +364,7 @@ def get_echarts_plot_time_range(
                 brush_mode="multiple",
                 brush_type="lineX",
                 tool_box=["lineX", "rect", "clear"],
-                # brush_link="all",
-                # geo_index=0,
                 series_index="all",
-                # x_axis_index=0,
-                # x_axis_index=2,
-                # y_axis_index=2,
-                # out_of_brush={"symbol": "pin"},
                 out_of_brush={"colorAlpha": 0.1},
             ),
             tooltip_opts=opts.TooltipOpts(axis_pointer_type="line", trigger="axis"),
@@ -434,7 +428,7 @@ def make_time_range_outlier_plot(dataset_name: str, series: str, start_time, end
         start_time,
         end_time,
         state.column,
-        plot_title=f"Outliers {start_time} - {end_time}",
+        plot_title=f"Outlier Plot {start_time} - {end_time}",
         include_annotations=True,
         dataset_name=dataset_name,
         series=series,

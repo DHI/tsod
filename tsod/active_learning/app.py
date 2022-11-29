@@ -4,9 +4,10 @@ import sys
 sys.path.append("/app/tsod")
 
 import streamlit as st
+from streamlit_option_menu import option_menu
+
 from tsod.active_learning.components import FUNC_MAPPING, dev_options
 from tsod.active_learning.utils import init_session_state
-from streamlit_option_menu import option_menu
 
 
 def main():
@@ -40,7 +41,7 @@ def main():
                     "font-size": "15px",
                     "text-align": "left",
                     "margin": "0px",
-                    # "--hover-color": "#eee",
+                    "--hover-color": "#AFADB4",
                 },
                 "nav-link-selected": {"background-color": "green"},
             },
