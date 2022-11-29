@@ -127,12 +127,14 @@ Use the 'Upload Annotations' - uploader to add previously created annotations. T
 def model_training():
     st.markdown(
         """
-    The *Model Training*-page is designated to choosing modelling methods & hyperparameters, training models and evaluating their performances. In the sidebar, you'll find all widgets related to the training process. 
+    The *Model Training*-page is designated to choosing modelling methods & hyperparameters, training models and evaluating their performances. In the sidebar, you'll find all widgets related to the training process.  
+    On top of the main window, you will see a short annotation summary. If you have already trained a model, you will also be able to see how many annotation points where added since the last model was trained.  
+After training a new model, train metrics will show underneath (& test metrics if defined). Precision, Recall & F1 scores are shown separately for annotated outliers and normal points. If you have already trained a model, you will also be able to see how the metrics have changed compared to the previous model.
+Underneath that, you'll find a plot & table showing some of the feature importances of the last trained model. If you have already trained a model, you will also be able to see how the importances have changed compared to the previous model. 
 """
     )
     st.markdown("***")
-    c1, c2 = st.columns([3, 1])
-    c1.markdown(
+    st.markdown(
         """
     ### Training Controls
 
@@ -156,9 +158,12 @@ For each annotated point (outlier or normal), a set of features is generated tha
 
 **Random Forest Classifier**
 
+[scikit-learn docs - RandomForestClassifier](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html)  
+[scikit-learn docs - RandomizedSearchCV](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.RandomizedSearchCV.html)
+
 The feature set is constructed by taking the x points before the annotated point, the y points after and normalizing them using the value of the annotated point. This way the model can only look at the relative changes of a series leading up to or after the point in question.  
 If you are interested in building any kind of 'real time' outlier detection model, set the number of points after to 0 (default).  
-The model using the feature set is a simple sklearn Random Forest Classifier. Behind the scenes, the random seeds are fixed for reproducible results and a small hyperparameter search is performed for cross validation.  
+The model using the feature set is a simple scikit-learn Random Forest Classifier. Behind the scenes, the random seeds are fixed for reproducible results and a small hyperparameter search is performed for cross validation.  
 Training times depend on the number of annotated points, but should generally never be longer than a minute. 
     """
     )
@@ -172,10 +177,98 @@ def model_prediction():
 """
     )
     st.markdown("***")
-    c1, c2 = st.columns([3, 1])
+    st.markdown(
+        """
+## Prediction Controls (sidebar)
+    
+It is recommended to generate predictions whenever training a new model (default). However, it is also possible to upload previously trained models and generate predictions for any uploaded series.  
+This allows for several potentially interesting workflows, such as uploading a test set as a separate dataset or evaluating the capabilities of a model on a completely different dataset. If you have previously created a capable model for your use case, you can skip the annotation and training processes and jump straight to the model prediction page, upload your model and clean your datasets.  
+Use the controls in the sidebar to select one or multiple models trained this session and/or upload models from disk. Then add individual series from any of your uploaded datasets for which you would like these models to generate predictions. 
+***
+    """
+    )
+
+    st.markdown(
+        """
+        ## Prediction visualization (main window)
+
+Each series you have generated predictions for will appear underneath each other in main window, each with its own set of visualization options and graphs.
+    """
+    )
+    st.image(
+        str(MEDIA_PATH / "distribution_to_prediction_plot.png"),
+        use_column_width=True,
+        caption="The distribution plot (left) summarizes the predicted outlier distribution. Clicking on any of the bar groups will bring up the outlier plot (right) for that time range underneath.",
+    )
+
+    c1, c2 = st.columns([2, 1])
+
+    c1.markdown(
+        """
+### Visualization Options
+
+
+1. In the multiselect at the top you will be able to choose up to 4 models that have been used to generate predictions for this series. By default (when a new set of predictions is added), the two most current models will be selected here, as this comparison is usually the most relevant (comparing the predictions of the most recent model to those of the previous one).  
+    Underneath, you will then see a small summary table, showing for each selected model:  
+    - The model name
+    - A 'Remove'-button to quickly remove that model from the selection
+    - The parameters of the model
+    - The number of predicted outliers for the series
+    - The number of predicted normal points for the series
+    - A color picker to choose which color that model should be shown in in the following graphs
+
+2. Each bar in the following distribution plot represents the number of predicted outliers for a given model. In order to not display too many points at once, the series is split into multiple parts containing an equal number of datapoints. That number can be adjusted using this slider.
+
+3. Set the height of both the distribution plot and the outlier plot (in pixel).
+
+4. If there are many segments of the distribution plot containing no predicted outliers, activate this checkbox to only display bars where there are predicted outliers. 
+
+5. If any of these checkboxes are set, annotated train or test outliers that where not predicted to be outliers by the model will be highlighted by a blinking symbol in the distribution plot. This is useful for identifying at a glance where predictions are deviating from annotations. 
+
+    """
+    )
+
+    c2.image(
+        str(MEDIA_PATH / "model_visualization.png"),
+        use_column_width=True,
+        caption="Customization options for visualizing model predictions.",
+    )
+    c1, c2 = st.columns([2, 1])
+    c1.markdown(
+        """
+### Prediction Correction
+
+You can use the outlier plots themselves to add further annotations, based on your model predictions. For this, you have several options to select points:
+
+- Click on predictions markers or normal datapoints for individual selection
+- Utilize the Box- or Horizontal selection modes to select multiple prediction markers at once (default). This way when drawing a box, you will only select points where at least one model made a prediction. This is useful to quickly correct multiple faulty predictions
+- By unchecking the checkbox 'Area select: Only select predicted outliers' above the outlier plot, you can also select any datapoints within the range of a Box- or Horizontal select. 
+
+Underneath the outlier plot, you will find another set of annotation buttons which you can use to label your selected points.
+    """
+    )
+
+    c1, c2 = st.columns([2, 1])
+    c1.markdown(
+        """
+    ### Retraining
+
+For convenience, the 'Retrain most recent model with new data' - button exists in order to retrain the most recent model (using the same parameters) and generate new predictions using that model. This allows for quicker iterations.  
+
+    """
+    )
+    c2.image(
+        str(MEDIA_PATH / "retrain.png"),
+        use_column_width=True,
+        caption="The retrain button allows for quicker iterations, without having to switch pages.",
+    )
 
 
 def annotaion_suggestion():
+    ...
+
+
+def data_download():
     ...
 
 
@@ -185,4 +278,5 @@ INSTRUCTION_DICT = {
     "Model Training": model_training,
     "Model Prediction": model_prediction,
     "Annotation Suggestion": annotaion_suggestion,
+    "Data Download": data_download,
 }
