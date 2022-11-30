@@ -10,7 +10,7 @@ This project is a human-in-the-loop system for detecting outliers in time series
 allowing for the cleaning of noisy datasets, which is often a requirement before the dataset can be used further (e.g. for training ML-models).
 
 ### General notes
-
+- This project implements a quite simple workflow. If you are unsure about what the use of a widget / field is, either hover your mouse above the little question mark next to it, or check the documentation. 
 - This app is currently a simple web app without user identification or saving of intermediate results. That means that if you refresh the page, you will start from scratch again. However, the app does allow for the download and upload of annotations, models and datasets so you may use them again at a later time.
 - It is possible to upload multiple datasets containing multiple series (columns) each. You can add annotations and train models on every individual series. Is is currently not possible to train a single model using features from multiple series (multivariate outlier prediction). However, this is one of the possible future improvements.
 ### Recommended workflow

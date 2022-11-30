@@ -330,7 +330,7 @@ def get_echarts_plot_time_range(
         .set_global_opts(
             title_opts=opts.TitleOpts(
                 title=plot_title,
-                subtitle="Click on points or markers to select them. Activate different selection modes in the toolbar.",
+                subtitle="Click on points or markers to select them. Activate different selection modes in the toolbar (top right). Zoom using the mouse wheel.",
                 padding=15,
             ),
             yaxis_opts=opts.AxisOpts(

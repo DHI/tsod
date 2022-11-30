@@ -58,7 +58,8 @@ def outlier_annotation():
 
         st.warning(
             """For first time users: It is recommended to check out the 
-        instructions before starting."""
+        instructions before starting.  
+        If you are unsure what a widget is for, hover your mouse above the little question mark next to it to get some more info."""
         )
         st.button(
             "View instructions",
@@ -1097,20 +1098,16 @@ def train_options(base_obj=None):
         return
 
     with st.sidebar.expander("Modelling Options", expanded=True):
-        st.info("Here you can choose what type of outlier detection approach to use.")
         st.selectbox(
             "Choose OD method",
             options=list(MODEL_OPTIONS.keys()),
             key="current_method_choice",
             format_func=lambda x: MODEL_OPTIONS.get(x),
             on_change=save_method,
+            help="Here you can choose what type of outlier detection approach to use.",
         )
 
     with st.sidebar.expander("Feature Options", expanded=True):
-        st.info(
-            "Here you can choose how many points before and after each annotated point \
-            to include in its feature set."
-        )
         st.number_input(
             "Points before",
             min_value=1,
@@ -1119,6 +1116,7 @@ def train_options(base_obj=None):
             else 10,
             key="number_points_before",
             step=5,
+            help="How many points before each annotated point to include in its feature set.",
         )
         st.number_input(
             "Points after",
@@ -1128,6 +1126,7 @@ def train_options(base_obj=None):
             else 0,
             key="number_points_after",
             step=5,
+            help="How many points after each annotated point to include in its feature set.",
         )
 
     auto_generate = st.sidebar.checkbox(
@@ -1223,10 +1222,7 @@ def prediction_options(base_obj=None):
     c.button("Generate Predictions", on_click=get_predictions_callback, args=(obj,))
 
     with obj.expander("Model Choice", expanded=True):
-        st.subheader("Choose Models")
-        st.info(
-            "Add models with which to generate predictions. The most recently trained model is automatically added."
-        )
+        st.subheader("Choose models for generating predictions")
         st.multiselect(
             "Select models trained this session",
             options=sorted(
@@ -1237,6 +1233,7 @@ def prediction_options(base_obj=None):
             ],
             on_change=add_session_models,
             key="session_models_to_add",
+            help="When a new model is trained, it is automatically pre-selected.",
         )
         st.file_uploader(
             "Or / and select model from disk (optional)",
@@ -1254,8 +1251,7 @@ def prediction_options(base_obj=None):
                 "Clear selection", on_click=set_session_state_items, args=("prediction_models", {})
             )
     with obj.expander("Data Choice", expanded=True):
-        st.subheader("Select Data")
-        st.info("Choose datasets for outlier evaluation.")
+        st.subheader("Select data for generating predictions")
         ds_options = list(st.session_state["data_store"].keys())
         if "most_recent_model" in st.session_state:
             idx = ds_options.index(
@@ -1394,7 +1390,7 @@ def test_metrics(base_obj=None):
     )
     obj.info(
         """All displayed metrics have a max value of 1 (best possible result)
-    and min value of 0 (worst possible result)."""
+    and min value of 0 (worst possible result). Hover over the question mark next to the metrics to get info on what they mean."""
     )
     c1, c2, c3, c4 = obj.columns(4)
 
@@ -1432,16 +1428,18 @@ def test_metrics(base_obj=None):
             prec[1],
             delta=out_prec_diff,
             delta_color="normal" if out_prec_diff != 0.0 else "off",
-            help="""The ratio of true predicted positives to total predicted positives for the train set outliers.  
-            Represents the ability not to classify a normal sample as an outlier.""",
+            help=f"""The ratio of true predicted positives to total predicted positives for the train set outliers.  
+            Represents the ability not to classify a normal sample as an outlier.  
+            Your score of {prec[1]} means that for the training set, {int(prec[1] * 100)}% of your model's predicted outliers were correct (not labelled as normal points).""",
         )
         st.metric(
             "Recall Score",
             rec[1],
             delta=out_rec_diff,
             delta_color="normal" if out_rec_diff != 0.0 else "off",
-            help="""The ratio of true predicted positives to total positives for the train set outliers.  
-            Represents the ability to correctly predict all the outliers.""",
+            help=f"""The ratio of true predicted positives to total positives for the train set outliers.  
+            Represents the ability to correctly predict all the outliers.  
+            Your score of {rec[1]} means that for the training set, your model has correctly predicted {int(rec[1] * 100)}% of the annotated outliers.""",
         )
         st.metric(
             "F1 Score",
@@ -1456,16 +1454,18 @@ def test_metrics(base_obj=None):
             prec[0],
             delta=norm_prec_diff,
             delta_color="normal" if norm_prec_diff != 0.0 else "off",
-            help="""The ratio of true predicted positives to total predicted positives for the train set normal points.  
-            Represents the ability not to classify an outlier sample as a normal point.""",
+            help=f"""The ratio of true predicted positives to total predicted positives for the train set normal points.  
+            Represents the ability not to classify an outlier sample as a normal point.  
+            Your score of {prec[0]} means that for the training set, {int(prec[0] * 100)}% of your model's predicted normal points were correct (not labelled as outliers).""",
         )
         st.metric(
             "Recall Score",
             rec[0],
             delta=norm_rec_diff,
             delta_color="normal" if norm_rec_diff != 0.0 else "off",
-            help="""The ratio of true predicted positives to total positives for the train set normal points.  
-            Represents the ability to correctly predict all the normal points.""",
+            help=f"""The ratio of true predicted positives to total positives for the train set normal points.  
+            Represents the ability to correctly predict all the normal points.  
+            Your score of {rec[0]} means that for the training set, your model has correctly predicted {int(rec[0] * 100)}% of the annotated normal points.""",
         )
         st.metric(
             "F1 Score",
@@ -1529,16 +1529,18 @@ def test_metrics(base_obj=None):
                 prec[idx],
                 delta=out_prec_diff,
                 delta_color="normal" if out_prec_diff != 0.0 else "off",
-                help="""The ratio of true predicted positives to total predicted positives for the test set outliers.  
-                Represents the ability not to classify a normal sample as an outlier.""",
+                help=f"""The ratio of true predicted positives to total predicted positives for the test set outliers.  
+                Represents the ability not to classify a normal sample as an outlier.  
+                Your score of {prec[idx]} means that for the test set, {int(prec[idx] * 100)}% of your model's predicted outliers were correct (not labelled as normal points).""",
             )
             st.metric(
                 "Recall Score",
                 rec[idx],
                 delta=out_rec_diff,
                 delta_color="normal" if out_rec_diff != 0.0 else "off",
-                help="""The ratio of true predicted positives to total positives for the test set outliers.  
-                Represents the ability to correctly predict all the outliers.""",
+                help=f"""The ratio of true predicted positives to total positives for the test set outliers.  
+                Represents the ability to correctly predict all the outliers.  
+                Your score of {rec[idx]} means that for the test set, your model has correctly predicted {int(rec[idx] * 100)}% of the annotated outliers.""",
             )
             st.metric(
                 "F1 Score",
@@ -1554,16 +1556,18 @@ def test_metrics(base_obj=None):
                 prec[0],
                 delta=norm_prec_diff,
                 delta_color="normal" if norm_prec_diff != 0.0 else "off",
-                help="""The ratio of true predicted positives to total predicted positives for the test set normal points.  
-                Represents the ability not to classify an outlier sample as a normal point.""",
+                help=f"""The ratio of true predicted positives to total predicted positives for the test set normal points.  
+                Represents the ability not to classify an outlier sample as a normal point.  
+                Your score of {prec[0]} means that for the test set, {int(prec[0] * 100)}% of your model's predicted normal points were correct (not labelled as outliers).""",
             )
             st.metric(
                 "Recall Score",
                 rec[0],
                 delta=norm_rec_diff,
                 delta_color="normal" if norm_rec_diff != 0.0 else "off",
-                help="""The ratio of true predicted positives to total positives for the test set normal points.  
-                Represents the ability to correctly predict all the normal points.""",
+                help=f"""The ratio of true predicted positives to total positives for the test set normal points.  
+                Represents the ability to correctly predict all the normal points.  
+                Your score of {rec[0]} means that for the test set, your model has correctly predicted {int(rec[0] * 100)}% of the annotated normal points.""",
             )
             st.metric(
                 "F1 Score",
