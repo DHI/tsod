@@ -265,11 +265,39 @@ For convenience, the 'Retrain most recent model with new data' - button exists i
 
 
 def annotaion_suggestion():
-    ...
+    st.markdown(
+        """
+     The *Annotation Suggestion*-page is designated to presenting the user with interesting points to annotate, using a simple yes-no-dialogue.  
+ For Random Forest Classifiers, the order of presented points is determined by the degree of disagreement of the individual decision trees (points with the most disagreement first).  
+ In the sidebar, you can choose from any model trained in the current session. Points are always drawn from the series the model was trained on.  
+ You can also set the number of neighboring points to display in the plot.
+    """
+    )
+
+    st.image(
+        str(MEDIA_PATH / "annotation_suggestion.png"),
+        use_column_width=True,
+        caption="In the annotation suggestion page, you are prompted for annotations of specific points.",
+    )
 
 
 def data_download():
-    ...
+    st.markdown(
+        """
+The *Data Download*-page is designated to the removal of outliers from your datasets and the download of your cleaned data.  
+In the sidebar, choose a dataset. If the dataset has multiple series, you can then choose which of its series to clean. The final dataset will always contain all its original series, regardless of which series you choose.  
+Next pick any of your trained or uploaded models to use for the cleaning.  
+Currently, there are two methods available for handling the predicted outliers: Either deleting them from the series completely or performing linear interpolation.  
+Click on 'Preview' to generate and review 3 random samples that show you effect of removing the outliers in the chosen way.  
+After reviewing, you can then add your cleaned data as a new dataset, either to download right away or to clean further using another model. You could also start an new annotation process for the newly created dataset.  
+Finally, at the bottom of the sidebar, you'll have the option to download any of your session dataset to disk, either as a .csv or a .xlsx file. 
+        """
+    )
+    st.image(
+        str(MEDIA_PATH / "data_download.png"),
+        use_column_width=True,
+        caption="Before saving your cleaned data, you may preview your chosen method of removing outliers.",
+    )
 
 
 INSTRUCTION_DICT = {
