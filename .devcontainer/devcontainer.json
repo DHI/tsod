@@ -1,0 +1,26 @@
+{
+    "name": "Python 3",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": "..",
+        "args": {
+            "VARIANT": "3.10"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python"
+            }
+        }
+    },
+    "containerEnv": {
+        "PYTHONPATH": "/workspaces/tsod",
+        "TSOD_DEV_MODE": "true"
+    },
+    "forwardPorts": [
+        8501
+    ],
+    "postStartCommand": "pip3 install --user --no-cache-dir -r requirements.txt",
+    "remoteUser": "vscode"
+}
