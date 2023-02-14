@@ -1,5 +1,5 @@
 pandas>=1.0.0
-numba
+#numba
 joblib
 streamlit
 pytest>=6.2.1
