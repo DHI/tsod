@@ -1,5 +1,5 @@
 # tsod: Anomaly Detection for time series data.
-[![Full test](https://github.com/DHI/tsod/actions/workflows/python-app.yml/badge.svg)](https://github.com/DHI/tsod/actions/workflows/python-app.yml)
+[![Full test](https://github.com/DHI/tsod/actions/workflows/test.yml/badge.svg)](https://github.com/DHI/tsod/actions/workflows/test.yml)
 [![PyPI version](https://badge.fury.io/py/tsod.svg)](https://badge.fury.io/py/tsod)
 ![Python version](https://img.shields.io/pypi/pyversions/tsod.svg) 
 
