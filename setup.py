@@ -8,7 +8,10 @@ setuptools.setup(
     version="0.1.4",
     install_requires=["pandas>=1.0.0", "numba", "joblib"],
     extras_require={
-        "dev": ["pytest>=6.2.1", "sphinx", "sphinx-book-theme"],
+        "dev": ["pytest>=6.2.1",
+                "sphinx==4.5.0",  # pin version to work with sphinx-book-theme,
+                "sphinx-book-theme"
+                ],
         "ml": ["pyod", "tensorflow"],
         "test": ["pytest>=6.2.1"],
     },
