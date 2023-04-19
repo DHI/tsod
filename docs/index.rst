@@ -3,8 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. image:: https://raw.githubusercontent.com/DHI/tsod/main/images/logo/tsod.png
+   :width: 600
+
 tsod: Anomaly Detection for time series data.
 =============================================
+
 
 .. image:: https://raw.githubusercontent.com/DHI/tsod/main/images/anomaly.png
 
