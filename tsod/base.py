@@ -28,7 +28,7 @@ class Detector(ABC):
     def __init__(self):
         pass
 
-    def fit(self, data: Union[pd.Series, pd.DataFrame]):
+    def fit(self, data: pd.Series):
         """Set detector parameters based on data.
 
         Parameters
@@ -40,13 +40,11 @@ class Detector(ABC):
         self._fit(data)
         return self
 
-    def _fit(self, data: Union[pd.Series, pd.DataFrame]):
+    def _fit(self, data: pd.Series):
         # Default implementation is a NoOp
         return self
 
-    def detect(
-        self, data: Union[pd.Series, pd.DataFrame]
-    ) -> Union[pd.Series, pd.DataFrame]:
+    def detect(self, data: pd.Series) -> pd.Series:
         """Detect anomalies
 
         Parameters
@@ -64,12 +62,12 @@ class Detector(ABC):
         pred = self._detect(data)
         return self._postprocess(pred)
 
-    def _postprocess(self, pred: Union[pd.Series, pd.DataFrame]) -> pd.Series:
+    def _postprocess(self, pred: pd.Series) -> pd.Series:
         # TODO implement
         return pred
 
     @abstractmethod
-    def _detect(self, data: Union[pd.Series, pd.DataFrame]) -> pd.Series:
+    def _detect(self, data: pd.Series) -> pd.Series:
         """Detect anomalies"""
         pass
 
