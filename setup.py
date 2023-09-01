@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tsod",
-    version="0.1.4",
+    version="0.2.0",
     install_requires=["pandas>=1.0.0", "numba", "joblib"],
     extras_require={
         "dev": [
