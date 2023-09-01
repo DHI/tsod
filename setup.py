@@ -5,13 +5,14 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tsod",
-    version="0.1.4",
+    version="0.2.0",
     install_requires=["pandas>=1.0.0", "numba", "joblib"],
     extras_require={
-        "dev": ["pytest>=6.2.1",
-                "sphinx==4.5.0",  # pin version to work with sphinx-book-theme,
-                "sphinx-book-theme"
-                ],
+        "dev": [
+            "pytest>=6.2.1",
+            "sphinx==4.5.0",  # pin version to work with sphinx-book-theme,
+            "sphinx-book-theme",
+        ],
         "ml": ["pyod", "tensorflow"],
         "test": ["pytest>=6.2.1"],
     },
@@ -30,10 +31,10 @@ setuptools.setup(
         "Intended Audience :: Science/Research",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering",
     ],
