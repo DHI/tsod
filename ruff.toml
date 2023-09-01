@@ -1,0 +1,3 @@
+# ignore long license for ruff
+ignore = ["E501", "E741"]
+exclude = ["tsod/active_learning/"]
