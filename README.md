@@ -12,13 +12,12 @@ Sensors often provide faulty or missing observations. These anomalies must be de
 
 This package aims to provide examples and algorithms for detecting anomalies in time series data specifically tailored to DHI users and the water domain. It is simple to install and deploy operationally and is accessible to everyone (open-source).
 
-## ✨ [Active learning web application](https://ts-outlier-detection.streamlit.app/) ✨
-
-Please try the newly developed prototype web application for active learning (human in the loop). It is possible to test a version currently running in the Streamlit cloud: <https://ts-outlier-detection.streamlit.app/>
+## [Active learning web application](https://github.com/DHI/tsod/blob/main/tsod/active_learning/)
 
 The web application is developed using [Streamlit](https://streamlit.io/). All requirements needed to run this application can be found [here](https://github.com/DHI/tsod/blob/main/.devcontainer/Dockerfile).
 
 ![](images/active_learning_app.png)
+
 
 
 ## Getting Started
