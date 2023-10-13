@@ -18,7 +18,13 @@ ANNOTATION_COLORS = {
     "test_outlier": "#fd7c99",
     "test_normal": "#0fefc7",
 }
-MARKER_SIZES = {"selected": 10, "outlier": 12, "normal": 12, "test_outlier": 12, "test_normal": 12}
+MARKER_SIZES = {
+    "selected": 10,
+    "outlier": 12,
+    "normal": 12,
+    "test_outlier": 12,
+    "test_normal": 12,
+}
 MARKER_VALUES = {
     "selected": "S",
     "outlier": "O",
@@ -46,22 +52,28 @@ def cachable_get_outlier_counts(
 ) -> pd.DataFrame:
     with st.spinner("Creating new distribution plot..."):
         state = get_as(dataset_name, series)
-        dataset: pd.DataFrame = st.session_state["inference_results"][dataset_name][series]
+        dataset: pd.DataFrame = st.session_state["inference_results"][dataset_name][
+            series
+        ]
 
         dataset["outlier_group"] = range(len(dataset))
-        dataset["outlier_group"] = (dataset["outlier_group"] // number_of_datapoints).astype(
-            np.int16
-        )
+        dataset["outlier_group"] = (
+            dataset["outlier_group"] // number_of_datapoints
+        ).astype(np.int16)
 
         threshold_timestamps = (
             dataset.reset_index().groupby("outlier_group")["index"].first().to_list()
         )
         threshold_timestamps.append(dataset.index.max())
-        ranges = [f"{i} - {j}" for i, j in zip(threshold_timestamps, threshold_timestamps[1:])]
+        ranges = [
+            f"{i} - {j}" for i, j in zip(threshold_timestamps, threshold_timestamps[1:])
+        ]
 
         out_columns = copy.deepcopy(model_names)
         for m in model_names:
-            out_columns.extend([f"{m} Missed Train Outliers", f"{m} Missed Test Outliers"])
+            out_columns.extend(
+                [f"{m} Missed Train Outliers", f"{m} Missed Test Outliers"]
+            )
         out_columns.extend(["Marked Train Outliers", "Marked Test Outliers"])
         df_out = pd.DataFrame(index=ranges, columns=out_columns)
 
@@ -69,10 +81,14 @@ def cachable_get_outlier_counts(
         annotated_test_outliers = state.df_test_outlier
         for group_index, (_, group) in enumerate(dataset.groupby("outlier_group")):
             outliers_in_this_group = annotated_outliers[
-                annotated_outliers.index.to_series().between(group.index[0], group.index[-1])
+                annotated_outliers.index.to_series().between(
+                    group.index[0], group.index[-1]
+                )
             ]
             test_outliers_in_this_group = annotated_test_outliers[
-                annotated_test_outliers.index.to_series().between(group.index[0], group.index[-1])
+                annotated_test_outliers.index.to_series().between(
+                    group.index[0], group.index[-1]
+                )
             ]
             df_out.iat[group_index, -2] = len(outliers_in_this_group)
             df_out.iat[group_index, -1] = len(test_outliers_in_this_group)
@@ -80,10 +96,14 @@ def cachable_get_outlier_counts(
             for model_index, model in enumerate(model_names):
                 model_pred_outliers = group[group[model] == 1].index
                 df_out.iat[group_index, model_index] = len(model_pred_outliers)
-                df_out.at[ranges[group_index], f"{model} Missed Train Outliers"] = np.count_nonzero(
+                df_out.at[
+                    ranges[group_index], f"{model} Missed Train Outliers"
+                ] = np.count_nonzero(
                     outliers_in_this_group.index.isin(model_pred_outliers) == False
                 )
-                df_out.at[ranges[group_index], f"{model} Missed Test Outliers"] = np.count_nonzero(
+                df_out.at[
+                    ranges[group_index], f"{model} Missed Test Outliers"
+                ] = np.count_nonzero(
                     test_outliers_in_this_group.index.isin(model_pred_outliers) == False
                 )
 
@@ -122,7 +142,9 @@ def make_outlier_distribution_plot(dataset_name: str, series: str):
                 name="Time Range",
                 name_location="middle",
                 name_gap=30,
-                axistick_opts=opts.AxisTickOpts(is_inside=True, is_align_with_label=True),
+                axistick_opts=opts.AxisTickOpts(
+                    is_inside=True, is_align_with_label=True
+                ),
             ),
             yaxis_opts=opts.AxisOpts(
                 type_="value",
@@ -163,7 +185,9 @@ def make_outlier_distribution_plot(dataset_name: str, series: str):
                 category_gap="40%",
             )
 
-    colors = [st.session_state[f"color_{m}_{dataset_name}_{series}"] for m in model_names]
+    colors = [
+        st.session_state[f"color_{m}_{dataset_name}_{series}"] for m in model_names
+    ]
     if state.outlier:
         colors.append("#e60b0b")
     if state.test_outlier:
@@ -179,7 +203,9 @@ def make_outlier_distribution_plot(dataset_name: str, series: str):
         if st.session_state.get(f"highlight_train_{dataset_name}_{series}"):
             df_missed = df_counts[df_counts[f"{m} Missed Train Outliers"] > 0]
             if not df_missed.empty:
-                effect_scatter = (EffectScatter().add_xaxis(df_missed.index.tolist())).add_yaxis(
+                effect_scatter = (
+                    EffectScatter().add_xaxis(df_missed.index.tolist())
+                ).add_yaxis(
                     f"{m} Missed Training Outliers",
                     df_missed[m].tolist(),
                     label_opts=opts.LabelOpts(is_show=False),
@@ -191,7 +217,9 @@ def make_outlier_distribution_plot(dataset_name: str, series: str):
         if st.session_state.get(f"highlight_test_{dataset_name}_{series}"):
             df_missed = df_counts[df_counts[f"{m} Missed Test Outliers"] > 0]
             if not df_missed.empty:
-                effect_scatter = (EffectScatter().add_xaxis(df_missed.index.tolist())).add_yaxis(
+                effect_scatter = (
+                    EffectScatter().add_xaxis(df_missed.index.tolist())
+                ).add_yaxis(
                     f"{m} Missed Test Outliers",
                     df_missed[m].tolist(),
                     label_opts=opts.LabelOpts(is_show=False),
@@ -220,7 +248,10 @@ def make_outlier_distribution_plot(dataset_name: str, series: str):
         start_str, end_str = clicked_range.split(" - ")
         start_time = datetime.datetime.strptime(start_str, "%Y-%m-%d %H:%M:%S")
         end_time = datetime.datetime.strptime(end_str, "%Y-%m-%d %H:%M:%S")
-        st.session_state[f"last_clicked_range_{dataset_name}_{series}"] = start_time, end_time
+        st.session_state[f"last_clicked_range_{dataset_name}_{series}"] = (
+            start_time,
+            end_time,
+        )
         # st.session_state[f"range_str_{dataset_name}"] = clicked_range
         return start_time, end_time
 
@@ -265,7 +296,9 @@ def make_annotation_suggestion_plot(
                 name_location="middle",
                 name_gap=-20,
             ),
-            datazoom_opts=opts.DataZoomOpts(type_="inside", range_start=0, range_end=100),
+            datazoom_opts=opts.DataZoomOpts(
+                type_="inside", range_start=0, range_end=100
+            ),
             legend_opts=opts.LegendOpts(pos_top=40, pos_right=10, orient="vertical"),
             tooltip_opts=opts.TooltipOpts(axis_pointer_type="line", trigger="axis"),
         )
@@ -280,7 +313,7 @@ def make_annotation_suggestion_plot(
             label_opts=opts.LabelOpts(is_show=False),
             symbol_size=3,
             itemstyle_opts=opts.ItemStyleOpts(color="#dce4e3"),
-            is_selected=len(x_data) < 10000,
+            # is_selected=len(x_data) < 10000,
             tooltip_opts=opts.TooltipOpts(is_show=False),
         )
     )
@@ -317,7 +350,9 @@ def get_echarts_plot_time_range(
     x_data = state.df_plot.index.to_list()
     y_data = state.df_plot[data_column].to_list()
     plot = (
-        Line(init_opts=opts.InitOpts(animation_opts=opts.AnimationOpts(animation=False)))
+        Line(
+            init_opts=opts.InitOpts(animation_opts=opts.AnimationOpts(animation=False))
+        )
         .add_xaxis(x_data)
         .add_yaxis(
             data_column,
@@ -380,7 +415,7 @@ def get_echarts_plot_time_range(
             label_opts=opts.LabelOpts(is_show=False),
             symbol_size=3,
             itemstyle_opts=opts.ItemStyleOpts(color="#dce4e3"),
-            is_selected=len(x_data) < 10000,
+            # is_selected=len(x_data) < 10000,
             tooltip_opts=opts.TooltipOpts(is_show=False),
         )
     )
@@ -410,7 +445,9 @@ def get_echarts_plot_time_range(
                 symbol="roundRect",
                 symbol_size=15,
                 # color="#dce4e3",
-                itemstyle_opts=opts.ItemStyleOpts(opacity=1, color=ANNOTATION_COLORS[series_name]),
+                itemstyle_opts=opts.ItemStyleOpts(
+                    opacity=1, color=ANNOTATION_COLORS[series_name]
+                ),
                 tooltip_opts=opts.TooltipOpts(is_show=False),
             )
         )
@@ -451,13 +488,18 @@ def make_time_range_outlier_plot(dataset_name: str, series: str, start_time, end
                 symbol="pin",
                 symbol_size=40,
                 itemstyle_opts=opts.ItemStyleOpts(
-                    opacity=1, color=st.session_state[f"color_{model_name}_{dataset_name}_{series}"]
+                    opacity=1,
+                    color=st.session_state[
+                        f"color_{model_name}_{dataset_name}_{series}"
+                    ],
                 ),
                 tooltip_opts=opts.TooltipOpts(formatter="{a} <br>Outlier predicted"),
             )
         )
 
-    st.session_state["pred_outlier_tracker"][dataset_name][series] = pred_outlier_tracker
+    st.session_state["pred_outlier_tracker"][dataset_name][
+        series
+    ] = pred_outlier_tracker
 
     clicked_point = st_pyecharts(
         plot,
@@ -485,12 +527,18 @@ def feature_importance_plot(base_obj=None):
     df_new: pd.DataFrame = st.session_state[f"current_importances_{dataset}_{series}"]
 
     if f"previous_importances_{dataset}_{series}" in st.session_state:
-        df_old: pd.DataFrame = st.session_state[f"previous_importances_{dataset}_{series}"]
-        df_plot = df_new.merge(df_old, how="left", on="Feature", suffixes=("", " before"))
+        df_old: pd.DataFrame = st.session_state[
+            f"previous_importances_{dataset}_{series}"
+        ]
+        df_plot = df_new.merge(
+            df_old, how="left", on="Feature", suffixes=("", " before")
+        )
         df_plot["diff"] = (
             df_plot["Feature importance"] - df_plot["Feature importance before"]
         ).round(3)
-        df_plot["diff_text"] = df_plot["diff"].apply(lambda x: str(x) if x <= 0 else f"+{x}")
+        df_plot["diff_text"] = df_plot["diff"].apply(
+            lambda x: str(x) if x <= 0 else f"+{x}"
+        )
     else:
         df_plot = df_new
 
@@ -549,15 +597,21 @@ def make_removed_outliers_example_plots(df_before: pd.DataFrame, df_new: pd.Data
         number_outlier = outlier_mask.sum()
         number_to_show = min(number_outlier, 3)
         changes_sample = (
-            df_before[df_before[f"{s}_{model}"] == 1].sample(number_to_show, random_state=1).index
+            df_before[df_before[f"{s}_{model}"] == 1]
+            .sample(number_to_show, random_state=1)
+            .index
         )
 
         st.subheader(s)
 
         cols = st.columns(3)
         cols[0].metric("Number of predicted outliers in this series", number_outlier)
-        cols[1].metric("Number of non-NaN entries before", len(df_before[~df_before[s].isna()]))
-        cols[2].metric("Number of non-NaN entries after", len(df_new[~df_new[s].isna()]))
+        cols[1].metric(
+            "Number of non-NaN entries before", len(df_before[~df_before[s].isna()])
+        )
+        cols[2].metric(
+            "Number of non-NaN entries after", len(df_new[~df_new[s].isna()])
+        )
 
         if not number_outlier:
             continue
@@ -568,12 +622,12 @@ def make_removed_outliers_example_plots(df_before: pd.DataFrame, df_new: pd.Data
             end_idx = min(len(df_before) - 1, int_idx + 20)
             start_time = df_before.index[start_idx]
             end_time = df_before.index[end_idx]
-            df_plot_before = df_before[df_before.index.to_series().between(start_time, end_time)][
-                [s]
-            ].dropna()
-            df_plot_new = df_new[df_new.index.to_series().between(start_time, end_time)][
-                [s]
-            ].dropna()
+            df_plot_before = df_before[
+                df_before.index.to_series().between(start_time, end_time)
+            ][[s]].dropna()
+            df_plot_new = df_new[
+                df_new.index.to_series().between(start_time, end_time)
+            ][[s]].dropna()
 
             plot = (
                 Line()
@@ -615,8 +669,12 @@ def make_removed_outliers_example_plots(df_before: pd.DataFrame, df_new: pd.Data
                     name_location="middle",
                     name_gap=-20,
                 ),
-                datazoom_opts=opts.DataZoomOpts(type_="inside", range_start=30, range_end=70),
-                legend_opts=opts.LegendOpts(pos_top=40, pos_right=10, orient="vertical"),
+                datazoom_opts=opts.DataZoomOpts(
+                    type_="inside", range_start=30, range_end=70
+                ),
+                legend_opts=opts.LegendOpts(
+                    pos_top=40, pos_right=10, orient="vertical"
+                ),
                 tooltip_opts=opts.TooltipOpts(axis_pointer_type="line", trigger="axis"),
             )
 
