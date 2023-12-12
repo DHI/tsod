@@ -12,14 +12,6 @@ Sensors often provide faulty or missing observations. These anomalies must be de
 
 This package aims to provide examples and algorithms for detecting anomalies in time series data specifically tailored to DHI users and the water domain. It is simple to install and deploy operationally and is accessible to everyone (open-source).
 
-## [Active learning web application](https://github.com/DHI/tsod/blob/main/tsod/active_learning/)
-
-The web application is developed using [Streamlit](https://streamlit.io/). All requirements needed to run this application can be found [here](https://github.com/DHI/tsod/blob/main/.devcontainer/Dockerfile).
-
-![](images/active_learning_app.png)
-
-
-
 ## Getting Started
 
 * [Documentation](https://dhi.github.io/tsod/getting_started.html)
@@ -38,6 +30,11 @@ From PyPI:
 Or development version:
 
 `pip install https://github.com/DHI/tsod/archive/main.zip`
+
+## [Active learning web application](https://github.com/DHI/tsod/blob/main/tsod/active_learning/)
+
+There is a web application that is developed using [Streamlit](https://streamlit.io/). It can be found [here]() 
+
 
 ## Vision
 * A simple and consistent API for anomaly detection of timeseries
@@ -59,4 +56,3 @@ The training data is considered "normal" and is not polluted by outliers. New te
 - Follow PEP8 code style. This is automatically checked during Pull Requests.
 
 - If citing or re-using other code please make sure their license is also consistent with our policy.
-
