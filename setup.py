@@ -7,20 +7,20 @@ setuptools.setup(
     name="tsod",
     version="0.2.0",
     install_requires=[
-        "pandas==2.1.*",
-        "joblib==1.3.*",
-        "numba==0.57.*",
+        "pandas>=2",
+        "joblib",
+        "numba",
     ],
     extras_require={
         "dev": [
-            "pytest==6.2.*",
-            "pytest-cov==4.1.*",
+            "pytest>=6",
+            "pytest-cov>=4",
             "sphinx==4.5.0",  # pin version to work with sphinx-book-theme,
-            "sphinx-book-theme==1.0.*",
+            "sphinx-book-theme",
         ],
         "ml": [
-            "pyod==1.1.*",
-            "tensorflow==2.15.*"
+            "pyod",
+            "tensorflow>=2"
         ],
     },
     author="Henrik Andersson",
