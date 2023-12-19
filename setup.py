@@ -19,12 +19,6 @@ setuptools.setup(
             "sphinx-book-theme",
         ],
         "ml": ["pyod", "tensorflow>=2"],
-        "notebooks": [
-            "xarray",
-            "netcdf4",
-            "h5netcdf",
-            "xlrd",
-        ],
     },
     author="Henrik Andersson",
     author_email="jan@dhigroup.com",
