@@ -239,15 +239,15 @@ class ConstantValueDetector(Detector):
         rollmax = data.rolling(self._window_size, center=True).apply(np.nanmax)
         rollmin = data.rolling(self._window_size, center=True).apply(np.nanmin)
         anomalies = np.abs(rollmax - rollmin) < self._threshold
-        anomalies[0] = False  # first element cannot be determined
-        anomalies[-1] = False
+        anomalies.iloc[0] = False  # first element cannot be determined
+        anomalies.iloc[-1] = False
         idx = np.where(anomalies)[0]
         if idx is not None:
             # assuming window size = 3
             # remove also points before and after each detected anomaly
-            anomalies[idx[idx > 0] - 1] = True
+            anomalies.iloc[idx[idx > 0] - 1] = True
             maxidx = len(anomalies) - 1
-            anomalies[idx[idx < maxidx] + 1] = True
+            anomalies.iloc[idx[idx < maxidx] + 1] = True
 
         return anomalies
 

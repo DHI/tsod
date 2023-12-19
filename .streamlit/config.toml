@@ -1,8 +1,0 @@
-[server]
-runOnSave = true
-
-[theme]
-base = "dark"
-
-[runner]
-fastReruns = true
