@@ -7,7 +7,7 @@ setuptools.setup(
     name="tsod",
     version="0.2.0",
     install_requires=[
-        "pandas>=2",
+        "pandas>=1.0.0",
         "joblib",
         "numba",
     ],
@@ -18,9 +18,12 @@ setuptools.setup(
             "sphinx==4.5.0",  # pin version to work with sphinx-book-theme,
             "sphinx-book-theme",
         ],
-        "ml": [
-            "pyod",
-            "tensorflow>=2"
+        "ml": ["pyod", "tensorflow>=2"],
+        "notebooks": [
+            "xarray",
+            "netcdf4",
+            "h5netcdf",
+            "xlrd",
         ],
     },
     author="Henrik Andersson",
