@@ -1,2 +1,0 @@
-# ignore long license for ruff
-ignore = ["E501", "E741"]

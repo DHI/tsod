@@ -1,4 +1,5 @@
 """Hampel detector"""
+
 import numpy as np
 from numba import jit
 
@@ -81,7 +82,6 @@ class HampelDetector(Detector):
         self._window_size = window_size
 
     def _detect(self, data):
-
         anomalies = _detect(data.values, self._window_size, self._threshold)
 
         return anomalies

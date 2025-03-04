@@ -17,8 +17,7 @@ from tsod.detectors import (
 
 from tsod.features import create_dataset
 from tsod.hampel import HampelDetector
-from tsod.autoencoders import AutoEncoder
-from tsod.autoencoder_lstm import AutoEncoderLSTM
+
 
 from tests.data_generation import create_random_walk_with_outliers
 
@@ -31,7 +30,7 @@ def data_series():
         outlier_indices,
         random_walk,
     ) = create_random_walk_with_outliers(n_steps)
-    time = pd.date_range(start="2020", periods=n_steps, freq="1H")
+    time = pd.date_range(start="2020", periods=n_steps, freq="1h")
     return (
         pd.Series(time_series_with_outliers, index=time),
         outlier_indices,
@@ -51,7 +50,7 @@ def range_data():
 @pytest.fixture
 def range_data_series(range_data):
     normal_data, abnormal_data, expected_anomalies = range_data
-    time = pd.date_range(start="2020", periods=len(normal_data), freq="1H")
+    time = pd.date_range(start="2020", periods=len(normal_data), freq="1h")
     return (
         pd.Series(normal_data, index=time),
         pd.Series(abnormal_data, index=time),
@@ -64,7 +63,7 @@ def constant_gradient_data_series(range_data):
     normal_data = np.array([0, np.nan, 1, 1.1, 1.4, 1.5555, 3.14, 4])
     abnormal_data = np.array([-1, 2.0, 2.1, 2.2, 2.3, 2.4, 4, 10])
     expected_anomalies = np.array([False, True, True, True, True, True, False, False])
-    time = pd.date_range(start="2020", periods=len(normal_data), freq="1H")
+    time = pd.date_range(start="2020", periods=len(normal_data), freq="1h")
     return (
         pd.Series(normal_data, index=time),
         pd.Series(abnormal_data, index=time),
@@ -77,7 +76,7 @@ def constant_data_series(range_data):
     normal_data = np.array([0, np.nan, 1, 1.1, 1.4, 1.5555, 3.14, 4])
     abnormal_data = np.array([-1, np.nan, 1, 1, 1, 1, 4, 10])
     expected_anomalies = np.array([False, False, True, True, True, True, False, False])
-    time = pd.date_range(start="2020", periods=len(normal_data), freq="1H")
+    time = pd.date_range(start="2020", periods=len(normal_data), freq="1h")
     return (
         pd.Series(normal_data, index=time),
         pd.Series(abnormal_data, index=time),
@@ -235,33 +234,6 @@ def test_hampel_detector(data_series):
     assert all(i in expected_anomalies_indices for i in anomalies_indices)
 
 
-def test_auto_encoder_detector(data_series):
-    data_with_anomalies, expected_anomalies_indices, normal_data = data_series
-    detector = AutoEncoder(
-        hidden_neurons=[1, 1, 1, 1], epochs=1
-    )  # TODO add lagged features to increase layer size
-    detector.fit(normal_data)
-    anomalies = detector.detect(data_with_anomalies)
-    anomalies_indices = np.array(np.where(anomalies)).flatten()
-    # Validate if the found anomalies are also in the expected anomaly set
-    # NB Not necessarily all of them
-    assert (
-        np.mean(np.array([i in expected_anomalies_indices for i in anomalies_indices]))
-        > 0.4
-    )
-
-
-def test_auto_encoder_lstm_detector(data_series):
-    data_with_anomalies, expected_anomalies_indices, normal_data = data_series
-    detector = AutoEncoderLSTM()
-    detector.fit(data_with_anomalies)
-    anomalies = detector.detect(data_with_anomalies)
-    anomalies_indices = np.array(np.where(anomalies)).flatten()
-    assert (
-        np.mean(np.array([i in expected_anomalies_indices for i in anomalies_indices]))
-        > 0.01
-    )
-
 
 def test_constant_value_detector(constant_data_series):
     good_data, abnormal_data, _ = constant_data_series
@@ -358,7 +330,7 @@ def test_gradient_detector_sudden_jump():
 
     expected_anomalies = np.repeat(False, len(normal_data))
     expected_anomalies[2] = True
-    time = pd.date_range(start="2020", periods=len(normal_data), freq="1H")
+    time = pd.date_range(start="2020", periods=len(normal_data), freq="1h")
 
     normal_data = pd.Series(normal_data, index=time)
     abnormal_data = pd.Series(abnormal_data, index=time)

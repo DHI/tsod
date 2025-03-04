@@ -130,7 +130,6 @@ class RangeDetector(Detector):
         return (data < self._min) | (data > self._max)
 
     def __str__(self):
-
         return f"{super.__str__(self)}{self._min}, {self._max})"
 
     def __repr__(self):

@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = [
+    "tsod/**/*",
+]
+
+[project]
+name = "tsod"
+version = "0.3.dev0"
+description = "Time series anomaly detection."
+authors = [{ name = "Henrik Andersson", email = "jan@dhigroup.com" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=1.0.0",
+    "joblib",
+    "numba",
+]
+
+classifiers = [
+"License :: OSI Approved :: MIT License",
+"Development Status :: 2 - Pre-Alpha",
+"Intended Audience :: Science/Research",
+"Programming Language :: Python",
+"Programming Language :: Python :: 3",
+"Programming Language :: Python :: 3.10",
+"Programming Language :: Python :: 3.11",
+"Programming Language :: Python :: 3.12",
+"Operating System :: OS Independent",
+"Topic :: Scientific/Engineering",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest>=6",
+    "pytest-cov>=4",
+    "sphinx==4.5.0",  # pin version to work with sphinx-book-theme
+    "sphinx-book-theme",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/DHI/tsod"
+"Bug Tracker" = "https://github.com/DHI/tsod/issues"
+
+
+
+[tool.ruff]
+lint.ignore = ["E501", "E741"]
