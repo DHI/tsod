@@ -39,7 +39,7 @@ dev = [
     "ruff",
     "pytest>=6",
     "pytest-cov>=4",
-    "sphinx==4.5.0",  # pin version to work with sphinx-book-theme
+    "sphinx<7,>=4",
     "sphinx-book-theme",
 ]
 
