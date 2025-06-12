@@ -351,6 +351,39 @@ def test_gradient_detector_sudden_jump():
     assert sum(anomalies) == 1
 
 
+def test_gradient_detector_datetime_index_validation():
+    """Test that GradientDetector raises ValueError when data doesn't have DatetimeIndex"""
+    # Create data with a regular integer index (not DatetimeIndex)
+    data_with_int_index = pd.Series([1, 2, 3, 4, 5])
+    
+    # Create data with a RangeIndex (default pandas index)
+    data_with_range_index = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0], index=pd.RangeIndex(5))
+    
+    # Create data with string index
+    data_with_string_index = pd.Series([1, 2, 3, 4, 5], index=['a', 'b', 'c', 'd', 'e'])
+    
+    detector = GradientDetector()
+    
+    # Test with integer index
+    with pytest.raises(ValueError, match="GradientDetector requires a DatetimeIndex"):
+        detector.fit(data_with_int_index)
+    
+    # Test with RangeIndex
+    with pytest.raises(ValueError, match="GradientDetector requires a DatetimeIndex"):
+        detector.fit(data_with_range_index)
+    
+    # Test with string index
+    with pytest.raises(ValueError, match="GradientDetector requires a DatetimeIndex"):
+        detector.fit(data_with_string_index)
+    
+    # Test that valid DatetimeIndex data works fine
+    time = pd.date_range(start="2020", periods=5, freq="1h")
+    data_with_datetime_index = pd.Series([1, 2, 3, 4, 5], index=time)
+    
+    # This should not raise an exception
+    detector.fit(data_with_datetime_index)
+
+
 def test_create_dataset(data_series):
     data_with_anomalies, _, _ = data_series
     data_with_anomalies.name = "y"
