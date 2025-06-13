@@ -353,20 +353,29 @@ def test_gradient_detector_sudden_jump():
 
 def test_gradient_detector_datetime_index_validation():
     """Test that GradientDetector raises ValueError when data doesn't have DatetimeIndex"""
-    data_with_int_index = pd.Series([1, 2, 3, 4, 5])
-    
-    # Test that valid DatetimeIndex data works fine
-    time = pd.date_range(start="2020", periods=5, freq="1h")
-    data_with_datetime_index = pd.Series([1, 2, 3, 4, 5], index=time)
-    
+    ###### Integer index test ######
     detector = GradientDetector()
-    
+
+    # Test data with integer index
+    data_with_int_index = pd.Series([1, 2, 3, 4, 5])
+
     # Test with integer index
     with pytest.raises(ValueError, match="GradientDetector requires a DatetimeIndex"):
         detector.fit(data_with_int_index)
+
+    ###### DatetimeIndex test ######
+    detector = GradientDetector()
     
+    # Test data with valid DatetimeIndex data works fine
+    time = pd.date_range(start="2020", periods=5, freq="1h")
+    data_with_datetime_index = pd.Series([1, 2, 3, 4, 5], index=time)
+
     # This should not raise an exception
     detector.fit(data_with_datetime_index)
+    
+    
+    
+    
 
 
 def test_create_dataset(data_series):
