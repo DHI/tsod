@@ -73,11 +73,11 @@ class Detector(ABC):
         Returns
         -------
         pd.Series
-            Time series with integers, -1 == anomaly, +1 == normal
+            Time series with integers, 1 == anomaly, 0 == normal
         """
         anomalies = self.detect(data)
-        # Convert boolean to sklearn format: True (anomaly) -> -1, False (normal) -> +1
-        return anomalies.map({True: -1, False: 1})
+        # Convert boolean to binary format: True (anomaly) -> 1, False (normal) -> 0
+        return anomalies.map({True: 1, False: 0})
 
     def _postprocess(self, pred: pd.Series) -> pd.Series:
         # TODO implement

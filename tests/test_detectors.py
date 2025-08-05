@@ -115,13 +115,13 @@ def test_predict_method_sklearn_compatibility(range_data_series):
     # Test predict method (new sklearn-compatible functionality)
     predictions = detector.predict(data)
     
-    # Check that predict returns the correct sklearn format
-    # True (anomaly) -> -1, False (normal) -> +1
-    expected_predictions = anomalies_bool.map({True: -1, False: 1})
+    # Check that predict returns the correct binary format
+    # True (anomaly) -> 1, False (normal) -> 0
+    expected_predictions = anomalies_bool.map({True: 1, False: 0})
     assert all(predictions == expected_predictions)
     
     # Check that predictions are integers
-    assert all(pred in [-1, 1] for pred in predictions)
+    assert all(pred in [0, 1] for pred in predictions)
     
     # Check that the number of predictions matches input data
     assert len(predictions) == len(data)
@@ -146,15 +146,15 @@ def test_predict_method_combined_detector(range_data_series):
     # Test that predict method is available and works
     predictions = combined_detector.predict(abnormal_data)
     
-    # Check that predictions are in sklearn format
-    assert all(pred in [-1, 1] for pred in predictions)
+    # Check that predictions are in binary format
+    assert all(pred in [0, 1] for pred in predictions)
     
     # Check that the number of predictions matches input data
     assert len(predictions) == len(abnormal_data)
     
     # Verify consistency between detect and predict
     anomalies = combined_detector.detect(abnormal_data)
-    expected_predictions = anomalies.map({True: -1, False: 1})
+    expected_predictions = anomalies.map({True: 1, False: 0})
     assert all(predictions == expected_predictions)
 
 
