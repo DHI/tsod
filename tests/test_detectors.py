@@ -103,6 +103,33 @@ def test_range_detector(range_data_series):
     assert all(expected_anomalies == anomalies)
 
 
+def test_predict_method_sklearn_compatibility(range_data_series):
+    """Test that predict method returns sklearn-compatible output"""
+    data, _, _ = range_data_series
+
+    detector = RangeDetector(0, 2)
+    
+    # Test detect method (existing functionality)
+    anomalies_bool = detector.detect(data)
+    
+    # Test predict method (new sklearn-compatible functionality)
+    predictions = detector.predict(data)
+    
+    # Check that predict returns the correct sklearn format
+    # True (anomaly) -> -1, False (normal) -> +1
+    expected_predictions = anomalies_bool.map({True: -1, False: 1})
+    assert all(predictions == expected_predictions)
+    
+    # Check that predictions are integers
+    assert all(pred in [-1, 1] for pred in predictions)
+    
+    # Check that the number of predictions matches input data
+    assert len(predictions) == len(data)
+    
+    # Check that index is preserved
+    assert predictions.index.equals(data.index)
+
+
 def test_range_detector_autoset(range_data_series):
     data, _, _ = range_data_series
 

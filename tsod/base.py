@@ -62,6 +62,23 @@ class Detector(ABC):
         pred = self._detect(data)
         return self._postprocess(pred)
 
+    def predict(self, data: pd.Series) -> pd.Series:
+        """Predict anomalies using sklearn-compatible output format
+
+        Parameters
+        ----------
+        data: pd.Series
+                Time series data with possible anomalies
+
+        Returns
+        -------
+        pd.Series
+            Time series with integers, -1 == anomaly, +1 == normal
+        """
+        anomalies = self.detect(data)
+        # Convert boolean to sklearn format: True (anomaly) -> -1, False (normal) -> +1
+        return anomalies.map({True: -1, False: 1})
+
     def _postprocess(self, pred: pd.Series) -> pd.Series:
         # TODO implement
         return pred
