@@ -130,6 +130,34 @@ def test_predict_method_sklearn_compatibility(range_data_series):
     assert predictions.index.equals(data.index)
 
 
+def test_predict_method_combined_detector(range_data_series):
+    """Test that predict method works with CombinedDetector"""
+    normal_data, abnormal_data, _ = range_data_series
+    
+    # Create a combined detector
+    combined_detector = CombinedDetector([
+        ConstantValueDetector(), 
+        RangeDetector()
+    ])
+    
+    # Fit the combined detector
+    combined_detector.fit(normal_data)
+    
+    # Test that predict method is available and works
+    predictions = combined_detector.predict(abnormal_data)
+    
+    # Check that predictions are in sklearn format
+    assert all(pred in [-1, 1] for pred in predictions)
+    
+    # Check that the number of predictions matches input data
+    assert len(predictions) == len(abnormal_data)
+    
+    # Verify consistency between detect and predict
+    anomalies = combined_detector.detect(abnormal_data)
+    expected_predictions = anomalies.map({True: -1, False: 1})
+    assert all(predictions == expected_predictions)
+
+
 def test_range_detector_autoset(range_data_series):
     data, _, _ = range_data_series
 
