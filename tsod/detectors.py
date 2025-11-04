@@ -247,11 +247,16 @@ class ConstantValueDetector(Detector):
     def _fit(self, data):
         return self
 
-    def _detect(
-        self,
-        data: pd.Series,
-    ) -> pd.Series:
+    def _detect(self, data:pd.Series) -> pd.Series:
+        """Detect constant values in single column or multiple columns."""
         
+        if isinstance(data, pd.DataFrame):
+            # Vectorized approach would be more efficient
+            return data.apply(self._detect_single_column, axis=0)
+        return self._detect_single_column(data)
+    
+    def _detect_single_column(self, data: pd.Series) -> pd.Series:
+        """Detect constant values in a single column."""
         # Early exit for windows size larger than data
         if self.window_size >= data.shape[0]:
             return pd.Series(False, index=data.index)
