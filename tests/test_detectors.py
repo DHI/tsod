@@ -250,6 +250,28 @@ def test_constant_value_detector(constant_data_series):
     assert len(anomalies) == len(abnormal_data)
     assert sum(anomalies) == 4
 
+    detector = ConstantValueDetector(4, 0.0001)
+    anomalies = detector.detect(abnormal_data)
+
+    assert len(anomalies) == len(abnormal_data)
+    assert sum(anomalies) == 4
+
+
+def test_constant_value_detector_large_threshold(constant_data_series):
+    good_data, abnormal_data, _ = constant_data_series
+
+    detector = ConstantValueDetector(2, 0.1)
+    anomalies = detector.detect(good_data)
+
+    assert len(anomalies) == len(good_data)
+    assert sum(anomalies) == 0
+
+    detector = ConstantValueDetector(window_size=3, threshold=3)
+    anomalies = detector.detect(abnormal_data)
+
+    assert len(anomalies) == len(abnormal_data)
+    assert [False, False, True, True, True, True, True, False] == anomalies.tolist()
+
 
 def test_constant_gradient_detector(constant_gradient_data_series):
     good_data, abnormal_data, _ = constant_gradient_data_series
