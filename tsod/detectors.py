@@ -259,7 +259,6 @@ class ConstantValueDetector(Detector):
         # Create shifted versions for comparison
         comparisons = []
         for i in range(1, self._window_size):
-            #comparisons.append(data == data.shift(i))
             comparisons.append(np.abs(data - data.shift(i)) <= self._threshold)
         
         constant_detected = pd.concat(comparisons, axis=1).all(axis=1)
