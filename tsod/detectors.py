@@ -226,7 +226,7 @@ class ConstantValueDetector(Detector):
     Commonly caused by sensor failures, which get stuck at a constant level.
     """
 
-    def __init__(self, threshold: float = 1e-8, window_size: int = 3):
+    def __init__(self, window_size: int = 3, threshold: float = 1e-7):
         super().__init__()
         
         # Validate input
