@@ -230,9 +230,11 @@ class ConstantValueDetector(Detector):
         super().__init__()
         
         # Validate input
-        assert threshold >= 0, f"threshold must be non-negative, got {threshold}"
-        assert window_size >= 2, f"window_size must be at least 2, got {window_size}"
-        
+        if threshold < 0:
+            raise ValueError(f"threshold must be non-negative, got {threshold}")
+        if window_size < 2:
+            raise ValueError(f"window_size must be at least 2, got {window_size}")
+    
         self._threshold = threshold
         self._window_size = window_size
     
