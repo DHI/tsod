@@ -307,6 +307,12 @@ def test_constant_value_detector_edge_cases(constant_data_series):
     anomalies = detector.detect(empty_data)
     assert len(anomalies) == 0
 
+    # Invalid arguments
+    with pytest.raises(ValueError):
+        ConstantValueDetector(window_size=0, threshold=0.0001)
+    with pytest.raises(ValueError): 
+        ConstantValueDetector(window_size=3, threshold=-1)
+
 
 
 
