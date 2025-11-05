@@ -224,6 +224,17 @@ class ConstantValueDetector(Detector):
     Detect constant values over a longer period.
 
     Commonly caused by sensor failures, which get stuck at a constant level.
+
+    Parameters
+    ----------
+    window_size: int
+        Minium window to consider as anomaly, default 3
+    threshold: float
+        Maximum difference to consider values as constant, default 1e-7
+
+    Returns
+    -------
+    A boolean pd.Series or pd.DataFrame indicating detected anomalies.
     """
 
     def __init__(self, window_size: int = 3, threshold: float = 1e-7):
