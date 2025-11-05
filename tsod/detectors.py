@@ -273,12 +273,10 @@ class ConstantValueDetector(Detector):
         # Early exit for windows size larger than data
         if self.window_size >= data.shape[0]:
             return pd.Series(False, index=data.index)
-        
-        # Create shifted versions for comparison
-        comparisons = []
-        for i in range(1, self._window_size):
-            comparisons.append(np.abs(data - data.shift(i)) <= self._threshold)
-        
+
+        #Create shifted versions for comparison
+        comparisons = [(np.abs(data - data.shift(i)) <= self.threshold) 
+                       for i in range(1, self.window_size)]
         constant_detected = pd.concat(comparisons, axis=1).all(axis=1)
         
         # Use convolution-like approach to expand detections
