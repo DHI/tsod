@@ -3,9 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-include = [
-    "tsod/**/*",
-]
+include = ["tsod/**/*"]
 
 [project]
 name = "tsod"
@@ -15,23 +13,19 @@ authors = [{ name = "Henrik Andersson", email = "jan@dhigroup.com" }]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = [
-    "pandas>=1.0.0",
-    "joblib",
-    "numba",
-]
+dependencies = ["pandas>=1.0.0", "joblib", "numba"]
 
 classifiers = [
-"License :: OSI Approved :: MIT License",
-"Development Status :: 2 - Pre-Alpha",
-"Intended Audience :: Science/Research",
-"Programming Language :: Python",
-"Programming Language :: Python :: 3",
-"Programming Language :: Python :: 3.10",
-"Programming Language :: Python :: 3.11",
-"Programming Language :: Python :: 3.12",
-"Operating System :: OS Independent",
-"Topic :: Scientific/Engineering",
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
 ]
 
 [project.optional-dependencies]
@@ -43,10 +37,17 @@ dev = [
     "sphinx-book-theme",
 ]
 
+[dependency-groups]
+docs = [
+    "nbclient>=0.10.2",
+    "nbformat>=5.10.4",
+    "quarto-cli>=1.8.25",
+    "quartodoc>=0.11.1",
+]
+
 [project.urls]
 "Homepage" = "https://github.com/DHI/tsod"
 "Bug Tracker" = "https://github.com/DHI/tsod/issues"
-
 
 
 [tool.ruff]
