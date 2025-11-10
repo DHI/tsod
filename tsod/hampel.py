@@ -2,9 +2,9 @@
 
 import numpy as np
 from numba import jit
-
+import pandas as pd
 from tsod.custom_exceptions import NotIntegerError, InvalidArgumentError
-from tsod.detectors import Detector
+from tsod.detectors import Detector, detectDataType
 
 
 # GAUSSIAN_SCALE_FACTOR = k = 1/Phi^(-1)(3/4)
@@ -80,11 +80,17 @@ class HampelDetector(Detector):
         _validate_arguments(window_size, threshold)
         self._threshold = threshold
         self._window_size = window_size
+    
 
-    def _detect(self, data):
-        anomalies = _detect(data.values, self._window_size, self._threshold)
-
-        return anomalies
+    def _detect(self, data: detectDataType) -> detectDataType:
+        if isinstance(data, pd.DataFrame):
+            # Apply detection column-wise for DataFrames
+            anomalies = [_detect(data[col].values, self._window_size, self._threshold)
+                         for col in data.columns]
+            return pd.DataFrame(anomalies, index=data.columns, columns=data.index).T.astype(bool)
+        else:
+            anomalies = _detect(data.values, self._window_size, self._threshold)
+            return pd.Series(anomalies, index=data.index, dtype=bool)
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"

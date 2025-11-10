@@ -4,7 +4,7 @@ from collections.abc import Sequence
 import pandas as pd
 import numpy as np
 
-from .base import Detector
+from .base import Detector, detectDataType
 
 
 class CombinedDetector(Detector, Sequence):
@@ -35,18 +35,23 @@ class CombinedDetector(Detector, Sequence):
 
         self._detectors = detectors
 
-    def _fit(self, data):
+    def _fit(self, data: pd.Series):
         for detector in self._detectors:
             detector.fit(data)
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: detectDataType) -> detectDataType:
         all_anomalies = []
         for detector in self._detectors:
             anom = detector.detect(data)
             all_anomalies.append(anom)
-        data_frame = pd.DataFrame(all_anomalies).T
-        return data_frame.any(axis=1)
+
+        data_frame = pd.concat(all_anomalies, axis=1)
+        if isinstance(data, pd.Series):
+            return data_frame.any(axis=1)
+        else:
+            #NOTE: Column names must be unique for this to work correctly
+            return data_frame.T.groupby(data_frame.columns).agg("any").T
 
     def __getitem__(self, index):
         return self._detectors[index]
@@ -101,7 +106,7 @@ class RangeDetector(Detector):
             assert 0.0 <= quantiles[1] <= 1.0
             self._quantiles = quantiles
 
-    def _fit(self, data):
+    def _fit(self, data: pd.Series):
         """Set min and max based on data.
 
         Parameters
@@ -118,7 +123,7 @@ class RangeDetector(Detector):
         assert self._max >= self._min
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: detectDataType) -> detectDataType:
         """Detect anomalies outside range"""
 
         if self._max is None:
@@ -163,13 +168,13 @@ class DiffDetector(Detector):
                 f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
             )
 
-    def _fit(self, data):
+    def _fit(self, data: pd.Series):
         data_diff = data.diff()
 
         self._max_diff = data_diff.max()
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: detectDataType) -> detectDataType:
         if self._direction == "both":
             return np.abs(data.diff()) > self._max_diff
         elif self._direction == "positive":
@@ -202,12 +207,12 @@ class RollingStandardDeviationDetector(Detector):
         self._max_std = max_std
         self._center = center
 
-    def _fit(self, data):
+    def _fit(self, data: pd.Series):
         self._max_std = data.rolling(self._window_size).std().max()
 
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: detectDataType) -> detectDataType:
         anomalies = (
             data.rolling(self._window_size, center=self._center).std() > self._max_std
         )
@@ -234,9 +239,15 @@ class ConstantValueDetector(Detector):
     def _fit(self, data):
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
-        rollmax = data.rolling(self._window_size, center=True).apply(np.nanmax)
-        rollmin = data.rolling(self._window_size, center=True).apply(np.nanmin)
+    def _detect(self, data: detectDataType) -> detectDataType:
+        if isinstance(data, pd.DataFrame):
+            return data.apply(self.detect_single_column, axis=0)
+        else:
+            return self.detect_single_column(data)
+
+    def detect_single_column(self, series):
+        rollmax = series.rolling(self._window_size, center=True).apply(np.nanmax)
+        rollmin = series.rolling(self._window_size, center=True).apply(np.nanmin)
         anomalies = np.abs(rollmax - rollmin) < self._threshold
         anomalies.iloc[0] = False  # first element cannot be determined
         anomalies.iloc[-1] = False
@@ -268,7 +279,7 @@ class ConstantGradientDetector(ConstantValueDetector):
     def __init__(self, window_size: int = 3):
         super().__init__(window_size=window_size)
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: detectDataType) -> detectDataType:
         gradient = self._gradient(data, periods=1)
         s1 = super()._detect(gradient)
         gradient = self._gradient(data, periods=-1)
@@ -315,7 +326,7 @@ class GradientDetector(Detector):
         self._max_gradient = np.max(np.abs(self._gradient(data)))
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: detectDataType) -> detectDataType:
         gradient = self._gradient(data)
         if self._direction == "negative":
             return gradient < -self._max_gradient
