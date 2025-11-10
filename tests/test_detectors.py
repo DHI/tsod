@@ -280,6 +280,26 @@ def test_rollingstddev_detector():
     anomalies = detector.detect(all_data)
     assert sum(anomalies) > 0
 
+def test_rollingstddev_detector_frame():
+    np.random.seed(42)
+    normal_data = pd.Series(np.random.normal(scale=1.0, size=1000)) + 10.0 * np.sin(
+        np.linspace(0, 10, num=1000)
+    )
+    abnormal_data = pd.Series(np.random.normal(scale=10000.0, size=1000))
+    print(abnormal_data)
+    df = pd.concat([normal_data.rename("normal"), abnormal_data.rename("abnormal")], axis=1)
+
+    detector = RollingStandardDeviationDetector()
+    anomalies = detector.detect(df)
+    print(anomalies)
+    print(anomalies.loc[:, "abnormal"].sum())
+    assert anomalies.loc[:, "normal"].sum() == 0
+    assert anomalies.loc[:, "abnormal"].sum() == 0
+
+    detector.fit(normal_data)
+    anomalies = detector.detect(df)
+    assert anomalies.loc[:, "normal"].sum() == 0
+    assert anomalies.loc[:, "abnormal"].sum() > 0
 
 def test_hampel_detector(data_series):
     data_with_anomalies, expected_anomalies_indices, _ = data_series
