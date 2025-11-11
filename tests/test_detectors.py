@@ -286,13 +286,10 @@ def test_rollingstddev_detector_frame():
         np.linspace(0, 10, num=1000)
     )
     abnormal_data = pd.Series(np.random.normal(scale=10000.0, size=1000))
-    print(abnormal_data)
     df = pd.concat([normal_data.rename("normal"), abnormal_data.rename("abnormal")], axis=1)
 
     detector = RollingStandardDeviationDetector()
     anomalies = detector.detect(df)
-    print(anomalies)
-    print(anomalies.loc[:, "abnormal"].sum())
     assert anomalies.loc[:, "normal"].sum() == 0
     assert anomalies.loc[:, "abnormal"].sum() == 0
 
@@ -531,3 +528,33 @@ def test_gradient_dataframe_2col(constant_data_series):
     assert (gradient.iloc[1,:].values == np.array([0,0])).all()
     assert gradient.iloc[2,0] == 1/60
     assert gradient.iloc[2,1] == 2/60
+
+
+def test_edge_cases():
+    detector = RangeDetector()
+
+    # Empty series
+    empty_series = pd.Series(dtype=float)
+    with pytest.raises(ValueError, match="Input data cannot be empty"):
+        detector.detect(empty_series)
+
+    # Empty DataFrame
+    empty_df = pd.DataFrame()
+    with pytest.raises(ValueError, match="Input data cannot be empty"):
+        detector.detect(empty_df)
+
+    # DataFrame with non-unique column names
+    tmp= pd.Series([1, 2, 3, np.nan, 5], name="A")
+    df_non_unique_cols = pd.concat([tmp, tmp * 2], axis=1)
+    with pytest.raises(ValueError, match="DataFrame columns names must be unique."):
+        detector.detect(df_non_unique_cols)
+
+    # Series with non-numeric data
+    #non_numeric_series = pd.Series(["a", "b", "c", "d"])
+    #with pytest.raises(WrongInputDataTypeError, match="Input series must be numeric."):
+    #    detector.detect(non_numeric_series)
+
+    # All nan
+    #all_nan_series = pd.Series([np.nan, np.nan, np.nan])
+    #with pytest.raises(ValueError, match="Input data cannot be all NaN"):
+    #    detector.detect(all_nan_series)
