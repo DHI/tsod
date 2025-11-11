@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Union, overload
 
 from pathlib import Path
 import joblib
@@ -8,7 +8,6 @@ import pandas as pd
 
 
 from .custom_exceptions import WrongInputDataTypeError
-detectDataType = Union[pd.Series, pd.DataFrame]
 
 def load(path: Union[str, Path]):
     """Load a saved model from disk saved with `Detector.save`
@@ -28,25 +27,38 @@ class Detector(ABC):
     def __init__(self):
         pass
 
-    def fit(self, data: pd.Series):
+    def fit(self, data: Union[pd.Series, pd.DataFrame]) -> "Detector":
         """Set detector parameters based on data.
 
         Parameters
         ----------
-        data:  pd.Series
-                Normal time series data.
+        data: pd.Series or pd.DataFrame
+            Normal (non-anomalous) time series data for training.
+            If DataFrame, must contain exactly one column
+        Returns
+        -------
+        Detector
+            Self  
         """
-        if not (isinstance(data, pd.Series)):
-            raise WrongInputDataTypeError()
+        df = self._validate(data)
+
+        if df.shape[1] != 1:
+            raise ValueError("Input DataFrame must contain exactly one column.")
         
-        self._fit(data)
+        self._fit(df.iloc[:,0])
         return self
 
     def _fit(self, data: pd.Series):
         # Default implementation is a NoOp
         return self
+    
+    @overload
+    def detect(self, data: pd.Series) -> pd.Series: ...
 
-    def detect(self, data: detectDataType) -> detectDataType:
+    @overload
+    def detect(self, data: pd.DataFrame) -> pd.DataFrame: ...
+
+    def detect(self, data: Union[pd.Series, pd.DataFrame]) -> Union[pd.Series, pd.DataFrame]:
         """Detect anomalies
 
         Parameters
@@ -59,66 +71,83 @@ class Detector(ABC):
         pd.Series or pd.DataFrame
             Time series with bools, True == anomaly
         """
-        data = self.validate(data)
+        series_as_input = isinstance(data, pd.Series)
+        data_as_dataframe = self._validate(data)
 
-        pred = self._detect(data)
-        return self._postprocess(pred)
+        pred = self._detect(data_as_dataframe)
+        pred = self._postprocess(pred)
+    
+        if series_as_input:
+            pred = pred.iloc[:,0]
+        return pred
 
-    def _postprocess(self, pred: detectDataType) -> detectDataType:
+    def _postprocess(self, pred: pd.DataFrame) -> pd.DataFrame:
         # TODO implement
         return pred
 
     @abstractmethod
-    def _detect(self, data: detectDataType) -> detectDataType:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         """Detect anomalies"""
         pass
 
-    def validate(self, data: Union[pd.Series, pd.DataFrame]):
-        """
-        Validate input data
 
+    def _validate(self, data: Union[pd.Series, pd.DataFrame]) -> pd.DataFrame:
+        """
+        Validate and normalize input data.
+        
         Parameters
         ----------
-        data: pd.Series or pd.DataFrame
+        data : pd.Series or pd.DataFrame
             Time series data
+        
         Returns
         -------
-        pd.Series or pd.DataFrame
-            Validated time series data
+        pd.DataFrame
+            Validated and normalized data
         """
-        
-        if isinstance(data, pd.DataFrame):
-            # check unique column names
-            if not data.columns.is_unique:
-                raise ValueError(
-                    "DataFrame columns must be unique."
-                )
-        elif isinstance(data, pd.Series):
-            pass
+        # Check type
+        if isinstance(data, pd.Series):
+            df = data.to_frame()
+        elif isinstance(data, pd.DataFrame):
+            df = data
         else:
-            raise WrongInputDataTypeError(
-                "Input data must be a pandas.Series or pandas.DataFrame."
-            )
+            raise WrongInputDataTypeError()
+        
+        # Check unique column names
+        if not df.columns.is_unique:
+            raise ValueError("DataFrame columns names must be unique.")
+        
+        if df.empty:
+            raise ValueError("Input data cannot be empty")
+          
+        return df
+    
+    @overload
+    def _gradient(self, data: pd.Series, periods: int = 1) -> pd.Series: ...
 
-        return data
+    @overload
+    def _gradient(self, data: pd.DataFrame, periods: int = 1) -> pd.DataFrame: ...
 
     def _gradient(
         self, data: Union[pd.Series, pd.DataFrame], periods: int = 1
     ) -> Union[pd.Series, pd.DataFrame]:
+        
+        if not isinstance(data.index, pd.DatetimeIndex):
+            raise ValueError("Index must be a pandas.DatetimeIndex for gradient computation.")
+
         dt = data.index.to_series().diff().dt.total_seconds()
         if dt.min() < 1e-15:
             raise ValueError("Index must be monotonically increasing")
-
+        
         # Broadcast division with dataframe correctly
         if isinstance(data, pd.DataFrame):
-            gradient = data.diff(periods=periods).div(dt, axis=0)
+            return data.diff(periods=periods).div(dt, axis=0)
         elif isinstance(data, pd.Series):
-            gradient = data.diff(periods=periods)/dt
+            return data.diff(periods=periods)/dt
         else:
             raise WrongInputDataTypeError(
                 "Input data must be a pandas.Series or pandas.DataFrame."
             )
-        return gradient
 
     def __str__(self):
         return f"{self.__class__.__name__}"

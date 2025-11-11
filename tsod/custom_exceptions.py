@@ -1,5 +1,5 @@
 class WrongInputDataTypeError(Exception):
-    def __init__(self, message="Input data must be a pandas.Series."):
+    def __init__(self, message="Input data must be a pandas.Series or pandas.DataFrame."):
         self.message = message
         super().__init__(self.message)
 

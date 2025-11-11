@@ -4,7 +4,7 @@ from collections.abc import Sequence
 import pandas as pd
 import numpy as np
 
-from .base import Detector, detectDataType
+from .base import Detector
 
 
 class CombinedDetector(Detector, Sequence):
@@ -40,18 +40,15 @@ class CombinedDetector(Detector, Sequence):
             detector.fit(data)
         return self
 
-    def _detect(self, data: detectDataType) -> detectDataType:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         all_anomalies = []
         for detector in self._detectors:
             anom = detector.detect(data)
             all_anomalies.append(anom)
 
         data_frame = pd.concat(all_anomalies, axis=1)
-        if isinstance(data, pd.Series):
-            return data_frame.any(axis=1)
-        else:
-            #NOTE: Column names must be unique for this to work correctly
-            return data_frame.T.groupby(data_frame.columns).agg("any").T
+        #NOTE: Column names must be unique for this to work correctly
+        return data_frame.T.groupby(data_frame.columns).agg("any").T
 
     def __getitem__(self, index):
         return self._detectors[index]
@@ -114,8 +111,6 @@ class RangeDetector(Detector):
         data :  pd.Series
                 Normal time series data.
         """
-        super().validate(data)
-
         quantiles = np.nanquantile(data, self._quantiles)
         self._min = quantiles.min()
         self._max = quantiles.max()
@@ -123,7 +118,7 @@ class RangeDetector(Detector):
         assert self._max >= self._min
         return self
 
-    def _detect(self, data: detectDataType) -> detectDataType:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         """Detect anomalies outside range"""
 
         if self._max is None:
@@ -174,7 +169,7 @@ class DiffDetector(Detector):
         self._max_diff = data_diff.max()
         return self
 
-    def _detect(self, data: detectDataType) -> detectDataType:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         if self._direction == "both":
             return np.abs(data.diff()) > self._max_diff
         elif self._direction == "positive":
@@ -212,12 +207,13 @@ class RollingStandardDeviationDetector(Detector):
 
         return self
 
-    def _detect(self, data: detectDataType) -> detectDataType:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         anomalies = (
             data.rolling(self._window_size, center=self._center).std() > self._max_std
         )
+
         # anomalies = anomalies.astype(int).diff() > 0  # only take positive edges
-        anomalies[0] = False  # first element cannot be determined by diff
+        anomalies.iloc[0, :] = False  # first element cannot be determined by diff
         return anomalies
 
     def __str__(self):
@@ -239,27 +235,24 @@ class ConstantValueDetector(Detector):
     def _fit(self, data):
         return self
 
-    def _detect(self, data: detectDataType) -> detectDataType:
-        if isinstance(data, pd.DataFrame):
-            return data.apply(self.detect_single_column, axis=0)
-        else:
-            return self.detect_single_column(data)
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+        df_cols = []
+        for col_name, series in data.items():
+            rollmax = series.rolling(self._window_size, center=True).apply(np.nanmax)
+            rollmin = series.rolling(self._window_size, center=True).apply(np.nanmin)
+            anomalies = np.abs(rollmax - rollmin) < self._threshold
+            anomalies.iloc[0] = False  # first element cannot be determined
+            anomalies.iloc[-1] = False
+            idx = np.where(anomalies)[0]
+            if idx is not None:
+                # assuming window size = 3
+                # remove also points before and after each detected anomaly
+                anomalies.iloc[idx[idx > 0] - 1] = True
+                maxidx = len(anomalies) - 1
+                anomalies.iloc[idx[idx < maxidx] + 1] = True
+            df_cols.append(anomalies)
 
-    def detect_single_column(self, series):
-        rollmax = series.rolling(self._window_size, center=True).apply(np.nanmax)
-        rollmin = series.rolling(self._window_size, center=True).apply(np.nanmin)
-        anomalies = np.abs(rollmax - rollmin) < self._threshold
-        anomalies.iloc[0] = False  # first element cannot be determined
-        anomalies.iloc[-1] = False
-        idx = np.where(anomalies)[0]
-        if idx is not None:
-            # assuming window size = 3
-            # remove also points before and after each detected anomaly
-            anomalies.iloc[idx[idx > 0] - 1] = True
-            maxidx = len(anomalies) - 1
-            anomalies.iloc[idx[idx < maxidx] + 1] = True
-
-        return anomalies
+        return pd.concat(df_cols, axis=1)
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
@@ -279,7 +272,7 @@ class ConstantGradientDetector(ConstantValueDetector):
     def __init__(self, window_size: int = 3):
         super().__init__(window_size=window_size)
 
-    def _detect(self, data: detectDataType) -> detectDataType:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         gradient = self._gradient(data, periods=1)
         s1 = super()._detect(gradient)
         gradient = self._gradient(data, periods=-1)
@@ -322,11 +315,10 @@ class GradientDetector(Detector):
                 "GradientDetector requires a DatetimeIndex. "
                 f"Got {type(data.index).__name__} instead."
             )
-
         self._max_gradient = np.max(np.abs(self._gradient(data)))
         return self
 
-    def _detect(self, data: detectDataType) -> detectDataType:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         gradient = self._gradient(data)
         if self._direction == "negative":
             return gradient < -self._max_gradient
