@@ -23,12 +23,8 @@ def load(path: Union[str, Path]):
 
 
 class Detector(ABC):
-    """Abstract base class for all detectors"""
 
-    def __init__(self):
-        pass
-
-    def fit(self, data: pd.Series):
+    def fit(self, data: pd.Series) -> "Detector":
         """Set detector parameters based on data.
 
         Parameters
@@ -60,15 +56,11 @@ class Detector(ABC):
         data = self.validate(data)
 
         pred = self._detect(data)
-        return self._postprocess(pred)
-
-    def _postprocess(self, pred: pd.Series) -> pd.Series:
-        # TODO implement
         return pred
+
 
     @abstractmethod
     def _detect(self, data: pd.Series) -> pd.Series:
-        """Detect anomalies"""
         pass
 
     def validate(
@@ -78,16 +70,6 @@ class Detector(ABC):
         if not (isinstance(data, pd.Series) or isinstance(data, pd.DataFrame)):
             raise WrongInputDataTypeError()
         return data
-
-    def _gradient(
-        self, data: Union[pd.Series, pd.DataFrame], periods: int = 1
-    ) -> pd.Series:
-        dt = data.index.to_series().diff().dt.total_seconds()
-        if dt.min() < 1e-15:
-            raise ValueError("Index must be monotonically increasing")
-
-        gradient = data.diff(periods=periods) / dt
-        return gradient
 
     def __str__(self):
         return f"{self.__class__.__name__}"
