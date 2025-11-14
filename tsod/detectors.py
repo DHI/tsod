@@ -292,7 +292,7 @@ class GradientDetector(Detector):
     """Detects abrupt changes
 
     Parameters
-    ==========
+    ----------
     max_gradient: float
         Maximum rate of change per second, default np.inf
     direction: str

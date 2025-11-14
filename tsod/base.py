@@ -14,7 +14,7 @@ def load(path: Union[str, Path]):
     """Load a saved model from disk saved with `Detector.save`
 
     Parameters
-    ==========
+    -----------------
     path: str or Path
         file-like object to load detector from
     """
@@ -78,7 +78,7 @@ class Detector(ABC):
         """Save a detector for later use
 
         Parameters
-        ==========
+        ----------
         path: str or Path
             file-like object to load detector from
         """
