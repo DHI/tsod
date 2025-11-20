@@ -38,7 +38,7 @@ def create_random_walk_with_outliers(
 
     # Add outliers
     random_walk_with_outliers = random_walk.copy()
-    outlier_indices = rng.randint(0, n_steps, n_outliers)
+    outlier_indices = rng.integers(0, n_steps, n_outliers)
     random_walk_with_outliers[outlier_indices] += (
         random_steps[outlier_indices] * outlier_scale
     )
