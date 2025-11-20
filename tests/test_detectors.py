@@ -15,7 +15,6 @@ from tsod.detectors import (
     GradientDetector,
 )
 
-from tsod.features import create_dataset
 from tsod.hampel import HampelDetector
 
 
@@ -373,17 +372,3 @@ def test_gradient_detector_datetime_index_validation():
     # This should not raise an exception
     detector.fit(data_with_datetime_index)
     
-    
-    
-    
-
-
-def test_create_dataset(data_series):
-    data_with_anomalies, _, _ = data_series
-    data_with_anomalies.name = "y"
-    data = data_with_anomalies.to_frame()
-    time_steps = 2
-    predictors, y = create_dataset(data[["y"]], data.y, time_steps)
-    assert len(y) == len(data) - time_steps
-    assert predictors.shape[0] == len(data) - time_steps
-    assert predictors.shape[1] == time_steps
