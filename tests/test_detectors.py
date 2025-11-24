@@ -480,7 +480,6 @@ def test_gradient_detector_datetime_index_validation():
 
 def test_gradient_dataframe_1col(constant_data_series):
     df = pd.Series([1, 1, 2, 1, 1], index=pd.date_range(start="2020", periods=5, freq="1min"))
-    detector = RangeDetector()
     gradient = tsod_gradient(df.to_frame())
     assert type(gradient) is pd.DataFrame
     assert gradient.shape == (len(df),1)
