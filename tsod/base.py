@@ -22,12 +22,8 @@ def load(path: Union[str, Path]):
 
 
 class Detector(ABC):
-    """Abstract base class for all detectors"""
 
-    def __init__(self):
-        pass
-
-    def fit(self, data: Union[pd.Series, pd.DataFrame]) -> "Detector":
+    def fit(self, data: pd.Series) -> "Detector":
         """Set detector parameters based on data.
 
         Parameters
@@ -84,6 +80,7 @@ class Detector(ABC):
     def _postprocess(self, pred: pd.DataFrame) -> pd.DataFrame:
         # TODO implement
         return pred
+
 
     @abstractmethod
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:

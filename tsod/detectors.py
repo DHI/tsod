@@ -7,6 +7,15 @@ import numpy as np
 from .base import Detector
 
 
+def _gradient(data, periods: int = 1):
+    dt = data.index.to_series().diff().dt.total_seconds()
+    if dt.min() < 1e-15:
+        raise ValueError("Index must be monotonically increasing")
+
+    gradient = data.diff(periods=periods) / dt
+    return gradient
+
+
 class CombinedDetector(Detector, Sequence):
     """Combine detectors.
 
@@ -275,7 +284,7 @@ class ConstantGradientDetector(ConstantValueDetector):
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         gradient = self._gradient(data, periods=1)
         s1 = super()._detect(gradient)
-        gradient = self._gradient(data, periods=-1)
+        gradient = _gradient(data, periods=-1)
         s2 = super()._detect(gradient)
         return s1 | s2
 
@@ -308,7 +317,7 @@ class GradientDetector(Detector):
 
     def _fit(self, data: pd.Series):
         """Set max gradient based on data."""
-        
+
         # Validate that the data has a DatetimeIndex
         if not isinstance(data.index, pd.DatetimeIndex):
             raise ValueError(
