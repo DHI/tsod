@@ -6,7 +6,6 @@ import joblib
 
 import pandas as pd
 
-
 from .custom_exceptions import WrongInputDataTypeError
 
 def load(path: Union[str, Path]):
@@ -22,8 +21,8 @@ def load(path: Union[str, Path]):
 
 
 class Detector(ABC):
-
-    def fit(self, data: pd.Series) -> "Detector":
+    
+    def fit(self, data: Union[pd.Series, pd.DataFrame]) -> "Detector":
         """Set detector parameters based on data.
 
         Parameters
@@ -75,6 +74,7 @@ class Detector(ABC):
     
         if series_as_input:
             pred = pred.iloc[:,0]
+             
         return pred
 
     def _postprocess(self, pred: pd.DataFrame) -> pd.DataFrame:
@@ -118,33 +118,6 @@ class Detector(ABC):
             raise ValueError("Input data cannot be empty")
           
         return df
-    
-    @overload
-    def _gradient(self, data: pd.Series, periods: int = 1) -> pd.Series: ...
-
-    @overload
-    def _gradient(self, data: pd.DataFrame, periods: int = 1) -> pd.DataFrame: ...
-
-    def _gradient(
-        self, data: Union[pd.Series, pd.DataFrame], periods: int = 1
-    ) -> Union[pd.Series, pd.DataFrame]:
-        
-        if not isinstance(data.index, pd.DatetimeIndex):
-            raise ValueError("Index must be a pandas.DatetimeIndex for gradient computation.")
-
-        dt = data.index.to_series().diff().dt.total_seconds()
-        if dt.min() < 1e-15:
-            raise ValueError("Index must be monotonically increasing")
-        
-        # Broadcast division with dataframe correctly
-        if isinstance(data, pd.DataFrame):
-            return data.diff(periods=periods).div(dt, axis=0)
-        elif isinstance(data, pd.Series):
-            return data.diff(periods=periods)/dt
-        else:
-            raise WrongInputDataTypeError(
-                "Input data must be a pandas.Series or pandas.DataFrame."
-            )
 
     def __str__(self):
         return f"{self.__class__.__name__}"

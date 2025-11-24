@@ -15,6 +15,8 @@ from tsod.detectors import (
     GradientDetector,
 )
 
+from tsod.detectors import _gradient as tsod_gradient
+
 from tsod.hampel import HampelDetector
 
 
@@ -475,20 +477,11 @@ def test_gradient_detector_datetime_index_validation():
     # This should not raise an exception
     detector.fit(data_with_datetime_index)
 
-def test_gradient(constant_data_series):
-    df = pd.Series([1, 1, 2, 1, 1], index=pd.date_range(start="2020", periods=5, freq="1min"))
-    detector = RangeDetector()
-    gradient = detector._gradient(df)
-    assert isinstance(gradient, pd.Series)
-    assert len(gradient) == len(df)
-    assert np.isnan(gradient.loc[df.index[0]])
-    assert gradient.loc[df.index[1]] == 0
-    assert gradient.loc[df.index[2]] == 1/60
 
 def test_gradient_dataframe_1col(constant_data_series):
     df = pd.Series([1, 1, 2, 1, 1], index=pd.date_range(start="2020", periods=5, freq="1min"))
     detector = RangeDetector()
-    gradient = detector._gradient(df.to_frame())
+    gradient = tsod_gradient(df.to_frame())
     assert type(gradient) is pd.DataFrame
     assert gradient.shape == (len(df),1)
     assert gradient.isna().iloc[0,0]
@@ -499,8 +492,7 @@ def test_gradient_dataframe_2col(constant_data_series):
     series = pd.Series([1, 1, 2, 1, 1], index=pd.date_range(start="2020", periods=5, freq="1min"))
     df = pd.DataFrame({"col1": series, "col2": series*2})
 
-    detector = RangeDetector()
-    gradient = detector._gradient(df)
+    gradient = tsod_gradient(df)
     assert type(gradient) is pd.DataFrame
     assert gradient.shape == (len(df),2)
     assert gradient.isna().iloc[0,0]

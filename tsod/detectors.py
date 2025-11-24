@@ -332,7 +332,7 @@ class GradientDetector(Detector):
         return self
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        gradient = self._gradient(data)
+        gradient = _gradient(data)
         if self._direction == "negative":
             return gradient < -self._max_gradient
         elif self._direction == "positive":
