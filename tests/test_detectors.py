@@ -275,11 +275,11 @@ def test_rollingstddev_detector():
     assert sum(anomalies) > 0
 
 def test_rollingstddev_detector_frame():
-    np.random.seed(42)
-    normal_data = pd.Series(np.random.normal(scale=1.0, size=1000)) + 10.0 * np.sin(
+    rng = np.random.default_rng(42)
+    normal_data = pd.Series(rng.normal(scale=1.0, size=1000)) + 10.0 * np.sin(
         np.linspace(0, 10, num=1000)
     )
-    abnormal_data = pd.Series(np.random.normal(scale=10000.0, size=1000))
+    abnormal_data = pd.Series(rng.normal(scale=10000.0, size=1000))
     df = pd.DataFrame({"normal": normal_data, "abnormal": abnormal_data})
 
     detector = RollingStandardDeviationDetector()
