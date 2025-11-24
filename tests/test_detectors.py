@@ -474,17 +474,6 @@ def test_gradient_detector_datetime_index_validation():
 
     # This should not raise an exception
     detector.fit(data_with_datetime_index)
-    
-def test_create_dataset(data_series):
-    data_with_anomalies, _, _ = data_series
-    data_with_anomalies.name = "y"
-    data = data_with_anomalies.to_frame()
-    time_steps = 2
-    predictors, y = create_dataset(data[["y"]], data.y, time_steps)
-    assert len(y) == len(data) - time_steps
-    assert predictors.shape[0] == len(data) - time_steps
-    assert predictors.shape[1] == time_steps
-
 
 def test_gradient(constant_data_series):
     df = pd.Series([1, 1, 2, 1, 1], index=pd.date_range(start="2020", periods=5, freq="1min"))

@@ -6,14 +6,18 @@ import numpy as np
 
 from .base import Detector
 
-
-def _gradient(data, periods: int = 1):
+def _gradient(data: pd.DataFrame, periods: int = 1
+) -> pd.DataFrame:
+    
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError("Input data must be a pandas.DataFrame.")
+    
     dt = data.index.to_series().diff().dt.total_seconds()
     if dt.min() < 1e-15:
         raise ValueError("Index must be monotonically increasing")
-
-    gradient = data.diff(periods=periods) / dt
-    return gradient
+    
+    # Broadcast division with dataframe correctly
+    return data.diff(periods=periods).div(dt, axis=0)
 
 
 class CombinedDetector(Detector, Sequence):
@@ -282,7 +286,7 @@ class ConstantGradientDetector(ConstantValueDetector):
         super().__init__(window_size=window_size)
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        gradient = self._gradient(data, periods=1)
+        gradient = _gradient(data, periods=1)
         s1 = super()._detect(gradient)
         gradient = _gradient(data, periods=-1)
         s2 = super()._detect(gradient)
@@ -324,7 +328,7 @@ class GradientDetector(Detector):
                 "GradientDetector requires a DatetimeIndex. "
                 f"Got {type(data.index).__name__} instead."
             )
-        self._max_gradient = np.max(np.abs(self._gradient(data)))
+        self._max_gradient = np.max(np.abs(_gradient(data.to_frame())))
         return self
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
