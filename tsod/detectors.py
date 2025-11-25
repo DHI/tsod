@@ -229,7 +229,7 @@ class RollingStandardDeviationDetector(Detector):
 
 
 class ConstantValueDetector(Detector):
-    """Detect constant values over a longer period.
+    """Detect contiguous periods of constant values within a configurable time window.
 
     Commonly caused by sensor failures, which get stuck at a constant level.
 
