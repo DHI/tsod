@@ -388,9 +388,11 @@ document.write(`
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>min_value</strong> (<em>float</em>) – Minimum value threshold.</p></li>
-<li><p><strong>max_value</strong> (<em>float</em>) – Maximum value threshold.</p></li>
-<li><p><strong>quantiles</strong> (<em>list</em><em>[</em><em>2</em><em>]</em>) – Default quantiles [0, 1]. Same as min and max value.</p></li>
+<li><p><strong>min_value</strong> (<em>float</em><em>, </em><em>default=-np.inf</em>) – Minimum value threshold.</p></li>
+<li><p><strong>max_value</strong> (<em>float</em><em>, </em><em>default=np.inf</em>) – Maximum value threshold.</p></li>
+<li><p><strong>quantiles</strong> (<em>list</em><em> of </em><em>float</em><em>, </em><em>optional</em>) – Quantiles to use for determining min and max during fit.
+Default is [0.0, 1.0], which corresponds to absolute min and max values.
+Use values like [0.001, 0.999] to exclude extreme outliers.</p></li>
 </ul>
 </dd>
 </dl>
@@ -419,13 +421,13 @@ document.write(`
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.RangeDetector.detect">
 <span class="sig-name descname"><span class="pre">detect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="headerlink" href="#tsod.RangeDetector.detect" title="Permalink to this definition">#</a></dt>
-<dd><p>Detect anomalies</p>
+<dd><p>Detect anomalies.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies</p>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Time series with bools, True == anomaly</p>
+<dd class="field-even"><p>Time series with bools, True == anomaly.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>pd.Series</p>
@@ -441,16 +443,22 @@ document.write(`
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Normal time series data.</p>
 </dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Returns self for method chaining.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Detector</p>
+</dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.RangeDetector.save">
 <span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#tsod.RangeDetector.save" title="Permalink to this definition">#</a></dt>
-<dd><p>Save a detector for later use</p>
+<dd><p>Save a detector for later use.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – file-like object to load detector from</p>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – File path to save the detector to.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -458,7 +466,21 @@ document.write(`
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.RangeDetector.validate">
 <span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#tsod.RangeDetector.validate" title="Permalink to this definition">#</a></dt>
-<dd><p>Check that input data is in correct format and possibly adjust</p>
+<dd><p>Check that input data is in correct format and possibly adjust.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em><em> or </em><em>pd.DataFrame</em>) – Input data to validate.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Validated data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series or pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>WrongInputDataTypeError</strong> – If data is not a pd.Series or pd.DataFrame.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -466,18 +488,26 @@ document.write(`
 <dl class="py class">
 <dt class="sig sig-object py" id="tsod.ConstantValueDetector">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tsod.</span></span><span class="sig-name descname"><span class="pre">ConstantValueDetector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-07</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.ConstantValueDetector" title="Permalink to this definition">#</a></dt>
-<dd><p>Detect constant values over a longer period.</p>
+<dd><p>Detect contiguous periods of constant values within a configurable time window.</p>
 <p>Commonly caused by sensor failures, which get stuck at a constant level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>window_size</strong> (<em>int</em><em>, </em><em>default=3</em>) – Number of consecutive points to evaluate.</p></li>
+<li><p><strong>threshold</strong> (<em>float</em><em>, </em><em>default=1e-7</em>) – Maximum variation (max - min) within window to consider constant.</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.ConstantValueDetector.detect">
 <span class="sig-name descname"><span class="pre">detect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="headerlink" href="#tsod.ConstantValueDetector.detect" title="Permalink to this definition">#</a></dt>
-<dd><p>Detect anomalies</p>
+<dd><p>Detect anomalies.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies</p>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Time series with bools, True == anomaly</p>
+<dd class="field-even"><p>Time series with bools, True == anomaly.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>pd.Series</p>
@@ -493,16 +523,22 @@ document.write(`
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Normal time series data.</p>
 </dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Returns self for method chaining.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Detector</p>
+</dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.ConstantValueDetector.save">
 <span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#tsod.ConstantValueDetector.save" title="Permalink to this definition">#</a></dt>
-<dd><p>Save a detector for later use</p>
+<dd><p>Save a detector for later use.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – file-like object to load detector from</p>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – File path to save the detector to.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -510,7 +546,21 @@ document.write(`
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.ConstantValueDetector.validate">
 <span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#tsod.ConstantValueDetector.validate" title="Permalink to this definition">#</a></dt>
-<dd><p>Check that input data is in correct format and possibly adjust</p>
+<dd><p>Check that input data is in correct format and possibly adjust.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em><em> or </em><em>pd.DataFrame</em>) – Input data to validate.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Validated data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series or pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>WrongInputDataTypeError</strong> – If data is not a pd.Series or pd.DataFrame.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -522,19 +572,19 @@ document.write(`
 <p>Typically caused by linear interpolation over a long interval.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>window_size</strong> (<em>int</em>) – Minium window to consider as anomaly, default 3</p>
+<dd class="field-odd"><p><strong>window_size</strong> (<em>int</em><em>, </em><em>default=3</em>) – Minimum window size to consider as anomaly.</p>
 </dd>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.ConstantGradientDetector.detect">
 <span class="sig-name descname"><span class="pre">detect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="headerlink" href="#tsod.ConstantGradientDetector.detect" title="Permalink to this definition">#</a></dt>
-<dd><p>Detect anomalies</p>
+<dd><p>Detect anomalies.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies</p>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Time series with bools, True == anomaly</p>
+<dd class="field-even"><p>Time series with bools, True == anomaly.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>pd.Series</p>
@@ -550,16 +600,22 @@ document.write(`
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Normal time series data.</p>
 </dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Returns self for method chaining.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Detector</p>
+</dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.ConstantGradientDetector.save">
 <span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#tsod.ConstantGradientDetector.save" title="Permalink to this definition">#</a></dt>
-<dd><p>Save a detector for later use</p>
+<dd><p>Save a detector for later use.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – file-like object to load detector from</p>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – File path to save the detector to.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -567,7 +623,21 @@ document.write(`
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.ConstantGradientDetector.validate">
 <span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#tsod.ConstantGradientDetector.validate" title="Permalink to this definition">#</a></dt>
-<dd><p>Check that input data is in correct format and possibly adjust</p>
+<dd><p>Check that input data is in correct format and possibly adjust.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em><em> or </em><em>pd.DataFrame</em>) – Input data to validate.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Validated data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series or pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>WrongInputDataTypeError</strong> – If data is not a pd.Series or pd.DataFrame.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -575,25 +645,27 @@ document.write(`
 <dl class="py class">
 <dt class="sig sig-object py" id="tsod.GradientDetector">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tsod.</span></span><span class="sig-name descname"><span class="pre">GradientDetector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_gradient</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'both'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.GradientDetector" title="Permalink to this definition">#</a></dt>
-<dd><p>Detects abrupt changes</p>
+<dd><p>Detect abrupt changes in time series data.</p>
+<p>Requires data with a DatetimeIndex. Calculates rate of change per second.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>max_gradient</strong> (<em>float</em>) – Maximum rate of change per second, default np.inf</p></li>
-<li><p><strong>direction</strong> (<em>str</em>) – positive, negative or both, default=’both’</p></li>
+<li><p><strong>max_gradient</strong> (<em>float</em><em>, </em><em>default=np.inf</em>) – Maximum rate of change per second.</p></li>
+<li><p><strong>direction</strong> (<em>{'both'</em><em>, </em><em>'positive'</em><em>, </em><em>'negative'}</em><em>, </em><em>default='both'</em>) – Direction of change to detect. ‘positive’ detects only increases,
+‘negative’ detects only decreases, ‘both’ detects changes in either direction.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.GradientDetector.detect">
 <span class="sig-name descname"><span class="pre">detect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="headerlink" href="#tsod.GradientDetector.detect" title="Permalink to this definition">#</a></dt>
-<dd><p>Detect anomalies</p>
+<dd><p>Detect anomalies.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies</p>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Time series with bools, True == anomaly</p>
+<dd class="field-even"><p>Time series with bools, True == anomaly.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>pd.Series</p>
@@ -609,16 +681,22 @@ document.write(`
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Normal time series data.</p>
 </dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Returns self for method chaining.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Detector</p>
+</dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.GradientDetector.save">
 <span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#tsod.GradientDetector.save" title="Permalink to this definition">#</a></dt>
-<dd><p>Save a detector for later use</p>
+<dd><p>Save a detector for later use.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – file-like object to load detector from</p>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – File path to save the detector to.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -626,7 +704,21 @@ document.write(`
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.GradientDetector.validate">
 <span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#tsod.GradientDetector.validate" title="Permalink to this definition">#</a></dt>
-<dd><p>Check that input data is in correct format and possibly adjust</p>
+<dd><p>Check that input data is in correct format and possibly adjust.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em><em> or </em><em>pd.DataFrame</em>) – Input data to validate.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Validated data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series or pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>WrongInputDataTypeError</strong> – If data is not a pd.Series or pd.DataFrame.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -634,32 +726,33 @@ document.write(`
 <dl class="py class">
 <dt class="sig sig-object py" id="tsod.DiffDetector">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tsod.</span></span><span class="sig-name descname"><span class="pre">DiffDetector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_diff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'both'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.DiffDetector" title="Permalink to this definition">#</a></dt>
-<dd><p>Detect sudden shifts in data. Irrespective of time axis.</p>
+<dd><p>Detect sudden shifts in data, irrespective of time axis.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>max_diff</strong> (<em>float</em>) – Maximum change threshold.</p></li>
-<li><p><strong>direction</strong> (<em>str</em>) – positive, negative or both, default=’both’</p></li>
+<li><p><strong>max_diff</strong> (<em>float</em><em>, </em><em>default=np.inf</em>) – Maximum change threshold between consecutive points.</p></li>
+<li><p><strong>direction</strong> (<em>{'both'</em><em>, </em><em>'positive'</em><em>, </em><em>'negative'}</em><em>, </em><em>default='both'</em>) – Direction of change to detect. ‘positive’ detects only increases,
+‘negative’ detects only decreases, ‘both’ detects changes in either direction.</p></li>
 </ul>
 </dd>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <dl class="simple">
-<dt><a class="reference internal" href="#tsod.GradientDetector" title="tsod.GradientDetector"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GradientDetector</span></code></a></dt><dd><p>similar functionality but considers actual time between data points</p>
+<dt><a class="reference internal" href="#tsod.GradientDetector" title="tsod.GradientDetector"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GradientDetector</span></code></a></dt><dd><p>Similar functionality but considers actual time between data points.</p>
 </dd>
 </dl>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.DiffDetector.detect">
 <span class="sig-name descname"><span class="pre">detect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="headerlink" href="#tsod.DiffDetector.detect" title="Permalink to this definition">#</a></dt>
-<dd><p>Detect anomalies</p>
+<dd><p>Detect anomalies.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies</p>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Time series with bools, True == anomaly</p>
+<dd class="field-even"><p>Time series with bools, True == anomaly.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>pd.Series</p>
@@ -675,16 +768,22 @@ document.write(`
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Normal time series data.</p>
 </dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Returns self for method chaining.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Detector</p>
+</dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.DiffDetector.save">
 <span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#tsod.DiffDetector.save" title="Permalink to this definition">#</a></dt>
-<dd><p>Save a detector for later use</p>
+<dd><p>Save a detector for later use.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – file-like object to load detector from</p>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – File path to save the detector to.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -692,7 +791,21 @@ document.write(`
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.DiffDetector.validate">
 <span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#tsod.DiffDetector.validate" title="Permalink to this definition">#</a></dt>
-<dd><p>Check that input data is in correct format and possibly adjust</p>
+<dd><p>Check that input data is in correct format and possibly adjust.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em><em> or </em><em>pd.DataFrame</em>) – Input data to validate.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Validated data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series or pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>WrongInputDataTypeError</strong> – If data is not a pd.Series or pd.DataFrame.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -701,7 +814,13 @@ document.write(`
 <dt class="sig sig-object py" id="tsod.CombinedDetector">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tsod.</span></span><span class="sig-name descname"><span class="pre">CombinedDetector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">detectors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tsod.CombinedDetector" title="Permalink to this definition">#</a></dt>
 <dd><p>Combine detectors.</p>
-<p>It is possible to combine several anomaly detection strategies into a combined detector.</p>
+<p>It is possible to combine several anomaly detection strategies into a combined detector.
+Anomalies are detected if ANY of the constituent detectors flags an anomaly (OR logic).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>detectors</strong> (<em>list</em><em> of </em><em>Detector</em>) – List of detector instances to combine.</p>
+</dd>
+</dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">normal_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">100</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">abnormal_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">100</span><span class="p">))</span>
@@ -721,13 +840,13 @@ document.write(`
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.CombinedDetector.detect">
 <span class="sig-name descname"><span class="pre">detect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="headerlink" href="#tsod.CombinedDetector.detect" title="Permalink to this definition">#</a></dt>
-<dd><p>Detect anomalies</p>
+<dd><p>Detect anomalies.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies</p>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Time series with bools, True == anomaly</p>
+<dd class="field-even"><p>Time series with bools, True == anomaly.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>pd.Series</p>
@@ -743,6 +862,12 @@ document.write(`
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Normal time series data.</p>
 </dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Returns self for method chaining.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Detector</p>
+</dd>
 </dl>
 </dd></dl>
 
@@ -757,10 +882,10 @@ recommended.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.CombinedDetector.save">
 <span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#tsod.CombinedDetector.save" title="Permalink to this definition">#</a></dt>
-<dd><p>Save a detector for later use</p>
+<dd><p>Save a detector for later use.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – file-like object to load detector from</p>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – File path to save the detector to.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -768,7 +893,21 @@ recommended.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.CombinedDetector.validate">
 <span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#tsod.CombinedDetector.validate" title="Permalink to this definition">#</a></dt>
-<dd><p>Check that input data is in correct format and possibly adjust</p>
+<dd><p>Check that input data is in correct format and possibly adjust.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em><em> or </em><em>pd.DataFrame</em>) – Input data to validate.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Validated data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series or pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>WrongInputDataTypeError</strong> – If data is not a pd.Series or pd.DataFrame.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -794,13 +933,13 @@ outliers. n_sigmas, default=3.0</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.hampel.HampelDetector.detect">
 <span class="sig-name descname"><span class="pre">detect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="headerlink" href="#tsod.hampel.HampelDetector.detect" title="Permalink to this definition">#</a></dt>
-<dd><p>Detect anomalies</p>
+<dd><p>Detect anomalies.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies</p>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Time series data with possible anomalies.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Time series with bools, True == anomaly</p>
+<dd class="field-even"><p>Time series with bools, True == anomaly.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>pd.Series</p>
@@ -816,16 +955,22 @@ outliers. n_sigmas, default=3.0</p></li>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em>) – Normal time series data.</p>
 </dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Returns self for method chaining.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Detector</p>
+</dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.hampel.HampelDetector.save">
 <span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#tsod.hampel.HampelDetector.save" title="Permalink to this definition">#</a></dt>
-<dd><p>Save a detector for later use</p>
+<dd><p>Save a detector for later use.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – file-like object to load detector from</p>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – File path to save the detector to.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -833,7 +978,21 @@ outliers. n_sigmas, default=3.0</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.hampel.HampelDetector.validate">
 <span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#tsod.hampel.HampelDetector.validate" title="Permalink to this definition">#</a></dt>
-<dd><p>Check that input data is in correct format and possibly adjust</p>
+<dd><p>Check that input data is in correct format and possibly adjust.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>pd.Series</em><em> or </em><em>pd.DataFrame</em>) – Input data to validate.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Validated data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series or pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>WrongInputDataTypeError</strong> – If data is not a pd.Series or pd.DataFrame.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
