@@ -173,9 +173,16 @@ class DiffDetector(Detector):
             )
 
     def _fit(self, data):
-        data_diff = data.diff()
+        data_diffs = data.diff()
 
-        self._max_diff = data_diff.max()
+        if self._direction == "positive":
+            filtered_diffs = data_diffs[data_diffs >= 0]
+        elif self._direction == "negative":
+            filtered_diffs = data_diffs[data_diffs <= 0].abs()
+        else:  # both
+            filtered_diffs = data_diffs.abs()
+
+        self._max_diff = filtered_diffs.max() if not filtered_diffs.empty else 0
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
@@ -320,8 +327,17 @@ class GradientDetector(Detector):
                 "GradientDetector requires a DatetimeIndex. "
                 f"Got {type(data.index).__name__} instead."
             )
+        gradients = _gradient(data)
 
-        self._max_gradient = np.max(np.abs(_gradient(data)))
+        # Filter based on direction
+        if self._direction == "positive":
+            filtered_gradients = gradients[gradients >= 0]
+        elif self._direction == "negative":
+            filtered_gradients = gradients[gradients <= 0].abs()
+        else:  # both directions
+            filtered_gradients = gradients.abs()
+
+        self._max_gradient = filtered_gradients.max() if not filtered_gradients.empty else 0
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
