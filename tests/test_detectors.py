@@ -19,7 +19,6 @@ from tsod.hampel import HampelDetector
 
 
 from tests.data_generation import create_random_walk_with_outliers
-from tsod.detectors import _gradient as tsod_gradient
 
 
 @pytest.fixture
@@ -374,15 +373,16 @@ def test_gradient_detector_datetime_index_validation():
     # This should not raise an exception
     detector.fit(data_with_datetime_index)
     
-
-def test_gradient_with_period_2(range_data_series):
-    normal_data, _, _ = range_data_series
-    normal_data.iloc[:] = np.arange(len(normal_data)) # modify normal data
-
-    gradient = tsod_gradient(normal_data, periods=2)
-    expected_gradient = np.array([1]*len(normal_data))/3600 # per second
-    assert np.allclose(gradient.values[2:], expected_gradient[2:])
-
-    gradient = tsod_gradient(normal_data, periods=-1)
-    expected_gradient = -np.array([1]*len(normal_data))/3600 # per second
-    assert np.allclose(gradient.values[:-1], expected_gradient[:-1])
+def test_constant_gradient_on_non_uniform_dt():
+    ind = pd.DatetimeIndex(
+        [
+            "2020-01-01 01:00:30",
+            "2020-01-01 01:01:00",
+            "2020-01-01 01:02:00",
+            "2020-01-01 01:03:00",
+            "2020-01-01 01:04:30",
+        ]
+    )
+    x = pd.Series(index=ind, data=[30, 60, 120, 180, 270])
+    anoms = ConstantGradientDetector(window_size=2).detect(x)
+    assert(anoms.sum() == 5)
