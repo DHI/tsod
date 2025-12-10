@@ -8,7 +8,7 @@ from .base import Detector
 
 
 def _gradient(data, periods: int = 1):
-    dt = data.index.to_series().diff().dt.total_seconds()
+    dt = data.index.to_series().diff(periods).dt.total_seconds()*np.sign(periods)
     if dt.min() < 1e-15:
         raise ValueError("Index must be monotonically increasing")
 

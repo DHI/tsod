@@ -373,3 +373,16 @@ def test_gradient_detector_datetime_index_validation():
     # This should not raise an exception
     detector.fit(data_with_datetime_index)
     
+def test_constant_gradient_on_non_uniform_dt():
+    ind = pd.DatetimeIndex(
+        [
+            "2020-01-01 01:00:30",
+            "2020-01-01 01:01:00",
+            "2020-01-01 01:02:00",
+            "2020-01-01 01:03:00",
+            "2020-01-01 01:04:30",
+        ]
+    )
+    x = pd.Series(index=ind, data=[30, 60, 120, 180, 270])
+    anoms = ConstantGradientDetector(window_size=2).detect(x)
+    assert(anoms.sum() == 5)
