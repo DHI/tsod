@@ -270,13 +270,11 @@ class ConstantValueDetector(Detector):
     def _fit(self, data):
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         """Detect constant values in single column or multiple columns."""
 
-        if isinstance(data, pd.DataFrame):
-            # Apply detection to each column independently
-            return data.apply(self._detect_single_column, axis=0)
-        return self._detect_single_column(data)
+        # Apply detection to each column independently
+        return data.apply(self._detect_single_column, axis=0)
 
     def _detect_single_column(self, data: pd.Series) -> pd.Series:
         """Detect constant values in a single column."""
