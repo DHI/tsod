@@ -81,7 +81,7 @@ class Detector(ABC):
         pred = self._detect(data_as_dataframe)
 
         if series_as_input:
-            pred = pred.iloc[:, 0]
+            return pred.iloc[:, 0]
 
         return pred
 
