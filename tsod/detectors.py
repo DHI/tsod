@@ -7,10 +7,25 @@ import numpy as np
 from .base import Detector
 
 
+def _gradient(data, periods: int = 1):
+    dt = data.index.to_series().diff().dt.total_seconds()
+    if dt.min() < 1e-15:
+        raise ValueError("Index must be monotonically increasing")
+
+    gradient = data.diff(periods=periods) / dt
+    return gradient
+
+
 class CombinedDetector(Detector, Sequence):
     """Combine detectors.
 
     It is possible to combine several anomaly detection strategies into a combined detector.
+    Anomalies are detected if ANY of the constituent detectors flags an anomaly (OR logic).
+
+    Parameters
+    ----------
+    detectors : list of Detector
+        List of detector instances to combine.
 
     Examples
     --------
@@ -56,20 +71,21 @@ class CombinedDetector(Detector, Sequence):
 
 
 class RangeDetector(Detector):
-    """
-    Detect values outside range.
+    """Detect values outside range.
 
     Parameters
     ----------
-    min_value : float
+    min_value : float, default=-np.inf
         Minimum value threshold.
-    max_value : float
+    max_value : float, default=np.inf
         Maximum value threshold.
-    quantiles : list[2]
-                Default quantiles [0, 1]. Same as min and max value.
+    quantiles : list of float, optional
+        Quantiles to use for determining min and max during fit.
+        Default is [0.0, 1.0], which corresponds to absolute min and max values.
+        Use values like [0.001, 0.999] to exclude extreme outliers.
 
     Examples
-    ---------
+    --------
     >>> normal_data = pd.Series(np.random.normal(size=100))
     >>> abnormal_data = pd.Series(np.random.normal(size=100))
     >>> abnormal_data[[2, 6, 15, 57, 60, 73]] = 5
@@ -85,7 +101,8 @@ class RangeDetector(Detector):
 
     >>> detector = RangeDetector(quantiles=[0.001,0.999])
     >>> detector.fit(normal_data_with_some_outliers)
-    >>> anomalies = detector.detect(abnormal_data)"""
+    >>> anomalies = detector.detect(abnormal_data)
+    """
 
     def __init__(self, min_value=-np.inf, max_value=np.inf, quantiles=None):
         super().__init__()
@@ -102,13 +119,6 @@ class RangeDetector(Detector):
             self._quantiles = quantiles
 
     def _fit(self, data):
-        """Set min and max based on data.
-
-        Parameters
-        ----------
-        data :  pd.Series
-                Normal time series data.
-        """
         super().validate(data)
 
         quantiles = np.nanquantile(data, self._quantiles)
@@ -119,8 +129,6 @@ class RangeDetector(Detector):
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
-        """Detect anomalies outside range"""
-
         if self._max is None:
             return data < self._min
 
@@ -137,18 +145,19 @@ class RangeDetector(Detector):
 
 
 class DiffDetector(Detector):
-    """Detect sudden shifts in data. Irrespective of time axis.
+    """Detect sudden shifts in data, irrespective of time axis.
 
     Parameters
     ----------
-    max_diff : float
-        Maximum change threshold.
-    direction: str
-        positive, negative or both, default='both'
+    max_diff : float, default=np.inf
+        Maximum change threshold between consecutive points.
+    direction : {'both', 'positive', 'negative'}, default='both'
+        Direction of change to detect. 'positive' detects only increases,
+        'negative' detects only decreases, 'both' detects changes in either direction.
 
-    See also
+    See Also
     --------
-    GradientDetector: similar functionality but considers actual time between data points
+    GradientDetector : Similar functionality but considers actual time between data points.
     """
 
     def __init__(self, max_diff=np.inf, direction="both"):
@@ -184,16 +193,16 @@ class DiffDetector(Detector):
 
 
 class RollingStandardDeviationDetector(Detector):
-    """Detect large variations
+    """Detect large variations.
 
-
+    Parameters
     ----------
-    window_size: int
-        Number of data points to evaluate over, default=10
-    max_std: float
-        Maximum standard deviation to accept as normal, default=np.inf
-    center: bool
-        Center rolling window, default=True
+    window_size : int, default=10
+        Number of data points to evaluate over.
+    max_std : float, default=np.inf
+        Maximum standard deviation to accept as normal.
+    center : bool, default=True
+        If True, set the labels at the center of the window.
     """
 
     def __init__(self, window_size=10, max_std=np.inf, center=True):
@@ -220,21 +229,16 @@ class RollingStandardDeviationDetector(Detector):
 
 
 class ConstantValueDetector(Detector):
-    """
-    Detect constant values over a longer period.
+    """Detect contiguous periods of constant values within a configurable time window.
 
     Commonly caused by sensor failures, which get stuck at a constant level.
 
     Parameters
     ----------
-    window_size: int
-        Minium window to consider as anomaly, default 3
-    threshold: float
-        Maximum difference to consider values as constant, default 1e-7
-
-    Returns
-    -------
-    A boolean pd.Series or pd.DataFrame indicating detected anomalies.
+    window_size : int, default=3
+        Number of consecutive points to evaluate.
+    threshold : float, default=1e-7
+        Maximum variation (max - min) within window to consider constant.
     """
 
     def __init__(self, window_size: int = 3, threshold: float = 1e-7):
@@ -301,18 +305,18 @@ class ConstantGradientDetector(ConstantValueDetector):
     Typically caused by linear interpolation over a long interval.
 
     Parameters
-    ==========
-    window_size: int
-        Minium window to consider as anomaly, default 3
+    ----------
+    window_size : int, default=3
+        Minimum window size to consider as anomaly.
     """
 
     def __init__(self, window_size: int = 3):
         super().__init__(window_size=window_size)
 
     def _detect(self, data: pd.Series) -> pd.Series:
-        gradient = self._gradient(data, periods=1)
+        gradient = _gradient(data, periods=1)
         s1 = super()._detect(gradient)
-        gradient = self._gradient(data, periods=-1)
+        gradient = _gradient(data, periods=-1)
         s2 = super()._detect(gradient)
         return s1 | s2
 
@@ -321,14 +325,17 @@ class ConstantGradientDetector(ConstantValueDetector):
 
 
 class GradientDetector(Detector):
-    """Detects abrupt changes
+    """Detect abrupt changes in time series data.
+
+    Requires data with a DatetimeIndex. Calculates rate of change per second.
 
     Parameters
-    ==========
-    max_gradient: float
-        Maximum rate of change per second, default np.inf
-    direction: str
-        positive, negative or both, default='both'
+    ----------
+    max_gradient : float, default=np.inf
+        Maximum rate of change per second.
+    direction : {'both', 'positive', 'negative'}, default='both'
+        Direction of change to detect. 'positive' detects only increases,
+        'negative' detects only decreases, 'both' detects changes in either direction.
     """
 
     def __init__(self, max_gradient=np.inf, direction="both"):
@@ -344,8 +351,6 @@ class GradientDetector(Detector):
             )
 
     def _fit(self, data: pd.Series):
-        """Set max gradient based on data."""
-        
         # Validate that the data has a DatetimeIndex
         if not isinstance(data.index, pd.DatetimeIndex):
             raise ValueError(
@@ -353,11 +358,11 @@ class GradientDetector(Detector):
                 f"Got {type(data.index).__name__} instead."
             )
 
-        self._max_gradient = np.max(np.abs(self._gradient(data)))
+        self._max_gradient = np.max(np.abs(_gradient(data)))
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
-        gradient = self._gradient(data)
+        gradient = _gradient(data)
         if self._direction == "negative":
             return gradient < -self._max_gradient
         elif self._direction == "positive":
