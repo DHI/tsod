@@ -8,6 +8,12 @@ from .base import Detector
 
 
 def _gradient(data, periods: int = 1):
+    if not isinstance(data.index, pd.DatetimeIndex):
+        raise ValueError(
+            "GradientDetector requires a DatetimeIndex. "
+            f"Got {type(data.index).__name__} instead."
+            )
+
     dt = data.index.to_series().diff(periods).dt.total_seconds()*np.sign(periods)
     if dt.min() < 1e-15:
         raise ValueError("Index must be monotonically increasing")
@@ -353,13 +359,6 @@ class GradientDetector(Detector):
             )
 
     def _fit(self, data: pd.Series):
-        # Validate that the data has a DatetimeIndex
-        if not isinstance(data.index, pd.DatetimeIndex):
-            raise ValueError(
-                "GradientDetector requires a DatetimeIndex. "
-                f"Got {type(data.index).__name__} instead."
-            )
-
         self._max_gradient = np.max(np.abs(_gradient(data)))
         return self
 
