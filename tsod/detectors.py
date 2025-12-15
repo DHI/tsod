@@ -186,7 +186,7 @@ class DiffDetector(Detector):
 
     def _detect(self, data: pd.Series) -> pd.Series:
         if self._direction == "both":
-            return np.abs(data.diff()) > self._max_diff
+            return (data.diff()).abs() > self._max_diff
         elif self._direction == "positive":
             return data.diff() > self._max_diff
         else:
@@ -286,7 +286,7 @@ class ConstantValueDetector(Detector):
 
         # Create shifted versions for comparison
         comparisons = [
-            (np.abs(data - data.shift(i)) <= self.threshold)
+            ((data - data.shift(i)).abs() <= self.threshold)
             for i in range(1, self.window_size)
         ]
         constant_detected = pd.concat(comparisons, axis=1).all(axis=1)
