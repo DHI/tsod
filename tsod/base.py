@@ -68,12 +68,12 @@ class Detector(ABC):
         Parameters
         ----------
         data: pd.Series or pd.DataFrame
-                Time series data with possible anomalies
+            Time series data with possible anomalies
 
         Returns
         -------
         pd.Series or pd.DataFrame
-            Time series with bools, True == anomaly
+            Time series with bools, True == anomaly.
         """
         series_as_input = isinstance(data, pd.Series)
         data_as_dataframe = self.validate(data)
