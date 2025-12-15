@@ -243,16 +243,16 @@ class ConstantValueDetector(Detector):
 
     def __init__(self, window_size: int = 3, threshold: float = 1e-7):
         super().__init__()
-        
+
         # Validate input
         if threshold < 0:
             raise ValueError(f"threshold must be non-negative, got {threshold}")
         if window_size < 2:
             raise ValueError(f"window_size must be at least 2, got {window_size}")
-    
+
         self._threshold = threshold
         self._window_size = window_size
-    
+
     @property
     def threshold(self) -> float:
         return self._threshold
@@ -264,35 +264,37 @@ class ConstantValueDetector(Detector):
     def _fit(self, data):
         return self
 
-    def _detect(self, data:pd.Series) -> pd.Series:
+    def _detect(self, data: pd.Series) -> pd.Series:
         """Detect constant values in single column or multiple columns."""
-        
+
         if isinstance(data, pd.DataFrame):
             # Vectorized approach would be more efficient
             return data.apply(self._detect_single_column, axis=0)
         return self._detect_single_column(data)
-    
+
     def _detect_single_column(self, data: pd.Series) -> pd.Series:
         """Detect constant values in a single column."""
         # Early exit for windows size larger than data
         if self.window_size >= data.shape[0]:
             return pd.Series(False, index=data.index)
 
-        #Create shifted versions for comparison
-        comparisons = [(np.abs(data - data.shift(i)) <= self.threshold) 
-                       for i in range(1, self.window_size)]
+        # Create shifted versions for comparison
+        comparisons = [
+            (np.abs(data - data.shift(i)) <= self.threshold)
+            for i in range(1, self.window_size)
+        ]
         constant_detected = pd.concat(comparisons, axis=1).all(axis=1)
-        
+
         # Use convolution-like approach to expand detections
         detections = constant_detected.values.astype(int)
         kernel = np.ones(self._window_size, dtype=int)
-        
+
         # Convolve to set all points in the window to anomalies
-        expanded_full = np.convolve(detections, kernel, mode='full')
-        
+        expanded_full = np.convolve(detections, kernel, mode="full")
+
         # Remove boundary effects and padded data from convolution
         start_idx = self._window_size - 1
-        expanded = expanded_full[start_idx:start_idx + len(detections)] > 0
+        expanded = expanded_full[start_idx : start_idx + len(detections)] > 0
         return pd.Series(expanded, index=data.index, name=data.name)
 
     def __str__(self):
