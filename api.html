@@ -313,14 +313,18 @@ document.write(`
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantValueDetector.detect"><code class="docutils literal notranslate"><span class="pre">ConstantValueDetector.detect()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantValueDetector.fit"><code class="docutils literal notranslate"><span class="pre">ConstantValueDetector.fit()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantValueDetector.save"><code class="docutils literal notranslate"><span class="pre">ConstantValueDetector.save()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantValueDetector.threshold"><code class="docutils literal notranslate"><span class="pre">ConstantValueDetector.threshold</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantValueDetector.validate"><code class="docutils literal notranslate"><span class="pre">ConstantValueDetector.validate()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantValueDetector.window_size"><code class="docutils literal notranslate"><span class="pre">ConstantValueDetector.window_size</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector.detect"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector.detect()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector.fit"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector.fit()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector.save"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector.save()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector.threshold"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector.threshold</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector.validate"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector.validate()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector.window_size"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector.window_size</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.GradientDetector"><code class="docutils literal notranslate"><span class="pre">GradientDetector</span></code></a><ul class="nav section-nav flex-column">
@@ -543,6 +547,11 @@ Use values like [0.001, 0.999] to exclude extreme outliers.</p></li>
 </dl>
 </dd></dl>
 
+<dl class="py property">
+<dt class="sig sig-object py" id="tsod.ConstantValueDetector.threshold">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">threshold</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#tsod.ConstantValueDetector.threshold" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.ConstantValueDetector.validate">
 <span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#tsod.ConstantValueDetector.validate" title="Permalink to this definition">#</a></dt>
@@ -562,6 +571,11 @@ Use values like [0.001, 0.999] to exclude extreme outliers.</p></li>
 </dd>
 </dl>
 </dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tsod.ConstantValueDetector.window_size">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">window_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#tsod.ConstantValueDetector.window_size" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -620,6 +634,11 @@ Use values like [0.001, 0.999] to exclude extreme outliers.</p></li>
 </dl>
 </dd></dl>
 
+<dl class="py property">
+<dt class="sig sig-object py" id="tsod.ConstantGradientDetector.threshold">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">threshold</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#tsod.ConstantGradientDetector.threshold" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="tsod.ConstantGradientDetector.validate">
 <span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#tsod.ConstantGradientDetector.validate" title="Permalink to this definition">#</a></dt>
@@ -639,6 +658,11 @@ Use values like [0.001, 0.999] to exclude extreme outliers.</p></li>
 </dd>
 </dl>
 </dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tsod.ConstantGradientDetector.window_size">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">window_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#tsod.ConstantGradientDetector.window_size" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -1048,14 +1072,18 @@ outliers. n_sigmas, default=3.0</p></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantValueDetector.detect"><code class="docutils literal notranslate"><span class="pre">ConstantValueDetector.detect()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantValueDetector.fit"><code class="docutils literal notranslate"><span class="pre">ConstantValueDetector.fit()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantValueDetector.save"><code class="docutils literal notranslate"><span class="pre">ConstantValueDetector.save()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantValueDetector.threshold"><code class="docutils literal notranslate"><span class="pre">ConstantValueDetector.threshold</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantValueDetector.validate"><code class="docutils literal notranslate"><span class="pre">ConstantValueDetector.validate()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantValueDetector.window_size"><code class="docutils literal notranslate"><span class="pre">ConstantValueDetector.window_size</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector.detect"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector.detect()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector.fit"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector.fit()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector.save"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector.save()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector.threshold"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector.threshold</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector.validate"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector.validate()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.ConstantGradientDetector.window_size"><code class="docutils literal notranslate"><span class="pre">ConstantGradientDetector.window_size</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tsod.GradientDetector"><code class="docutils literal notranslate"><span class="pre">GradientDetector</span></code></a><ul class="nav section-nav flex-column">
