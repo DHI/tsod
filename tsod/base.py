@@ -8,6 +8,7 @@ import pandas as pd
 
 from .custom_exceptions import WrongInputDataTypeError
 
+
 def load(path: Union[str, Path]):
     """Load a saved model from disk saved with `Detector.save`
 
@@ -26,7 +27,6 @@ def load(path: Union[str, Path]):
 
 
 class Detector(ABC):
-    
     def fit(self, data: Union[pd.Series, pd.DataFrame]) -> "Detector":
         """Set detector parameters based on data.
 
@@ -38,27 +38,31 @@ class Detector(ABC):
         Returns
         -------
         Detector
-            Self  
+            Self
         """
         df = self.validate(data)
 
+        if df.empty:
+            raise ValueError("Input data cannot be empty")
         if df.shape[1] != 1:
             raise ValueError("Input DataFrame must contain exactly one column.")
-        
-        self._fit(df.iloc[:,0])
+
+        self._fit(df.iloc[:, 0])
         return self
 
     def _fit(self, data: pd.Series):
         # Default implementation is a NoOp
         return self
-    
+
     @overload
     def detect(self, data: pd.Series) -> pd.Series: ...
 
     @overload
     def detect(self, data: pd.DataFrame) -> pd.DataFrame: ...
 
-    def detect(self, data: Union[pd.Series, pd.DataFrame]) -> Union[pd.Series, pd.DataFrame]:
+    def detect(
+        self, data: Union[pd.Series, pd.DataFrame]
+    ) -> Union[pd.Series, pd.DataFrame]:
         """Detect anomalies
 
         Parameters
@@ -75,17 +79,16 @@ class Detector(ABC):
         data_as_dataframe = self.validate(data)
 
         pred = self._detect(data_as_dataframe)
-    
+
         if series_as_input:
-            pred = pred.iloc[:,0]
-             
+            pred = pred.iloc[:, 0]
+
         return pred
 
     @abstractmethod
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         """Detect anomalies"""
         pass
-
 
     def validate(self, data: Union[pd.Series, pd.DataFrame]) -> pd.DataFrame:
         """Check that input data is in correct format and possibly adjust.
@@ -112,14 +115,11 @@ class Detector(ABC):
             df = data
         else:
             raise WrongInputDataTypeError()
-        
+
         # Check unique column names
         if not df.columns.is_unique:
             raise ValueError("DataFrame columns names must be unique.")
-        
-        if df.empty:
-            raise ValueError("Input data cannot be empty")
-          
+
         return df
 
     def __str__(self):

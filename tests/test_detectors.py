@@ -82,6 +82,7 @@ def constant_data_series(range_data):
         expected_anomalies,
     )
 
+
 def test_base_detector_exceptions(range_data, range_data_series):
     data, _, _ = range_data
     data_series, _, _ = range_data_series
@@ -101,6 +102,7 @@ def test_range_detector(range_data_series):
     assert sum(anomalies) == 2
     assert all(expected_anomalies == anomalies)
 
+
 def test_range_detector_frame_1col(range_data_series):
     data, _, _ = range_data_series
 
@@ -110,16 +112,16 @@ def test_range_detector_frame_1col(range_data_series):
     expected_anomalies = [False, False, False, False, False, False, True, True]
 
     assert isinstance(anomalies, pd.DataFrame)
-    assert anomalies.shape == (len(data),1)
-    assert (anomalies.iloc[:,0].sum() == 2)
-    assert expected_anomalies == anomalies.iloc[:,0].values.tolist()
+    assert anomalies.shape == (len(data), 1)
+    assert anomalies.iloc[:, 0].sum() == 2
+    assert expected_anomalies == anomalies.iloc[:, 0].values.tolist()
 
 
 def test_range_detector_frame_multicol(range_data_series):
     data, _, _ = range_data_series
     # Multi column dataframe
     detector = RangeDetector(0, 2)
-    df = pd.DataFrame({"col1": data, "col2": data*2})
+    df = pd.DataFrame({"col1": data, "col2": data * 2})
     anomalies = detector.detect(df)
     expected_anomalies = [
         [False, False, False, False, False, False, True, True],
@@ -127,11 +129,12 @@ def test_range_detector_frame_multicol(range_data_series):
     ]
 
     assert isinstance(anomalies, pd.DataFrame)
-    assert list(anomalies.columns) == ['col1', 'col2']
-    assert anomalies.shape == (len(data),2)
+    assert list(anomalies.columns) == ["col1", "col2"]
+    assert anomalies.shape == (len(data), 2)
     assert anomalies["col1"].sum() == 2
     assert anomalies["col2"].sum() == 3
     assert expected_anomalies == anomalies.T.values.tolist()
+
 
 def test_range_detector_autoset(range_data_series):
     data, _, _ = range_data_series
@@ -151,6 +154,7 @@ def test_combined_fit(range_data_series):
     anomalies = cd.detect(abnormal_data)
     assert all(anomalies == labels)
 
+
 def test_combined_fit_frame(range_data_series):
     normal_data, abnormal_data, labels = range_data_series
     cd = CombinedDetector([ConstantValueDetector(), RangeDetector()])
@@ -158,15 +162,18 @@ def test_combined_fit_frame(range_data_series):
     df = pd.DataFrame({"normal": normal_data, "abnormal": abnormal_data})
     anomalies = cd.detect(df)
 
-    assert anomalies["normal"].tolist() == [False]*len(labels) # should be normal data
+    assert anomalies["normal"].tolist() == [False] * len(
+        labels
+    )  # should be normal data
     assert anomalies["abnormal"].tolist() == labels.tolist()
+
+
 def test_combined_wrong_type():
     with pytest.raises(ValueError):
         CombinedDetector([ConstantValueDetector, RangeDetector()])  #
 
 
 def test_combined_access_items():
-
     cd = CombinedDetector([ConstantValueDetector(), RangeDetector()])
 
     assert isinstance(cd[0], Detector)
@@ -212,6 +219,7 @@ def test_diff_detector_autoset(range_data_series):
     detected_anomalies = detector.detect(abnormal_data)
     assert sum(detected_anomalies) == 2
 
+
 def test_diff_detector_autoset_frame(range_data_series):
     normal_data, abnormal_data, expected_anomalies = range_data_series
 
@@ -221,7 +229,6 @@ def test_diff_detector_autoset_frame(range_data_series):
     detected_anomalies = detector.detect(df)
     assert detected_anomalies["abnormal"].sum() == 2
     assert detected_anomalies["normal"].sum() == 0
-
 
 
 def test_combined_detector():
@@ -245,8 +252,8 @@ def test_combined_detector():
     res = combined.detect(df)
     assert isinstance(res, pd.DataFrame)
 
-def test_rollingstddev_detector():
 
+def test_rollingstddev_detector():
     rng = np.random.default_rng(42)
     normal_data = pd.Series(rng.normal(scale=1.0, size=1000)) + 10.0 * np.sin(
         np.linspace(0, 10, num=1000)
@@ -274,6 +281,7 @@ def test_rollingstddev_detector():
     anomalies = detector.detect(all_data)
     assert sum(anomalies) > 0
 
+
 def test_rollingstddev_detector_frame():
     rng = np.random.default_rng(42)
     normal_data = pd.Series(rng.normal(scale=1.0, size=1000)) + 10.0 * np.sin(
@@ -292,6 +300,7 @@ def test_rollingstddev_detector_frame():
     assert anomalies["normal"].sum() == 0
     assert anomalies["abnormal"].sum() > 0
 
+
 def test_hampel_detector(data_series):
     data_with_anomalies, expected_anomalies_indices, _ = data_series
     detector = HampelDetector()
@@ -305,13 +314,15 @@ def test_hampel_detector(data_series):
 def test_hampel_detector_frame(data_series):
     data_with_anomalies, expected_anomalies_indices, _ = data_series
     data_with_anomalies_frame = pd.DataFrame(
-        {"col1": data_with_anomalies, "col2": data_with_anomalies})
+        {"col1": data_with_anomalies, "col2": data_with_anomalies}
+    )
 
     detector = HampelDetector()
     anomalies = detector.detect(data_with_anomalies_frame)
     for col in anomalies.columns:
         anomalies_indices = np.array(np.where(anomalies[col])).flatten()
         assert all(i in expected_anomalies_indices for i in anomalies_indices)
+
 
 def test_constant_value_detector(constant_data_series):
     good_data, abnormal_data, _ = constant_data_series
@@ -422,6 +433,7 @@ def test_constant_gradient_detector_frame(constant_gradient_data_series):
     assert anomalies["normal"].sum() == 0
     assert anomalies["abnormal"].sum() == 5
 
+
 def test_gradient_detector_constant_gradient(constant_gradient_data_series):
     good_data, _, _ = constant_gradient_data_series
 
@@ -431,18 +443,19 @@ def test_gradient_detector_constant_gradient(constant_gradient_data_series):
     assert len(anomalies) == len(good_data)
     assert sum(anomalies) == 0
 
+
 def test_gradient_detector_constant_gradient_frame(constant_gradient_data_series):
     good_data, _, _ = constant_gradient_data_series
 
     detector = GradientDetector(1.0, direction="positive")
     df = pd.DataFrame({"normal": good_data, "abnormal": good_data})
-    df.iloc[3,1] = 5000  # introduce an anomaly in one column
+    df.iloc[3, 1] = 5000  # introduce an anomaly in one column
     anomalies = detector.detect(df)
 
     assert anomalies.shape == df.shape
     assert anomalies["normal"].sum() == 0
     assert anomalies["abnormal"].sum() == 1
-    assert anomalies.loc[df.index[3],"abnormal"] is np.True_
+    assert anomalies.loc[df.index[3], "abnormal"] is np.True_
 
 
 def test_gradient_detector_sudden_jump():
@@ -555,21 +568,22 @@ def test_edge_cases():
         detector.detect(empty_df)
 
     # DataFrame with non-unique column names
-    tmp= pd.Series([1, 2, 3, np.nan, 5], name="A")
+    tmp = pd.Series([1, 2, 3, np.nan, 5], name="A")
     df_non_unique_cols = pd.concat([tmp, tmp * 2], axis=1)
     with pytest.raises(ValueError, match="DataFrame columns names must be unique."):
         detector.detect(df_non_unique_cols)
 
     # Series with non-numeric data
-    #non_numeric_series = pd.Series(["a", "b", "c", "d"])
-    #with pytest.raises(WrongInputDataTypeError, match="Input series must be numeric."):
+    # non_numeric_series = pd.Series(["a", "b", "c", "d"])
+    # with pytest.raises(WrongInputDataTypeError, match="Input series must be numeric."):
     #    detector.detect(non_numeric_series)
 
     # All nan
-    #all_nan_series = pd.Series([np.nan, np.nan, np.nan])
-    #with pytest.raises(ValueError, match="Input data cannot be all NaN"):
+    # all_nan_series = pd.Series([np.nan, np.nan, np.nan])
+    # with pytest.raises(ValueError, match="Input data cannot be all NaN"):
     #    detector.detect(all_nan_series)
-    
+
+
 def test_constant_gradient_on_non_uniform_dt():
     ind = pd.DatetimeIndex(
         [
@@ -582,4 +596,4 @@ def test_constant_gradient_on_non_uniform_dt():
     )
     x = pd.Series(index=ind, data=[30, 60, 120, 180, 270])
     anoms = ConstantGradientDetector(window_size=2).detect(x)
-    assert(anoms.sum() == 5)
+    assert anoms.sum() == 5

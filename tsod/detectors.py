@@ -6,16 +6,15 @@ import numpy as np
 
 from .base import Detector
 
-def _gradient(data: pd.DataFrame, periods: int = 1
-) -> pd.DataFrame:
-    
+
+def _gradient(data: pd.DataFrame, periods: int = 1) -> pd.DataFrame:
     if not isinstance(data, pd.DataFrame):
         raise TypeError("Input data must be a pandas.DataFrame.")
-    
-    dt = data.index.to_series().diff(periods).dt.total_seconds()*np.sign(periods)
+
+    dt = data.index.to_series().diff(periods).dt.total_seconds() * np.sign(periods)
     if dt.min() < 1e-15:
         raise ValueError("Index must be monotonically increasing")
-    
+
     # Broadcast division with dataframe correctly
     return data.diff(periods=periods).div(dt, axis=0)
 
@@ -66,7 +65,7 @@ class CombinedDetector(Detector, Sequence):
             all_anomalies.append(anom)
 
         data_frame = pd.concat(all_anomalies, axis=1)
-        #NOTE: Column names must be unique for this to work correctly
+        # NOTE: Column names must be unique for this to work correctly
         return data_frame.T.groupby(data_frame.columns).agg("any").T
 
     def __getitem__(self, index):
