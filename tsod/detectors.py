@@ -243,30 +243,62 @@ class ConstantValueDetector(Detector):
 
     def __init__(self, window_size: int = 3, threshold: float = 1e-7):
         super().__init__()
+
+        # Validate input
+        if threshold < 0:
+            raise ValueError(f"threshold must be non-negative, got {threshold}")
+        if window_size < 2:
+            raise ValueError(f"window_size must be at least 2, got {window_size}")
+
         self._threshold = threshold
         self._window_size = window_size
+
+    @property
+    def threshold(self) -> float:
+        return self._threshold
+
+    @property
+    def window_size(self) -> int:
+        return self._window_size
 
     def _fit(self, data):
         return self
 
     def _detect(self, data: pd.Series) -> pd.Series:
-        rollmax = data.rolling(self._window_size, center=True).apply(np.nanmax)
-        rollmin = data.rolling(self._window_size, center=True).apply(np.nanmin)
-        anomalies = np.abs(rollmax - rollmin) < self._threshold
-        anomalies.iloc[0] = False  # first element cannot be determined
-        anomalies.iloc[-1] = False
-        idx = np.where(anomalies)[0]
-        if idx is not None:
-            # assuming window size = 3
-            # remove also points before and after each detected anomaly
-            anomalies.iloc[idx[idx > 0] - 1] = True
-            maxidx = len(anomalies) - 1
-            anomalies.iloc[idx[idx < maxidx] + 1] = True
+        """Detect constant values in single column or multiple columns."""
 
-        return anomalies
+        if isinstance(data, pd.DataFrame):
+            # Apply detection to each column independently
+            return data.apply(self._detect_single_column, axis=0)
+        return self._detect_single_column(data)
+
+    def _detect_single_column(self, data: pd.Series) -> pd.Series:
+        """Detect constant values in a single column."""
+        # Early exit for windows size larger than data
+        if self.window_size >= data.shape[0]:
+            return pd.Series(False, index=data.index)
+
+        # Create shifted versions for comparison
+        comparisons = [
+            (np.abs(data - data.shift(i)) <= self.threshold)
+            for i in range(1, self.window_size)
+        ]
+        constant_detected = pd.concat(comparisons, axis=1).all(axis=1)
+
+        # Use convolution-like approach to expand detections
+        detections = constant_detected.values.astype(int)
+        kernel = np.ones(self._window_size, dtype=int)
+
+        # Convolve to set all points in the window to anomalies
+        expanded_full = np.convolve(detections, kernel, mode="full")
+
+        # Remove boundary effects and padded data from convolution
+        start_idx = self._window_size - 1
+        expanded = expanded_full[start_idx : start_idx + len(detections)] > 0
+        return pd.Series(expanded, index=data.index, name=data.name)
 
     def __str__(self):
-        return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
+        return f"{self.__class__.__name__}(window_size: {self.window_size}, threshold: {self.threshold})"
 
 
 class ConstantGradientDetector(ConstantValueDetector):

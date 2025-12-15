@@ -250,6 +250,72 @@ def test_constant_value_detector(constant_data_series):
     assert len(anomalies) == len(abnormal_data)
     assert sum(anomalies) == 4
 
+    detector = ConstantValueDetector(4, 0.0001)
+    anomalies = detector.detect(abnormal_data)
+
+    assert len(anomalies) == len(abnormal_data)
+    assert sum(anomalies) == 4
+
+
+def test_constant_value_detector_large_threshold(constant_data_series):
+    good_data, abnormal_data, _ = constant_data_series
+
+    detector = ConstantValueDetector(2, 0.1)
+    anomalies = detector.detect(good_data)
+
+    assert len(anomalies) == len(good_data)
+    assert sum(anomalies) == 0
+
+    detector = ConstantValueDetector(window_size=3, threshold=3)
+    anomalies = detector.detect(abnormal_data)
+
+    assert len(anomalies) == len(abnormal_data)
+    assert [False, False, True, True, True, True, True, False] == anomalies.tolist()
+
+
+def test_constant_value_detector_dataframe(constant_data_series):
+    good_data, abnormal_data, expected_anomalies = constant_data_series
+
+    good_bad_frame = pd.concat(
+        [good_data.rename("good_col"), abnormal_data.rename("bad_col")], axis=1
+    )
+
+    # Test on good data
+    detector = ConstantValueDetector(3, 0.1)
+    anomalies = detector.detect(good_bad_frame)
+    assert type(anomalies) is pd.DataFrame
+    assert anomalies.shape == good_bad_frame.shape
+    assert anomalies["good_col"].sum() == 0
+    assert anomalies["bad_col"].to_list() == expected_anomalies.tolist()
+
+    # Test on data frame with one col
+    detector = ConstantValueDetector(3, 0.1)
+    anomalies = detector.detect(good_bad_frame[["bad_col"]])
+    assert type(anomalies) is pd.DataFrame
+    assert anomalies.shape == (len(abnormal_data), 1)
+    assert anomalies["bad_col"].to_list() == expected_anomalies.tolist()
+
+
+def test_constant_value_detector_edge_cases(constant_data_series):
+    # Edge case: window size larger than data length
+    _, abnormal_data, _ = constant_data_series
+    detector = ConstantValueDetector(window_size=20, threshold=0.0001)
+    anomalies = detector.detect(abnormal_data)
+    assert len(anomalies) == len(abnormal_data)
+    assert sum(anomalies) == 0
+
+    # Emtpy series
+    empty_data = pd.Series([], dtype=float)
+    detector = ConstantValueDetector(window_size=3, threshold=0.0001)
+    anomalies = detector.detect(empty_data)
+    assert len(anomalies) == 0
+
+    # Invalid arguments
+    with pytest.raises(ValueError):
+        ConstantValueDetector(window_size=0, threshold=0.0001)
+    with pytest.raises(ValueError):
+        ConstantValueDetector(window_size=3, threshold=-1)
+
 
 def test_constant_gradient_detector(constant_gradient_data_series):
     good_data, abnormal_data, _ = constant_gradient_data_series
@@ -278,7 +344,6 @@ def test_gradient_detector_constant_gradient(constant_gradient_data_series):
 
 
 def test_gradient_detector_sudden_jump():
-
     normal_data = np.array(
         [
             -0.5,
@@ -365,7 +430,7 @@ def test_gradient_detector_datetime_index_validation():
 
     ###### DatetimeIndex test ######
     detector = GradientDetector()
-    
+
     # Test data with valid DatetimeIndex data works fine
     time = pd.date_range(start="2020", periods=5, freq="1h")
     data_with_datetime_index = pd.Series([1, 2, 3, 4, 5], index=time)
