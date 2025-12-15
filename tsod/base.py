@@ -12,9 +12,14 @@ def load(path: Union[str, Path]):
     """Load a saved model from disk saved with `Detector.save`
 
     Parameters
-    ==========
-    path: str or Path
-        file-like object to load detector from
+    ----------
+    path : str or Path
+        File-like object to load detector from.
+
+    Returns
+    -------
+    Detector
+        The loaded detector instance.
     """
 
     return joblib.load(path)
@@ -35,7 +40,7 @@ class Detector(ABC):
         Detector
             Self  
         """
-        df = self._validate(data)
+        df = self.validate(data)
 
         if df.shape[1] != 1:
             raise ValueError("Input DataFrame must contain exactly one column.")
@@ -67,20 +72,14 @@ class Detector(ABC):
             Time series with bools, True == anomaly
         """
         series_as_input = isinstance(data, pd.Series)
-        data_as_dataframe = self._validate(data)
+        data_as_dataframe = self.validate(data)
 
         pred = self._detect(data_as_dataframe)
-        pred = self._postprocess(pred)
     
         if series_as_input:
             pred = pred.iloc[:,0]
              
         return pred
-
-    def _postprocess(self, pred: pd.DataFrame) -> pd.DataFrame:
-        # TODO implement
-        return pred
-
 
     @abstractmethod
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -88,19 +87,23 @@ class Detector(ABC):
         pass
 
 
-    def _validate(self, data: Union[pd.Series, pd.DataFrame]) -> pd.DataFrame:
-        """
-        Validate and normalize input data.
-        
+    def validate(self, data: Union[pd.Series, pd.DataFrame]) -> pd.DataFrame:
+        """Check that input data is in correct format and possibly adjust.
+
         Parameters
         ----------
         data : pd.Series or pd.DataFrame
-            Time series data
-        
+            Input data to validate.
+
         Returns
         -------
         pd.DataFrame
-            Validated and normalized data
+            Validated data.
+
+        Raises
+        ------
+        WrongInputDataTypeError
+            If data is not a pd.Series or pd.DataFrame.
         """
         # Check type
         if isinstance(data, pd.Series):
@@ -123,12 +126,12 @@ class Detector(ABC):
         return f"{self.__class__.__name__}"
 
     def save(self, path: Union[str, Path]) -> None:
-        """Save a detector for later use
+        """Save a detector for later use.
 
         Parameters
-        ==========
-        path: str or Path
-            file-like object to load detector from
+        ----------
+        path : str or Path
+            File path to save the detector to.
         """
 
         joblib.dump(self, path)

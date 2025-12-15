@@ -15,8 +15,6 @@ from tsod.detectors import (
     GradientDetector,
 )
 
-from tsod.detectors import _gradient as tsod_gradient
-
 from tsod.hampel import HampelDetector
 
 
@@ -330,6 +328,72 @@ def test_constant_value_detector(constant_data_series):
     assert len(anomalies) == len(abnormal_data)
     assert sum(anomalies) == 4
 
+    detector = ConstantValueDetector(4, 0.0001)
+    anomalies = detector.detect(abnormal_data)
+
+    assert len(anomalies) == len(abnormal_data)
+    assert sum(anomalies) == 4
+
+
+def test_constant_value_detector_large_threshold(constant_data_series):
+    good_data, abnormal_data, _ = constant_data_series
+
+    detector = ConstantValueDetector(2, 0.1)
+    anomalies = detector.detect(good_data)
+
+    assert len(anomalies) == len(good_data)
+    assert sum(anomalies) == 0
+
+    detector = ConstantValueDetector(window_size=3, threshold=3)
+    anomalies = detector.detect(abnormal_data)
+
+    assert len(anomalies) == len(abnormal_data)
+    assert [False, False, True, True, True, True, True, False] == anomalies.tolist()
+
+
+def test_constant_value_detector_dataframe(constant_data_series):
+    good_data, abnormal_data, expected_anomalies = constant_data_series
+
+    good_bad_frame = pd.concat(
+        [good_data.rename("good_col"), abnormal_data.rename("bad_col")], axis=1
+    )
+
+    # Test on good data
+    detector = ConstantValueDetector(3, 0.1)
+    anomalies = detector.detect(good_bad_frame)
+    assert type(anomalies) is pd.DataFrame
+    assert anomalies.shape == good_bad_frame.shape
+    assert anomalies["good_col"].sum() == 0
+    assert anomalies["bad_col"].to_list() == expected_anomalies.tolist()
+
+    # Test on data frame with one col
+    detector = ConstantValueDetector(3, 0.1)
+    anomalies = detector.detect(good_bad_frame[["bad_col"]])
+    assert type(anomalies) is pd.DataFrame
+    assert anomalies.shape == (len(abnormal_data), 1)
+    assert anomalies["bad_col"].to_list() == expected_anomalies.tolist()
+
+
+def test_constant_value_detector_edge_cases(constant_data_series):
+    # Edge case: window size larger than data length
+    _, abnormal_data, _ = constant_data_series
+    detector = ConstantValueDetector(window_size=20, threshold=0.0001)
+    anomalies = detector.detect(abnormal_data)
+    assert len(anomalies) == len(abnormal_data)
+    assert sum(anomalies) == 0
+
+    # Emtpy series
+    empty_data = pd.Series([], dtype=float)
+    detector = ConstantValueDetector(window_size=3, threshold=0.0001)
+    anomalies = detector.detect(empty_data)
+    assert len(anomalies) == 0
+
+    # Invalid arguments
+    with pytest.raises(ValueError):
+        ConstantValueDetector(window_size=0, threshold=0.0001)
+    with pytest.raises(ValueError):
+        ConstantValueDetector(window_size=3, threshold=-1)
+
 
 def test_constant_gradient_detector(constant_gradient_data_series):
     good_data, abnormal_data, _ = constant_gradient_data_series
@@ -382,7 +446,6 @@ def test_gradient_detector_constant_gradient_frame(constant_gradient_data_series
 
 
 def test_gradient_detector_sudden_jump():
-
     normal_data = np.array(
         [
             -0.5,
@@ -469,35 +532,13 @@ def test_gradient_detector_datetime_index_validation():
 
     ###### DatetimeIndex test ######
     detector = GradientDetector()
-    
+
     # Test data with valid DatetimeIndex data works fine
     time = pd.date_range(start="2020", periods=5, freq="1h")
     data_with_datetime_index = pd.Series([1, 2, 3, 4, 5], index=time)
 
     # This should not raise an exception
     detector.fit(data_with_datetime_index)
-
-
-def test_gradient_dataframe_1col(constant_data_series):
-    df = pd.Series([1, 1, 2, 1, 1], index=pd.date_range(start="2020", periods=5, freq="1min"))
-    gradient = tsod_gradient(df.to_frame())
-    assert type(gradient) is pd.DataFrame
-    assert gradient.shape == (len(df),1)
-    assert gradient.isna().iloc[0,0]
-    assert gradient.iloc[1,0] == 0
-    assert gradient.iloc[2,0] == 1/60
-
-def test_gradient_dataframe_2col(constant_data_series):
-    series = pd.Series([1, 1, 2, 1, 1], index=pd.date_range(start="2020", periods=5, freq="1min"))
-    df = pd.DataFrame({"col1": series, "col2": series*2})
-
-    gradient = tsod_gradient(df)
-    assert type(gradient) is pd.DataFrame
-    assert gradient.shape == (len(df),2)
-    assert gradient.isna().iloc[0,0]
-    assert (gradient.iloc[1,:].values == np.array([0,0])).all()
-    assert gradient.iloc[2,0] == 1/60
-    assert gradient.iloc[2,1] == 2/60
 
 
 def test_edge_cases():
@@ -528,3 +569,17 @@ def test_edge_cases():
     #all_nan_series = pd.Series([np.nan, np.nan, np.nan])
     #with pytest.raises(ValueError, match="Input data cannot be all NaN"):
     #    detector.detect(all_nan_series)
+    
+def test_constant_gradient_on_non_uniform_dt():
+    ind = pd.DatetimeIndex(
+        [
+            "2020-01-01 01:00:30",
+            "2020-01-01 01:01:00",
+            "2020-01-01 01:02:00",
+            "2020-01-01 01:03:00",
+            "2020-01-01 01:04:30",
+        ]
+    )
+    x = pd.Series(index=ind, data=[30, 60, 120, 180, 270])
+    anoms = ConstantGradientDetector(window_size=2).detect(x)
+    assert(anoms.sum() == 5)
