@@ -289,7 +289,7 @@ class ConstantValueDetector(Detector):
         constant_detected = pd.concat(comparisons, axis=1).all(axis=1)
 
         # Use convolution-like approach to expand detections
-        detections = constant_detected.values.astype(int)
+        detections = constant_detected.astype(np.int64).to_numpy()
         kernel = np.ones(self._window_size, dtype=int)
 
         # Convolve to set all points in the window to anomalies
