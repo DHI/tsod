@@ -268,7 +268,7 @@ class ConstantValueDetector(Detector):
         """Detect constant values in single column or multiple columns."""
 
         if isinstance(data, pd.DataFrame):
-            # Vectorized approach would be more efficient
+            # Apply detection to each column independently
             return data.apply(self._detect_single_column, axis=0)
         return self._detect_single_column(data)
 
