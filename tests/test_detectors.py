@@ -560,12 +560,12 @@ def test_edge_cases():
     # Empty series
     empty_series = pd.Series(dtype=float)
     with pytest.raises(ValueError, match="Input data cannot be empty"):
-        detector.detect(empty_series)
+        detector.fit(empty_series)
 
     # Empty DataFrame
     empty_df = pd.DataFrame()
     with pytest.raises(ValueError, match="Input data cannot be empty"):
-        detector.detect(empty_df)
+        detector.fit(empty_df)
 
     # DataFrame with non-unique column names
     tmp = pd.Series([1, 2, 3, np.nan, 5], name="A")
