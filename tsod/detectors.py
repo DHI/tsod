@@ -123,7 +123,7 @@ class RangeDetector(Detector):
             assert 0.0 <= quantiles[1] <= 1.0
             self._quantiles = quantiles
 
-    def _fit(self, data):
+    def _fit(self, data: pd.Series):
         quantiles = np.nanquantile(data, self._quantiles)
         self._min = quantiles.min()
         self._max = quantiles.max()
@@ -267,7 +267,7 @@ class ConstantValueDetector(Detector):
     def window_size(self) -> int:
         return self._window_size
 
-    def _fit(self, data):
+    def _fit(self, data: pd.Series):
         return self
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
