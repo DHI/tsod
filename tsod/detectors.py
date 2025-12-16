@@ -59,14 +59,11 @@ class CombinedDetector(Detector, Sequence):
         return self
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        all_anomalies = []
-        for detector in self._detectors:
-            anom = detector.detect(data)
-            all_anomalies.append(anom)
-
-        data_frame = pd.concat(all_anomalies, axis=1)
-        # NOTE: Column names must be unique for this to work correctly
-        return data_frame.T.groupby(data_frame.columns).agg("any").T
+        # NaN handling: True | NaN -> True, False | NaN -> NaN
+        result = self._detectors[0].detect(data)
+        for detector in self._detectors[1:]:
+            result = result | detector.detect(data)
+        return result
 
     def __getitem__(self, index):
         return self._detectors[index]
