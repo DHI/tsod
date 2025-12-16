@@ -289,13 +289,19 @@ ALL_DETECTOR_CONFIGS = [
 ]
 
 
+# Helper function for readable test IDs
+def detector_config_id(config):
+    """Generate readable test IDs from detector configs."""
+    return config.detector_class.__name__
+
+
 # =============================================================================
 # Parameterized Test Suite
 # =============================================================================
 class TestDetectorStandardBehavior:
     """Standard behavior tests applied to all detectors."""
     
-    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS)
+    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS, ids=detector_config_id)
     def test_initialization_with_valid_params(self, config):
         """Test that detector can be initialized with all valid parameter combinations."""
         for params in config.valid_init_params:
@@ -303,14 +309,14 @@ class TestDetectorStandardBehavior:
             assert isinstance(detector, Detector)
             assert isinstance(detector, config.detector_class)
     
-    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS)
+    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS, ids=detector_config_id)
     def test_initialization_with_invalid_params(self, config):
         """Test that detector raises expected exceptions for invalid parameters."""
         for params, expected_exception in config.invalid_init_params:
             with pytest.raises(expected_exception):
                 config.detector_class(**params)
     
-    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS)
+    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS, ids=detector_config_id)
     def test_detect_returns_series_for_series_input(self, config, normal_series):
         """Test that detect() returns a boolean Series for Series input."""
         detector = config.detector_class()
@@ -327,7 +333,7 @@ class TestDetectorStandardBehavior:
         assert len(result) == len(normal_series)
         assert result.dtype == bool or result.dtype == np.bool_
     
-    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS)
+    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS, ids=detector_config_id)
     def test_detect_returns_dataframe_for_dataframe_input(self, config, normal_dataframe):
         """Test that detect() handles DataFrame input appropriately."""
         if not config.supports_dataframe:
@@ -342,7 +348,7 @@ class TestDetectorStandardBehavior:
         assert isinstance(result, pd.DataFrame)
         assert result.shape == normal_dataframe.shape
     
-    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS)
+    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS, ids=detector_config_id)
     def test_fit_returns_self(self, config, normal_series):
         """Test that fit() returns self for method chaining."""
         if not config.supports_fit:
@@ -352,7 +358,7 @@ class TestDetectorStandardBehavior:
         result = detector.fit(normal_series)
         assert result is detector
     
-    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS)
+    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS, ids=detector_config_id)
     def test_fit_detect_chain(self, config, normal_series, data_series):
         """Test fit().detect() method chaining works correctly."""
         if not config.supports_fit:
@@ -366,7 +372,7 @@ class TestDetectorStandardBehavior:
         assert isinstance(result, pd.Series)
         assert len(result) == len(series_with_outliers)
     
-    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS)
+    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS, ids=detector_config_id)
     def test_str_representation(self, config):
         """Test __str__ method returns a meaningful string."""
         detector = config.detector_class()
@@ -374,7 +380,7 @@ class TestDetectorStandardBehavior:
         assert isinstance(str_repr, str)
         assert config.detector_class.__name__ in str_repr
     
-    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS)
+    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS, ids=detector_config_id)
     def test_detect_raises_on_numpy_array(self, config):
         """Test that detect() raises error for numpy array input."""
         detector = config.detector_class()
@@ -382,7 +388,7 @@ class TestDetectorStandardBehavior:
         with pytest.raises(WrongInputDataTypeError):
             detector.detect(np.array([1, 2, 3, 4, 5]))
     
-    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS)
+    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS, ids=detector_config_id)
     def test_detect_raises_on_list(self, config):
         """Test that detect() raises error for list input."""
         detector = config.detector_class()
@@ -390,7 +396,7 @@ class TestDetectorStandardBehavior:
         with pytest.raises(WrongInputDataTypeError):
             detector.detect([1, 2, 3, 4, 5])
     
-    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS)
+    @pytest.mark.parametrize("config", ALL_DETECTOR_CONFIGS, ids=detector_config_id)
     def test_fit_raises_on_numpy_array(self, config):
         """Test that fit() raises error for numpy array input."""
         if not config.supports_fit:
