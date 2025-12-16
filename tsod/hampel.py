@@ -2,7 +2,7 @@
 
 import numpy as np
 from numba import jit
-
+import pandas as pd
 from tsod.custom_exceptions import NotIntegerError, InvalidArgumentError
 from tsod.detectors import Detector
 
@@ -81,10 +81,12 @@ class HampelDetector(Detector):
         self._threshold = threshold
         self._window_size = window_size
 
-    def _detect(self, data):
-        anomalies = _detect(data.values, self._window_size, self._threshold)
-
-        return anomalies
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+        # Apply column-wise detection
+        return data.apply(
+            lambda col: _detect(col.values, self._window_size, self._threshold),
+            axis=0
+        ).astype(bool)
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"

@@ -35,6 +35,7 @@ dev = [
     "pytest-cov>=4",
     "sphinx<7,>=4",
     "sphinx-book-theme",
+    "pandas-stubs",
 ]
 
 [project.urls]
