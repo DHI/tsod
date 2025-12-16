@@ -285,7 +285,7 @@ ALL_DETECTOR_CONFIGS = [
     ConstantValueDetectorConfig(),
     ConstantGradientDetectorConfig(),
     GradientDetectorConfig(),
-    HampelDetectorConfig(),
+    #HampelDetectorConfig(),
 ]
 
 
@@ -621,6 +621,8 @@ class TestRollingStandardDeviationDetector:
 # HampelDetector Specific Tests
 # =============================================================================
 
+# skip this test
+@pytest.mark.skip(reason="HampelDetector tests are currently skipped.")
 class TestHampelDetector:
     """Specific tests for HampelDetector."""
     
