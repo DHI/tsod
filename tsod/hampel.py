@@ -82,18 +82,11 @@ class HampelDetector(Detector):
         self._window_size = window_size
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        if isinstance(data, pd.DataFrame):
-            # Apply detection column-wise for DataFrames
-            anomalies = [
-                _detect(data[col].values, self._window_size, self._threshold)
-                for col in data.columns
-            ]
-            return pd.DataFrame(
-                anomalies, index=data.columns, columns=data.index
-            ).T.astype(bool)
-        else:
-            anomalies = _detect(data.values, self._window_size, self._threshold)
-            return pd.Series(anomalies, index=data.index, dtype=bool)
+        # Apply column-wise detection
+        return data.apply(
+            lambda col: _detect(col.values, self._window_size, self._threshold),
+            axis=0
+        ).astype(bool)
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._window_size}, {self._threshold})"
