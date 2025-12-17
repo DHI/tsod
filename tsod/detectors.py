@@ -365,7 +365,8 @@ class GradientDetector(Detector):
 
 
     def _fit(self, data: pd.Series):
-        self._max_gradient = np.max(np.abs(_gradient(data.to_frame())))
+        _gradients = _gradient(data.to_frame())
+        self._max_gradient = np.max(_gradients.abs())
         return self
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
