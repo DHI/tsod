@@ -13,7 +13,7 @@ def _gradient(data: pd.DataFrame, periods: int = 1) -> pd.DataFrame:
 
     if not isinstance(data.index, pd.DatetimeIndex):
         raise ValueError(
-            "GradientDetector requires a DatetimeIndex. "
+            "Gradient calculation requires a DatetimeIndex. "
             f"Got {type(data.index).__name__} instead."
         )
 
