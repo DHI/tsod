@@ -170,7 +170,7 @@ def test_combined_fit_frame(range_data_series):
 
 def test_combined_wrong_type():
     with pytest.raises(ValueError):
-        CombinedDetector([ConstantValueDetector, RangeDetector()])  #
+        CombinedDetector([ConstantValueDetector, RangeDetector()])  # type: ignore  # noqa
 
 
 def test_combined_access_items():
