@@ -47,7 +47,7 @@ class CombinedDetector(Detector, Sequence):
     >>> detected_anomalies = anomaly_detector.detect(abnormal_data)
     """
 
-    def __init__(self, detectors):
+    def __init__(self, detectors: list[Detector]):
         super().__init__()
 
         for detector in detectors:
@@ -57,7 +57,7 @@ class CombinedDetector(Detector, Sequence):
                      Did you forget to create an instance, e.g. ConstantValueDetector()?"""
                 )
 
-        self._detectors = detectors
+        self._detectors: list[Detector] = detectors
 
     def _fit(self, data: pd.Series):
         for detector in self._detectors:
@@ -112,12 +112,17 @@ class RangeDetector(Detector):
     >>> anomalies = detector.detect(abnormal_data)
     """
 
-    def __init__(self, min_value=-np.inf, max_value=np.inf, quantiles=None):
+    def __init__(
+        self,
+        min_value: float = -np.inf,
+        max_value: float = np.inf,
+        quantiles: list[float] | None = None,
+    ):
         super().__init__()
 
-        self._min = min_value
-
-        self._max = max_value
+        self._min: float = min_value
+        self._max: float = max_value
+        self._quantiles: list[float]
 
         if quantiles is None:
             self._quantiles = [0.0, 1.0]
@@ -165,9 +170,10 @@ class DiffDetector(Detector):
     GradientDetector : Similar functionality but considers actual time between data points.
     """
 
-    def __init__(self, max_diff=np.inf, direction="both"):
+    def __init__(self, max_diff: float = np.inf, direction: str = "both"):
         super().__init__()
-        self._max_diff = max_diff
+        self._max_diff: float = max_diff
+        self._direction: str = direction
 
         valid_directions = ("both", "positive", "negative")
         if direction in valid_directions:
@@ -210,11 +216,11 @@ class RollingStandardDeviationDetector(Detector):
         If True, set the labels at the center of the window.
     """
 
-    def __init__(self, window_size=10, max_std=np.inf, center=True):
+    def __init__(self, window_size: int = 10, max_std: float = np.inf, center: bool = True):
         super().__init__()
-        self._window_size = window_size
-        self._max_std = max_std
-        self._center = center
+        self._window_size: int = window_size
+        self._max_std: float = max_std
+        self._center: bool = center
 
     def _fit(self, data: pd.Series):
         self._max_std = data.rolling(self._window_size).std().max()
@@ -344,17 +350,19 @@ class GradientDetector(Detector):
         'negative' detects only decreases, 'both' detects changes in either direction.
     """
 
-    def __init__(self, max_gradient=np.inf, direction="both"):
+    def __init__(self, max_gradient: float = np.inf, direction: str = "both"):
         super().__init__()
-        self._max_gradient = max_gradient
+        self._max_gradient: float = max_gradient
+        
         valid_directions = ("both", "positive", "negative")
-        if direction in valid_directions:
-            self._direction = direction
-        else:
+        if direction not in valid_directions:
             raise ValueError(
                 f"""Selected direction, '{direction}' is not a valid direction.
                  Valid directions are: {valid_directions}"""
             )
+        
+        self._direction: str = direction
+
 
     def _fit(self, data: pd.Series):
         # Validate that the data has a DatetimeIndex
