@@ -176,12 +176,13 @@ class DiffDetector(Detector):
         self._direction: str = direction
 
         valid_directions = ("both", "positive", "negative")
-        if direction in valid_directions:
-            self._direction = direction
-        else:
+        if direction not in valid_directions:
             raise ValueError(
-                f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
+                f"""Selected direction, '{direction}' is not a valid direction.
+                 Valid directions are: {valid_directions}"""
             )
+
+        self._direction: str = direction
 
     def _fit(self, data: pd.Series):
         data_diff = data.diff()
@@ -216,7 +217,9 @@ class RollingStandardDeviationDetector(Detector):
         If True, set the labels at the center of the window.
     """
 
-    def __init__(self, window_size: int = 10, max_std: float = np.inf, center: bool = True):
+    def __init__(
+        self, window_size: int = 10, max_std: float = np.inf, center: bool = True
+    ):
         super().__init__()
         self._window_size: int = window_size
         self._max_std: float = max_std
@@ -353,16 +356,15 @@ class GradientDetector(Detector):
     def __init__(self, max_gradient: float = np.inf, direction: str = "both"):
         super().__init__()
         self._max_gradient: float = max_gradient
-        
+
         valid_directions = ("both", "positive", "negative")
         if direction not in valid_directions:
             raise ValueError(
                 f"""Selected direction, '{direction}' is not a valid direction.
                  Valid directions are: {valid_directions}"""
             )
-        
-        self._direction: str = direction
 
+        self._direction: str = direction
 
     def _fit(self, data: pd.Series):
         _gradients = _gradient(data.to_frame())
