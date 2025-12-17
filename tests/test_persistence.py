@@ -4,7 +4,6 @@ from tsod import RangeDetector, ConstantValueDetector, CombinedDetector
 
 
 def test_save_and_load(tmp_path):
-
     combined = CombinedDetector(
         [
             ConstantValueDetector(),
@@ -32,7 +31,6 @@ def test_load():
 
 
 def test_save_and_load_filename(tmpdir):
-
     combined = CombinedDetector(
         [
             ConstantValueDetector(),

@@ -7,19 +7,22 @@ import numpy as np
 from .base import Detector
 
 
-def _gradient(data, periods: int = 1):
+def _gradient(data: pd.DataFrame, periods: int = 1) -> pd.DataFrame:
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError("Input data must be a pandas.DataFrame.")
+
     if not isinstance(data.index, pd.DatetimeIndex):
         raise ValueError(
             "GradientDetector requires a DatetimeIndex. "
             f"Got {type(data.index).__name__} instead."
             )
 
-    dt = data.index.to_series().diff(periods).dt.total_seconds()*np.sign(periods)
+    dt = data.index.to_series().diff(periods).dt.total_seconds() * np.sign(periods)
     if dt.min() < 1e-15:
         raise ValueError("Index must be monotonically increasing")
 
-    gradient = data.diff(periods=periods) / dt
-    return gradient
+    # Broadcast division with dataframe correctly
+    return data.diff(periods=periods).div(dt, axis=0)
 
 
 class CombinedDetector(Detector, Sequence):
@@ -56,18 +59,17 @@ class CombinedDetector(Detector, Sequence):
 
         self._detectors = detectors
 
-    def _fit(self, data):
+    def _fit(self, data: pd.Series):
         for detector in self._detectors:
             detector.fit(data)
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
-        all_anomalies = []
-        for detector in self._detectors:
-            anom = detector.detect(data)
-            all_anomalies.append(anom)
-        data_frame = pd.DataFrame(all_anomalies).T
-        return data_frame.any(axis=1)
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+        # NaN handling: True | NaN -> True, False | NaN -> NaN
+        result = self._detectors[0].detect(data)
+        for detector in self._detectors[1:]:
+            result = result | detector.detect(data)
+        return result
 
     def __getitem__(self, index):
         return self._detectors[index]
@@ -124,9 +126,7 @@ class RangeDetector(Detector):
             assert 0.0 <= quantiles[1] <= 1.0
             self._quantiles = quantiles
 
-    def _fit(self, data):
-        super().validate(data)
-
+    def _fit(self, data: pd.Series):
         quantiles = np.nanquantile(data, self._quantiles)
         self._min = quantiles.min()
         self._max = quantiles.max()
@@ -134,7 +134,9 @@ class RangeDetector(Detector):
         assert self._max >= self._min
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Detect anomalies outside range"""
+
         if self._max is None:
             return data < self._min
 
@@ -175,13 +177,13 @@ class DiffDetector(Detector):
                 f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
             )
 
-    def _fit(self, data):
+    def _fit(self, data: pd.Series):
         data_diff = data.diff()
 
         self._max_diff = data_diff.max()
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         if self._direction == "both":
             return (data.diff()).abs() > self._max_diff
         elif self._direction == "positive":
@@ -214,17 +216,18 @@ class RollingStandardDeviationDetector(Detector):
         self._max_std = max_std
         self._center = center
 
-    def _fit(self, data):
+    def _fit(self, data: pd.Series):
         self._max_std = data.rolling(self._window_size).std().max()
 
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         anomalies = (
             data.rolling(self._window_size, center=self._center).std() > self._max_std
         )
+
         # anomalies = anomalies.astype(int).diff() > 0  # only take positive edges
-        anomalies[0] = False  # first element cannot be determined by diff
+        anomalies.iloc[0, :] = False  # first element cannot be determined by diff
         return anomalies
 
     def __str__(self):
@@ -264,16 +267,14 @@ class ConstantValueDetector(Detector):
     def window_size(self) -> int:
         return self._window_size
 
-    def _fit(self, data):
+    def _fit(self, data: pd.Series):
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         """Detect constant values in single column or multiple columns."""
 
-        if isinstance(data, pd.DataFrame):
-            # Apply detection to each column independently
-            return data.apply(self._detect_single_column, axis=0)
-        return self._detect_single_column(data)
+        # Apply detection to each column independently
+        return data.apply(self._detect_single_column, axis=0)
 
     def _detect_single_column(self, data: pd.Series) -> pd.Series:
         """Detect constant values in a single column."""
@@ -318,7 +319,7 @@ class ConstantGradientDetector(ConstantValueDetector):
     def __init__(self, window_size: int = 3):
         super().__init__(window_size=window_size)
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         gradient = _gradient(data, periods=1)
         s1 = super()._detect(gradient)
         gradient = _gradient(data, periods=-1)
@@ -356,10 +357,16 @@ class GradientDetector(Detector):
             )
 
     def _fit(self, data: pd.Series):
-        self._max_gradient = np.max(np.abs(_gradient(data)))
+        # Validate that the data has a DatetimeIndex
+        if not isinstance(data.index, pd.DatetimeIndex):
+            raise ValueError(
+                "GradientDetector requires a DatetimeIndex. "
+                f"Got {type(data.index).__name__} instead."
+            )
+        self._max_gradient = np.max(np.abs(_gradient(data.to_frame())))
         return self
 
-    def _detect(self, data: pd.Series) -> pd.Series:
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         gradient = _gradient(data)
         if self._direction == "negative":
             return gradient < -self._max_gradient
