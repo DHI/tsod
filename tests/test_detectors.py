@@ -100,7 +100,7 @@ def test_range_detector(range_data_series):
     assert isinstance(anomalies, pd.Series)
     assert len(anomalies) == len(data)
     assert sum(anomalies) == 2
-    assert all(expected_anomalies == anomalies)
+    assert (anomalies == expected_anomalies).all()
 
 
 def test_range_detector_frame_1col(range_data_series):
