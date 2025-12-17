@@ -15,7 +15,7 @@ def _gradient(data: pd.DataFrame, periods: int = 1) -> pd.DataFrame:
         raise ValueError(
             "GradientDetector requires a DatetimeIndex. "
             f"Got {type(data.index).__name__} instead."
-            )
+        )
 
     dt = data.index.to_series().diff(periods).dt.total_seconds() * np.sign(periods)
     if dt.min() < 1e-15:

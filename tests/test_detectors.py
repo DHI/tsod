@@ -256,30 +256,39 @@ def test_combined_detector():
 def test_combined_detector_multicol_results():
     """Test CombinedDetector with RangeDetector and ConstantValueDetector on 2-column DataFrame"""
     # Create test data for column 1: has range violations (values outside 0-4 range)
-    col1_data = np.array([np.nan, 2.0, 3.0, 5.0, 6.0, 2.0, 3.0, -1.0])  # 5.0, 6.0, -1.0 are out of range
-    
+    col1_data = np.array(
+        [np.nan, 2.0, 3.0, 5.0, 6.0, 2.0, 3.0, -1.0]
+    )  # 5.0, 6.0, -1.0 are out of range
+
     # Create test data for column 2: has constant values (four consecutive 2.0s) and range violation at last index
-    col2_data = np.array([1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 4.0, 5.0])  # 2.0, 2.0, 2.0, 2.0 are constant, 5.0 is out of range
-    
+    col2_data = np.array(
+        [1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 4.0, 5.0]
+    )  # 2.0, 2.0, 2.0, 2.0 are constant, 5.0 is out of range
+
     time = pd.date_range(start="2020", periods=len(col1_data), freq="1h")
     df = pd.DataFrame({"col1": col1_data, "col2": col2_data}, index=time)
-    
+
     # Combined detector with RangeDetector (0-4) and ConstantValueDetector (window=4, threshold=0.001)
-    combined = CombinedDetector([
-        RangeDetector(min_value=0, max_value=4),
-        ConstantValueDetector(window_size=4, threshold=0.001),
-        RollingStandardDeviationDetector()
-    ])
-    
+    combined = CombinedDetector(
+        [
+            RangeDetector(min_value=0, max_value=4),
+            ConstantValueDetector(window_size=4, threshold=0.001),
+            RollingStandardDeviationDetector(),
+        ]
+    )
+
     anomalies = combined.detect(df)
-    
+
     # Verify output structure
     assert isinstance(anomalies, pd.DataFrame)
     assert anomalies.shape == df.shape
     assert list(anomalies.columns) == ["col1", "col2"]
-    
+
     assert anomalies["col1"].sum() == 3  # 3 range violations
-    assert anomalies["col2"].sum() == 5  # 4 constant value violations + 1 range violation
+    assert (
+        anomalies["col2"].sum() == 5
+    )  # 4 constant value violations + 1 range violation
+
 
 def test_rollingstddev_detector():
     rng = np.random.default_rng(42)
