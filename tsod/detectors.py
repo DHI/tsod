@@ -373,7 +373,7 @@ class GradientDetector(Detector):
         elif self._direction == "positive":
             return gradient > self._max_gradient
         else:
-            return np.abs(gradient) > self._max_gradient
+            return gradient.abs() > self._max_gradient
 
     def __str__(self):
         max_grad_hr = self._max_gradient * 3600.0
