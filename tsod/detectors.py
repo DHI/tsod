@@ -173,7 +173,6 @@ class DiffDetector(Detector):
     def __init__(self, max_diff: float = np.inf, direction: str = "both"):
         super().__init__()
         self._max_diff: float = max_diff
-        self._direction: str = direction
 
         valid_directions = ("both", "positive", "negative")
         if direction not in valid_directions:
