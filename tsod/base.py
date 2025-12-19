@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Union, overload
+from typing_extensions import Self
 
 from pathlib import Path
 import joblib
@@ -27,7 +28,7 @@ def load(path: Union[str, Path]):
 
 
 class Detector(ABC):
-    def fit(self, data: Union[pd.Series, pd.DataFrame]) -> "Detector":
+    def fit(self, data: Union[pd.Series, pd.DataFrame]) -> Self:
         """Set detector parameters based on data.
 
         Parameters
@@ -37,8 +38,7 @@ class Detector(ABC):
             If DataFrame, must contain exactly one column
         Returns
         -------
-        Detector
-            Self
+        Self
         """
         df = self.validate(data)
 

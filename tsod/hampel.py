@@ -84,8 +84,7 @@ class HampelDetector(Detector):
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         # Apply column-wise detection
         return data.apply(
-            lambda col: _detect(col.values, self._window_size, self._threshold),
-            axis=0
+            lambda col: _detect(col.values, self._window_size, self._threshold), axis=0
         ).astype(bool)
 
     def __str__(self):

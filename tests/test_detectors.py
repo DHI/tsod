@@ -100,7 +100,7 @@ def test_range_detector(range_data_series):
     assert isinstance(anomalies, pd.Series)
     assert len(anomalies) == len(data)
     assert sum(anomalies) == 2
-    assert all(expected_anomalies == anomalies)
+    assert (anomalies == expected_anomalies).all()
 
 
 def test_range_detector_frame_1col(range_data_series):
@@ -170,7 +170,7 @@ def test_combined_fit_frame(range_data_series):
 
 def test_combined_wrong_type():
     with pytest.raises(ValueError):
-        CombinedDetector([ConstantValueDetector, RangeDetector()])  #
+        CombinedDetector([ConstantValueDetector, RangeDetector()])  # type: ignore  # noqa
 
 
 def test_combined_access_items():
@@ -256,30 +256,39 @@ def test_combined_detector():
 def test_combined_detector_multicol_results():
     """Test CombinedDetector with RangeDetector and ConstantValueDetector on 2-column DataFrame"""
     # Create test data for column 1: has range violations (values outside 0-4 range)
-    col1_data = np.array([np.nan, 2.0, 3.0, 5.0, 6.0, 2.0, 3.0, -1.0])  # 5.0, 6.0, -1.0 are out of range
-    
+    col1_data = np.array(
+        [np.nan, 2.0, 3.0, 5.0, 6.0, 2.0, 3.0, -1.0]
+    )  # 5.0, 6.0, -1.0 are out of range
+
     # Create test data for column 2: has constant values (four consecutive 2.0s) and range violation at last index
-    col2_data = np.array([1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 4.0, 5.0])  # 2.0, 2.0, 2.0, 2.0 are constant, 5.0 is out of range
-    
+    col2_data = np.array(
+        [1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 4.0, 5.0]
+    )  # 2.0, 2.0, 2.0, 2.0 are constant, 5.0 is out of range
+
     time = pd.date_range(start="2020", periods=len(col1_data), freq="1h")
     df = pd.DataFrame({"col1": col1_data, "col2": col2_data}, index=time)
-    
+
     # Combined detector with RangeDetector (0-4) and ConstantValueDetector (window=4, threshold=0.001)
-    combined = CombinedDetector([
-        RangeDetector(min_value=0, max_value=4),
-        ConstantValueDetector(window_size=4, threshold=0.001),
-        RollingStandardDeviationDetector()
-    ])
-    
+    combined = CombinedDetector(
+        [
+            RangeDetector(min_value=0, max_value=4),
+            ConstantValueDetector(window_size=4, threshold=0.001),
+            RollingStandardDeviationDetector(),
+        ]
+    )
+
     anomalies = combined.detect(df)
-    
+
     # Verify output structure
     assert isinstance(anomalies, pd.DataFrame)
     assert anomalies.shape == df.shape
     assert list(anomalies.columns) == ["col1", "col2"]
-    
+
     assert anomalies["col1"].sum() == 3  # 3 range violations
-    assert anomalies["col2"].sum() == 5  # 4 constant value violations + 1 range violation
+    assert (
+        anomalies["col2"].sum() == 5
+    )  # 4 constant value violations + 1 range violation
+
 
 def test_rollingstddev_detector():
     rng = np.random.default_rng(42)
@@ -568,7 +577,7 @@ def test_gradient_detector_datetime_index_validation():
     data_with_int_index = pd.Series([1, 2, 3, 4, 5])
 
     # Test with integer index
-    with pytest.raises(ValueError, match="GradientDetector requires a DatetimeIndex"):
+    with pytest.raises(ValueError, match="Gradient calculation requires a DatetimeIndex. Got RangeIndex instead"):
         detector.fit(data_with_int_index)
 
     ###### DatetimeIndex test ######

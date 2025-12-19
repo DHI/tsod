@@ -11,6 +11,12 @@ def _gradient(data: pd.DataFrame, periods: int = 1) -> pd.DataFrame:
     if not isinstance(data, pd.DataFrame):
         raise TypeError("Input data must be a pandas.DataFrame.")
 
+    if not isinstance(data.index, pd.DatetimeIndex):
+        raise ValueError(
+            "Gradient calculation requires a DatetimeIndex. "
+            f"Got {type(data.index).__name__} instead."
+        )
+
     dt = data.index.to_series().diff(periods).dt.total_seconds() * np.sign(periods)
     if dt.min() < 1e-15:
         raise ValueError("Index must be monotonically increasing")
@@ -41,7 +47,7 @@ class CombinedDetector(Detector, Sequence):
     >>> detected_anomalies = anomaly_detector.detect(abnormal_data)
     """
 
-    def __init__(self, detectors):
+    def __init__(self, detectors: list[Detector]):
         super().__init__()
 
         for detector in detectors:
@@ -51,7 +57,7 @@ class CombinedDetector(Detector, Sequence):
                      Did you forget to create an instance, e.g. ConstantValueDetector()?"""
                 )
 
-        self._detectors = detectors
+        self._detectors: list[Detector] = detectors
 
     def _fit(self, data: pd.Series):
         for detector in self._detectors:
@@ -106,12 +112,17 @@ class RangeDetector(Detector):
     >>> anomalies = detector.detect(abnormal_data)
     """
 
-    def __init__(self, min_value=-np.inf, max_value=np.inf, quantiles=None):
+    def __init__(
+        self,
+        min_value: float = -np.inf,
+        max_value: float = np.inf,
+        quantiles: list[float] | None = None,
+    ):
         super().__init__()
 
-        self._min = min_value
-
-        self._max = max_value
+        self._min: float = min_value
+        self._max: float = max_value
+        self._quantiles: list[float]
 
         if quantiles is None:
             self._quantiles = [0.0, 1.0]
@@ -140,9 +151,6 @@ class RangeDetector(Detector):
         return (data < self._min) | (data > self._max)
 
     def __str__(self):
-        return f"{super.__str__(self)}{self._min}, {self._max})"
-
-    def __repr__(self):
         return f"{self.__class__.__name__}(min: {self._min:.1e}, max: {self._max:.1e})"
 
 
@@ -162,17 +170,18 @@ class DiffDetector(Detector):
     GradientDetector : Similar functionality but considers actual time between data points.
     """
 
-    def __init__(self, max_diff=np.inf, direction="both"):
+    def __init__(self, max_diff: float = np.inf, direction: str = "both"):
         super().__init__()
-        self._max_diff = max_diff
+        self._max_diff: float = max_diff
 
         valid_directions = ("both", "positive", "negative")
-        if direction in valid_directions:
-            self._direction = direction
-        else:
+        if direction not in valid_directions:
             raise ValueError(
-                f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
+                f"""Selected direction, '{direction}' is not a valid direction.
+                 Valid directions are: {valid_directions}"""
             )
+
+        self._direction: str = direction
 
     def _fit(self, data: pd.Series):
         data_diff = data.diff()
@@ -182,7 +191,7 @@ class DiffDetector(Detector):
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         if self._direction == "both":
-            return np.abs(data.diff()) > self._max_diff
+            return (data.diff()).abs() > self._max_diff
         elif self._direction == "positive":
             return data.diff() > self._max_diff
         else:
@@ -207,11 +216,13 @@ class RollingStandardDeviationDetector(Detector):
         If True, set the labels at the center of the window.
     """
 
-    def __init__(self, window_size=10, max_std=np.inf, center=True):
+    def __init__(
+        self, window_size: int = 10, max_std: float = np.inf, center: bool = True
+    ):
         super().__init__()
-        self._window_size = window_size
-        self._max_std = max_std
-        self._center = center
+        self._window_size: int = window_size
+        self._max_std: float = max_std
+        self._center: bool = center
 
     def _fit(self, data: pd.Series):
         self._max_std = data.rolling(self._window_size).std().max()
@@ -281,13 +292,13 @@ class ConstantValueDetector(Detector):
 
         # Create shifted versions for comparison
         comparisons = [
-            (np.abs(data - data.shift(i)) <= self.threshold)
+            ((data - data.shift(i)).abs() <= self.threshold)
             for i in range(1, self.window_size)
         ]
         constant_detected = pd.concat(comparisons, axis=1).all(axis=1)
 
         # Use convolution-like approach to expand detections
-        detections = constant_detected.values.astype(int)
+        detections = constant_detected.astype(np.int64).to_numpy()
         kernel = np.ones(self._window_size, dtype=int)
 
         # Convolve to set all points in the window to anomalies
@@ -341,26 +352,22 @@ class GradientDetector(Detector):
         'negative' detects only decreases, 'both' detects changes in either direction.
     """
 
-    def __init__(self, max_gradient=np.inf, direction="both"):
+    def __init__(self, max_gradient: float = np.inf, direction: str = "both"):
         super().__init__()
-        self._max_gradient = max_gradient
+        self._max_gradient: float = max_gradient
+
         valid_directions = ("both", "positive", "negative")
-        if direction in valid_directions:
-            self._direction = direction
-        else:
+        if direction not in valid_directions:
             raise ValueError(
                 f"""Selected direction, '{direction}' is not a valid direction.
                  Valid directions are: {valid_directions}"""
             )
 
+        self._direction: str = direction
+
     def _fit(self, data: pd.Series):
-        # Validate that the data has a DatetimeIndex
-        if not isinstance(data.index, pd.DatetimeIndex):
-            raise ValueError(
-                "GradientDetector requires a DatetimeIndex. "
-                f"Got {type(data.index).__name__} instead."
-            )
-        self._max_gradient = np.max(np.abs(_gradient(data.to_frame())))
+        _gradients = _gradient(data.to_frame())
+        self._max_gradient = _gradients.abs().max().iloc[0]
         return self
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -370,7 +377,7 @@ class GradientDetector(Detector):
         elif self._direction == "positive":
             return gradient > self._max_gradient
         else:
-            return np.abs(gradient) > self._max_gradient
+            return gradient.abs() > self._max_gradient
 
     def __str__(self):
         max_grad_hr = self._max_gradient * 3600.0
