@@ -577,7 +577,10 @@ def test_gradient_detector_datetime_index_validation():
     data_with_int_index = pd.Series([1, 2, 3, 4, 5])
 
     # Test with integer index
-    with pytest.raises(ValueError, match="Gradient calculation requires a DatetimeIndex. Got RangeIndex instead"):
+    with pytest.raises(
+        ValueError,
+        match="Gradient calculation requires a DatetimeIndex. Got RangeIndex instead",
+    ):
         detector.fit(data_with_int_index)
 
     ###### DatetimeIndex test ######
