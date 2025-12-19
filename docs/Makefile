@@ -1,20 +1,23 @@
-# Minimal makefile for Sphinx documentation
+# Minimal makefile for Quarto documentation
 #
 
-# You can set these variables from the command line, and also
-# from the environment for the first two.
-SPHINXOPTS    ?=
-SPHINXBUILD   ?= sphinx-build
-SOURCEDIR     = .
-BUILDDIR      = _build
+.PHONY: help api build preview clean
 
-# Put it first so that "make" without argument is like "make help".
 help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@echo "Please use 'make <target>' where <target> is one of:"
+	@echo "  api      to generate API documentation with quartodoc"
+	@echo "  build    to build the documentation as HTML"
+	@echo "  preview  to preview the documentation with live reload"
+	@echo "  clean    to remove generated files"
 
-.PHONY: help Makefile
+api:
+	uv run quartodoc build
 
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+build: api
+	uv run quarto render
+
+preview: api
+	uv run quarto preview
+
+clean:
+	rm -rf _site api objects.json
