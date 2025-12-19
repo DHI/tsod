@@ -13,7 +13,7 @@ authors = [{ name = "Henrik Andersson", email = "jan@dhigroup.com" }]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["pandas>=1.0.0", "joblib", "numba"]
+dependencies = ["pandas>=1.0.0", "joblib", "numba", "typing_extensions"]
 
 classifiers = [
     "License :: OSI Approved :: MIT License",
@@ -30,11 +30,12 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
-    "ruff",
+    "ruff==0.14.5",
     "pytest>=6",
     "pytest-cov>=4",
     "sphinx<7,>=4",
     "sphinx-book-theme",
+    "pandas-stubs",
 ]
 
 [dependency-groups]
@@ -50,5 +51,28 @@ docs = [
 "Bug Tracker" = "https://github.com/DHI/tsod/issues"
 
 
-[tool.ruff]
-lint.ignore = ["E501", "E741"]
+[tool.ruff.lint]
+
+# ignore long lines
+ignore = ["E501", "E741", "PD011"]
+
+select = [
+    # ruff defaults
+    "E4",
+    "E7",
+    "E9",
+    "F",
+    # ruff defaults
+    # TODO deal with docstring issues in a future PR
+    #"D100",
+    #"D101",
+    #"D102",
+    #"D103",
+    #"D202",
+    #"D212",
+    #"D413",
+    #"D415",
+    #"D417",
+    "NPY",
+    "PD",
+]

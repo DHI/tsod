@@ -31,14 +31,14 @@ def create_random_walk_with_outliers(
     n_outliers = int(outlier_fraction * n_steps)
 
     # Simulate random walk
-    np.random.seed(seed)
+    rng = np.random.default_rng(seed)
     possible_steps = [-1, 1]
-    random_steps = np.random.choice(a=possible_steps, size=n_steps)
+    random_steps = rng.choice(a=possible_steps, size=n_steps)
     random_walk = np.append(t0, random_steps[:-1]).cumsum(axis=0)
 
     # Add outliers
     random_walk_with_outliers = random_walk.copy()
-    outlier_indices = np.random.randint(0, n_steps, n_outliers)
+    outlier_indices = rng.integers(0, n_steps, n_outliers)
     random_walk_with_outliers[outlier_indices] += (
         random_steps[outlier_indices] * outlier_scale
     )
