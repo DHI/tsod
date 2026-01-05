@@ -13,7 +13,7 @@ authors = [{ name = "Henrik Andersson", email = "jan@dhigroup.com" }]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["pandas>=1.0.0", "joblib", "numba"]
+dependencies = ["pandas>=1.0.0", "joblib", "numba", "typing_extensions"]
 
 classifiers = [
     "License :: OSI Approved :: MIT License",
@@ -35,6 +35,7 @@ dev = [
     "pytest-cov>=4",
     "sphinx<7,>=4",
     "sphinx-book-theme",
+    "pandas-stubs",
 ]
 
 [project.urls]
