@@ -175,10 +175,11 @@ class DiffDetector(Detector):
         self._max_diff: float = max_diff
 
         valid_directions = ("both", "positive", "negative")
-        if direction not in valid_directions:
+        if direction in valid_directions:
+            self._direction = direction
+        else:
             raise ValueError(
-                f"""Selected direction, '{direction}' is not a valid direction.
-                 Valid directions are: {valid_directions}"""
+                f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
             )
 
     def _fit(self, data):
@@ -362,7 +363,9 @@ class GradientDetector(Detector):
         self._max_gradient: float = max_gradient
 
         valid_directions = ("both", "positive", "negative")
-        if direction not in valid_directions:
+        if direction in valid_directions:
+            self._direction = direction
+        else:
             raise ValueError(
                 f"""Selected direction, '{direction}' is not a valid direction.
                  Valid directions are: {valid_directions}"""
@@ -370,14 +373,7 @@ class GradientDetector(Detector):
 
     def _fit(self, data: pd.Series):
         """Set max gradient based on data."""
-
-        # Validate that the data has a DatetimeIndex
-        if not isinstance(data.index, pd.DatetimeIndex):
-            raise ValueError(
-                "GradientDetector requires a DatetimeIndex. "
-                f"Got {type(data.index).__name__} instead."
-            )
-        gradients = _gradient(data)
+        gradients = _gradient(data.to_frame())
 
         # Filter based on direction
         if self._direction == "positive":
@@ -387,7 +383,9 @@ class GradientDetector(Detector):
         else:  # both directions
             filtered_gradients = gradients.abs()
 
-        self._max_gradient = filtered_gradients.max() if not filtered_gradients.empty else 0
+        self._max_gradient = (
+            filtered_gradients.max().iloc[0] if not filtered_gradients.empty else 0
+        )
         return self
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:

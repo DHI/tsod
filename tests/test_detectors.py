@@ -222,21 +222,29 @@ def test_diff_detector_autoset(range_data_series):
 
 def test_diff_detector_autoset_neg(range_data_series):
     normal_data, abnormal_data, _ = range_data_series
-    normal_data.iloc[:] = [0,1,2,3,4,5,6,7]
-    detector = DiffDetector(direction="negative").fit(normal_data) #pos max=2, neg_max=-1
-    abnormal_data.iloc[4] = 2.0  #neg jump iloc[4->5] with -2
-    detected_anomalies = detector.detect(abnormal_data) 
-    expexted_anomalies = np.array([False, False, False, False, False, True, False, False])
+    normal_data.iloc[:] = [0, 1, 2, 3, 4, 5, 6, 7]
+    detector = DiffDetector(direction="negative").fit(
+        normal_data
+    )  # pos max=2, neg_max=-1
+    abnormal_data.iloc[4] = 2.0  # neg jump iloc[4->5] with -2
+    detected_anomalies = detector.detect(abnormal_data)
+    expexted_anomalies = np.array(
+        [False, False, False, False, False, True, False, False]
+    )
     assert all(detected_anomalies.values == expexted_anomalies)
 
 
 def test_diff_autoset_on_all_negative(range_data_series):
     normal_data, abnormal_data, _ = range_data_series
-    normal_data.iloc[:] = [0,-1,-2,-3,-4,-5,-6,-7]
-    detector = DiffDetector(direction="positive").fit(normal_data) #max_diff set to 0
-    detected_anomalies = detector.detect(abnormal_data) 
-    expexted_anomalies = np.array([False, False, False, False, False, False, True, True])
+    normal_data.iloc[:] = [0, -1, -2, -3, -4, -5, -6, -7]
+    detector = DiffDetector(direction="positive").fit(normal_data)  # max_diff set to 0
+    detected_anomalies = detector.detect(abnormal_data)
+    expexted_anomalies = np.array(
+        [False, False, False, False, False, False, True, True]
+    )
     assert all(detected_anomalies.values == expexted_anomalies)
+
+
 def test_diff_detector_autoset_frame(range_data_series):
     normal_data, abnormal_data, expected_anomalies = range_data_series
 
@@ -594,7 +602,10 @@ def test_gradient_detector_datetime_index_validation():
     data_with_int_index = pd.Series([1, 2, 3, 4, 5])
 
     # Test with integer index
-    with pytest.raises(ValueError, match="Gradient calculation requires a DatetimeIndex. Got RangeIndex instead"):
+    with pytest.raises(
+        ValueError,
+        match="Gradient calculation requires a DatetimeIndex. Got RangeIndex instead",
+    ):
         detector.fit(data_with_int_index)
 
     ###### DatetimeIndex test ######
