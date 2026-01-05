@@ -589,8 +589,22 @@ def test_gradient_detector_sudden_jump():
     # Max gradient 2.0/h
     detector.fit(normal_data)
     anomalies = detector.detect(abnormal_data)
-
     assert sum(anomalies) == 1
+
+    # Fit and detect with direction positive
+    detector = GradientDetector(direction="positive")
+    detector.fit(normal_data)  # max 1.7
+    anomalies = detector.detect(abnormal_data)
+    assert detector._max_gradient * 3600 == normal_data.diff().max()
+    assert sum(anomalies) == 1
+    assert anomalies.iloc[2] is np.True_
+
+    # Fit and detect with direction negative
+    detector = GradientDetector(direction="negative")
+    detector.fit(normal_data)  # min -1.4
+    anomalies = detector.detect(abnormal_data)
+    assert detector._max_gradient * 3600 == -normal_data.diff().min()
+    assert sum(anomalies) == 0
 
 
 def test_gradient_detector_datetime_index_validation():
