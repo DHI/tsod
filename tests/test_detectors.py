@@ -228,10 +228,10 @@ def test_diff_detector_autoset_neg(range_data_series):
     )  # pos max=2, neg_max=-1
     abnormal_data.iloc[4] = 2.0  # neg jump iloc[4->5] with -2
     detected_anomalies = detector.detect(abnormal_data)
-    expexted_anomalies = np.array(
+    expected_is_anomaly = np.array(
         [False, False, False, False, False, True, False, False]
     )
-    assert all(detected_anomalies.values == expexted_anomalies)
+    assert all(detected_anomalies.values == expected_is_anomaly)
 
 
 def test_diff_autoset_on_all_negative(range_data_series):
@@ -239,10 +239,10 @@ def test_diff_autoset_on_all_negative(range_data_series):
     normal_data.iloc[:] = [0, -1, -2, -3, -4, -5, -6, -7]
     detector = DiffDetector(direction="positive").fit(normal_data)  # max_diff set to 0
     detected_anomalies = detector.detect(abnormal_data)
-    expexted_anomalies = np.array(
+    expected_is_anomaly = np.array(
         [False, False, False, False, False, False, True, True]
     )
-    assert all(detected_anomalies.values == expexted_anomalies)
+    assert all(detected_anomalies.values == expected_is_anomaly)
 
 
 def test_diff_detector_autoset_frame(range_data_series):
