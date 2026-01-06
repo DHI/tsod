@@ -30,6 +30,7 @@ test = ["pytest>=6", "pytest-cov>=4"]
 
 dev = [
     { include-group = "test" },
+    { include-group = "docs" },
     "ruff==0.14.5",
     "pandas-stubs",
 ]

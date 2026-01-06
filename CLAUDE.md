@@ -58,6 +58,7 @@ make format
 ### Installation
 ```bash
 # Sync all dependencies including dev group (default)
+# This includes test and docs dependencies
 uv sync
 
 # Sync only test dependencies (used in CI)
