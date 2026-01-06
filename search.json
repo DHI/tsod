@@ -1,0 +1,331 @@
+[
+  {
+    "objectID": "getting-started.html",
+    "href": "getting-started.html",
+    "title": "Getting started",
+    "section": "",
+    "text": "Sensors often provide faulty or missing observations. These anomalies must be detected automatically and replaced with more feasible values before feeding the data to numerical simulation engines as boundary conditions or real time decision systems.\nThis package aims to provide examples and algorithms for detecting anomalies in time series data specifically tailored to DHI users and the water domain. It is simple to install and deploy operationally and is accessible to everyone (open-source).\ntsod is library for timeseries data. The format of a timeseries is always a pandas.Series and in some cases with a pandas.DatetimeIndex"
+  },
+  {
+    "objectID": "getting-started.html#example",
+    "href": "getting-started.html#example",
+    "title": "Getting started",
+    "section": "Example",
+    "text": "Example\n\nimport pandas as pd\nfrom tsod import RangeDetector\nrd = RangeDetector(max_value=2.0)\ndata = pd.Series([0.0, 1.0, 3.0]) # 3.0 is out of range i.e. an anomaly\nanom = rd.detect(data)\nanom\n\n0    False\n1    False\n2     True\nName: 0, dtype: bool\n\n\n\ndata[anom] # get anomalous data\n\n2    3.0\ndtype: float64\n\n\n\ndata[~anom]  # get normal data\n\n0    0.0\n1    1.0\ndtype: float64"
+  },
+  {
+    "objectID": "getting-started.html#saving-and-loading",
+    "href": "getting-started.html#saving-and-loading",
+    "title": "Getting started",
+    "section": "Saving and loading",
+    "text": "Saving and loading\nSave a configured detector\ncd = CombinedDetector([ConstantValueDetector(), RangeDetector()])\ncd.fit(normal_data)\ncd.save(\"detector.joblib\")\n… and then later load it from disk\nmy_detector = tsod.load(\"detector.joblib\")\nmy_detector.detect(some_data)"
+  },
+  {
+    "objectID": "license.html",
+    "href": "license.html",
+    "title": "tsod",
+    "section": "",
+    "text": "MIT License\nCopyright (c) 2021 DHI\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\nTHE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."
+  },
+  {
+    "objectID": "api/RollingStandardDeviationDetector.html",
+    "href": "api/RollingStandardDeviationDetector.html",
+    "title": "RollingStandardDeviationDetector",
+    "section": "",
+    "text": "RollingStandardDeviationDetector(window_size=10, max_std=np.inf, center=True)\nDetect large variations.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nwindow_size\nint\nNumber of data points to evaluate over.\n10\n\n\nmax_std\nfloat\nMaximum standard deviation to accept as normal.\nnp.inf\n\n\ncenter\nbool\nIf True, set the labels at the center of the window.\nTrue\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nRollingStandardDeviationDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nRollingStandardDeviationDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nRollingStandardDeviationDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nRollingStandardDeviationDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/RollingStandardDeviationDetector.html#parameters",
+    "href": "api/RollingStandardDeviationDetector.html#parameters",
+    "title": "RollingStandardDeviationDetector",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nwindow_size\nint\nNumber of data points to evaluate over.\n10\n\n\nmax_std\nfloat\nMaximum standard deviation to accept as normal.\nnp.inf\n\n\ncenter\nbool\nIf True, set the labels at the center of the window.\nTrue"
+  },
+  {
+    "objectID": "api/RollingStandardDeviationDetector.html#methods",
+    "href": "api/RollingStandardDeviationDetector.html#methods",
+    "title": "RollingStandardDeviationDetector",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nRollingStandardDeviationDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nRollingStandardDeviationDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nRollingStandardDeviationDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nRollingStandardDeviationDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/ConstantValueDetector.html",
+    "href": "api/ConstantValueDetector.html",
+    "title": "ConstantValueDetector",
+    "section": "",
+    "text": "ConstantValueDetector(window_size=3, threshold=1e-07)\nDetect contiguous periods of constant values within a configurable time window.\nCommonly caused by sensor failures, which get stuck at a constant level.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nwindow_size\nint\nNumber of consecutive points to evaluate.\n3\n\n\nthreshold\nfloat\nMaximum variation (max - min) within window to consider constant.\n1e-7\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nConstantValueDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nConstantValueDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nConstantValueDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nConstantValueDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/ConstantValueDetector.html#parameters",
+    "href": "api/ConstantValueDetector.html#parameters",
+    "title": "ConstantValueDetector",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nwindow_size\nint\nNumber of consecutive points to evaluate.\n3\n\n\nthreshold\nfloat\nMaximum variation (max - min) within window to consider constant.\n1e-7"
+  },
+  {
+    "objectID": "api/ConstantValueDetector.html#methods",
+    "href": "api/ConstantValueDetector.html#methods",
+    "title": "ConstantValueDetector",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nConstantValueDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nConstantValueDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nConstantValueDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nConstantValueDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/ConstantGradientDetector.html",
+    "href": "api/ConstantGradientDetector.html",
+    "title": "ConstantGradientDetector",
+    "section": "",
+    "text": "ConstantGradientDetector(window_size=3)\nDetect constant gradients.\nTypically caused by linear interpolation over a long interval.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nwindow_size\nint\nMinimum window size to consider as anomaly.\n3\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nConstantGradientDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nConstantGradientDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nConstantGradientDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nConstantGradientDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/ConstantGradientDetector.html#parameters",
+    "href": "api/ConstantGradientDetector.html#parameters",
+    "title": "ConstantGradientDetector",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nwindow_size\nint\nMinimum window size to consider as anomaly.\n3"
+  },
+  {
+    "objectID": "api/ConstantGradientDetector.html#methods",
+    "href": "api/ConstantGradientDetector.html#methods",
+    "title": "ConstantGradientDetector",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nConstantGradientDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nConstantGradientDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nConstantGradientDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nConstantGradientDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/HampelDetector.html",
+    "href": "api/HampelDetector.html",
+    "title": "HampelDetector",
+    "section": "",
+    "text": "HampelDetector(window_size=5, threshold=3)\nHampel filter implementation that works on numpy arrays, implemented with numba.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nwindow_size\n\nThe window range is from [(i - window_size):(i + window_size)], so window_size is half of the window, counted in number of array elements (as opposed to specify a time span, which is not supported by this implementation)\n5\n\n\nthreshold\n\nThe threshold for marking an outlier. A low threshold “narrows” the band within which values are deemed as outliers. n_sigmas, default=3.0\n3\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nHampelDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nHampelDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nHampelDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nHampelDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/HampelDetector.html#parameters",
+    "href": "api/HampelDetector.html#parameters",
+    "title": "HampelDetector",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nwindow_size\n\nThe window range is from [(i - window_size):(i + window_size)], so window_size is half of the window, counted in number of array elements (as opposed to specify a time span, which is not supported by this implementation)\n5\n\n\nthreshold\n\nThe threshold for marking an outlier. A low threshold “narrows” the band within which values are deemed as outliers. n_sigmas, default=3.0\n3"
+  },
+  {
+    "objectID": "api/HampelDetector.html#methods",
+    "href": "api/HampelDetector.html#methods",
+    "title": "HampelDetector",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nHampelDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nHampelDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nHampelDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nHampelDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/GradientDetector.html",
+    "href": "api/GradientDetector.html",
+    "title": "GradientDetector",
+    "section": "",
+    "text": "GradientDetector(max_gradient=np.inf, direction='both')\nDetect abrupt changes in time series data.\nRequires data with a DatetimeIndex. Calculates rate of change per second.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nmax_gradient\nfloat\nMaximum rate of change per second.\nnp.inf\n\n\ndirection\n(both, positive, negative)\nDirection of change to detect. ‘positive’ detects only increases, ‘negative’ detects only decreases, ‘both’ detects changes in either direction.\n'both'\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nGradientDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nGradientDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nGradientDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nGradientDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/GradientDetector.html#parameters",
+    "href": "api/GradientDetector.html#parameters",
+    "title": "GradientDetector",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nmax_gradient\nfloat\nMaximum rate of change per second.\nnp.inf\n\n\ndirection\n(both, positive, negative)\nDirection of change to detect. ‘positive’ detects only increases, ‘negative’ detects only decreases, ‘both’ detects changes in either direction.\n'both'"
+  },
+  {
+    "objectID": "api/GradientDetector.html#methods",
+    "href": "api/GradientDetector.html#methods",
+    "title": "GradientDetector",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nGradientDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nGradientDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nGradientDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nGradientDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/index.html",
+    "href": "api/index.html",
+    "title": "API Reference",
+    "section": "",
+    "text": "RangeDetector\nDetect values outside range.\n\n\nConstantValueDetector\nDetect contiguous periods of constant values within a configurable time window.\n\n\nConstantGradientDetector\nDetect constant gradients.\n\n\nGradientDetector\nDetect abrupt changes in time series data.\n\n\nDiffDetector\nDetect sudden shifts in data, irrespective of time axis.\n\n\nRollingStandardDeviationDetector\nDetect large variations.\n\n\nCombinedDetector\nCombine detectors.\n\n\nHampelDetector\nHampel filter implementation that works on numpy arrays, implemented with numba.\n\n\nload\nLoad a saved model from disk saved with Detector.save"
+  },
+  {
+    "objectID": "api/index.html#tsod",
+    "href": "api/index.html#tsod",
+    "title": "API Reference",
+    "section": "",
+    "text": "RangeDetector\nDetect values outside range.\n\n\nConstantValueDetector\nDetect contiguous periods of constant values within a configurable time window.\n\n\nConstantGradientDetector\nDetect constant gradients.\n\n\nGradientDetector\nDetect abrupt changes in time series data.\n\n\nDiffDetector\nDetect sudden shifts in data, irrespective of time axis.\n\n\nRollingStandardDeviationDetector\nDetect large variations.\n\n\nCombinedDetector\nCombine detectors.\n\n\nHampelDetector\nHampel filter implementation that works on numpy arrays, implemented with numba.\n\n\nload\nLoad a saved model from disk saved with Detector.save"
+  },
+  {
+    "objectID": "api/DiffDetector.html",
+    "href": "api/DiffDetector.html",
+    "title": "DiffDetector",
+    "section": "",
+    "text": "DiffDetector(max_diff=np.inf, direction='both')\nDetect sudden shifts in data, irrespective of time axis.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nmax_diff\nfloat\nMaximum change threshold between consecutive points.\nnp.inf\n\n\ndirection\n(both, positive, negative)\nDirection of change to detect. ‘positive’ detects only increases, ‘negative’ detects only decreases, ‘both’ detects changes in either direction.\n'both'\n\n\n\n\n\n\nGradientDetector : Similar functionality but considers actual time between data points.\n\n\n\n\n\n\nName\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nDiffDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nDiffDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nDiffDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nDiffDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/DiffDetector.html#parameters",
+    "href": "api/DiffDetector.html#parameters",
+    "title": "DiffDetector",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nmax_diff\nfloat\nMaximum change threshold between consecutive points.\nnp.inf\n\n\ndirection\n(both, positive, negative)\nDirection of change to detect. ‘positive’ detects only increases, ‘negative’ detects only decreases, ‘both’ detects changes in either direction.\n'both'"
+  },
+  {
+    "objectID": "api/DiffDetector.html#see-also",
+    "href": "api/DiffDetector.html#see-also",
+    "title": "DiffDetector",
+    "section": "",
+    "text": "GradientDetector : Similar functionality but considers actual time between data points."
+  },
+  {
+    "objectID": "api/DiffDetector.html#methods",
+    "href": "api/DiffDetector.html#methods",
+    "title": "DiffDetector",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nDiffDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nDiffDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nDiffDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nDiffDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/RangeDetector.html",
+    "href": "api/RangeDetector.html",
+    "title": "RangeDetector",
+    "section": "",
+    "text": "RangeDetector(min_value=-np.inf, max_value=np.inf, quantiles=None)\nDetect values outside range.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nmin_value\nfloat\nMinimum value threshold.\n-np.inf\n\n\nmax_value\nfloat\nMaximum value threshold.\nnp.inf\n\n\nquantiles\nlist of float\nQuantiles to use for determining min and max during fit. Default is [0.0, 1.0], which corresponds to absolute min and max values. Use values like [0.001, 0.999] to exclude extreme outliers.\nNone\n\n\n\n\n\n\n&gt;&gt;&gt; normal_data = pd.Series(np.random.normal(size=100))\n&gt;&gt;&gt; abnormal_data = pd.Series(np.random.normal(size=100))\n&gt;&gt;&gt; abnormal_data[[2, 6, 15, 57, 60, 73]] = 5\n&gt;&gt;&gt; normal_data_with_some_outliers = pd.Series(np.random.normal(size=100))\n&gt;&gt;&gt; normal_data_with_some_outliers[[12, 13, 20, 90]] = 7\n&gt;&gt;&gt; detector = RangeDetector(min_value=0.0, max_value=2.0)\n&gt;&gt;&gt; anomalies = detector.detect(abnormal_data)\n&gt;&gt;&gt; detector = RangeDetector()\n&gt;&gt;&gt; detector.fit(normal_data) # min, max inferred from normal data\n&gt;&gt;&gt; anomalies = detector.detect(abnormal_data)\n&gt;&gt;&gt; detector = RangeDetector(quantiles=[0.001,0.999])\n&gt;&gt;&gt; detector.fit(normal_data_with_some_outliers)\n&gt;&gt;&gt; anomalies = detector.detect(abnormal_data)\n\n\n\n\n\n\nName\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nRangeDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nRangeDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nRangeDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nRangeDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/RangeDetector.html#parameters",
+    "href": "api/RangeDetector.html#parameters",
+    "title": "RangeDetector",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nmin_value\nfloat\nMinimum value threshold.\n-np.inf\n\n\nmax_value\nfloat\nMaximum value threshold.\nnp.inf\n\n\nquantiles\nlist of float\nQuantiles to use for determining min and max during fit. Default is [0.0, 1.0], which corresponds to absolute min and max values. Use values like [0.001, 0.999] to exclude extreme outliers.\nNone"
+  },
+  {
+    "objectID": "api/RangeDetector.html#examples",
+    "href": "api/RangeDetector.html#examples",
+    "title": "RangeDetector",
+    "section": "",
+    "text": "&gt;&gt;&gt; normal_data = pd.Series(np.random.normal(size=100))\n&gt;&gt;&gt; abnormal_data = pd.Series(np.random.normal(size=100))\n&gt;&gt;&gt; abnormal_data[[2, 6, 15, 57, 60, 73]] = 5\n&gt;&gt;&gt; normal_data_with_some_outliers = pd.Series(np.random.normal(size=100))\n&gt;&gt;&gt; normal_data_with_some_outliers[[12, 13, 20, 90]] = 7\n&gt;&gt;&gt; detector = RangeDetector(min_value=0.0, max_value=2.0)\n&gt;&gt;&gt; anomalies = detector.detect(abnormal_data)\n&gt;&gt;&gt; detector = RangeDetector()\n&gt;&gt;&gt; detector.fit(normal_data) # min, max inferred from normal data\n&gt;&gt;&gt; anomalies = detector.detect(abnormal_data)\n&gt;&gt;&gt; detector = RangeDetector(quantiles=[0.001,0.999])\n&gt;&gt;&gt; detector.fit(normal_data_with_some_outliers)\n&gt;&gt;&gt; anomalies = detector.detect(abnormal_data)"
+  },
+  {
+    "objectID": "api/RangeDetector.html#methods",
+    "href": "api/RangeDetector.html#methods",
+    "title": "RangeDetector",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nRangeDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nRangeDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nRangeDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nRangeDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/CombinedDetector.html",
+    "href": "api/CombinedDetector.html",
+    "title": "CombinedDetector",
+    "section": "",
+    "text": "CombinedDetector(detectors)\nCombine detectors.\nIt is possible to combine several anomaly detection strategies into a combined detector. Anomalies are detected if ANY of the constituent detectors flags an anomaly (OR logic).\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndetectors\nlist of Detector\nList of detector instances to combine.\nrequired\n\n\n\n\n\n\n&gt;&gt;&gt; normal_data = pd.Series(np.random.normal(size=100))\n&gt;&gt;&gt; abnormal_data = pd.Series(np.random.normal(size=100))\n&gt;&gt;&gt; abnormal_data[[2, 6, 15, 57, 60, 73]] = 5\n&gt;&gt;&gt; anomaly_detector = CombinedDetector([RangeDetector(), DiffDetector()])\n&gt;&gt;&gt; anomaly_detector.fit(normal_data)\n&gt;&gt;&gt; detected_anomalies = anomaly_detector.detect(abnormal_data)\n\n\n\n\n\n\nName\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nCombinedDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nCombinedDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nCombinedDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nCombinedDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/CombinedDetector.html#parameters",
+    "href": "api/CombinedDetector.html#parameters",
+    "title": "CombinedDetector",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\ndetectors\nlist of Detector\nList of detector instances to combine.\nrequired"
+  },
+  {
+    "objectID": "api/CombinedDetector.html#examples",
+    "href": "api/CombinedDetector.html#examples",
+    "title": "CombinedDetector",
+    "section": "",
+    "text": "&gt;&gt;&gt; normal_data = pd.Series(np.random.normal(size=100))\n&gt;&gt;&gt; abnormal_data = pd.Series(np.random.normal(size=100))\n&gt;&gt;&gt; abnormal_data[[2, 6, 15, 57, 60, 73]] = 5\n&gt;&gt;&gt; anomaly_detector = CombinedDetector([RangeDetector(), DiffDetector()])\n&gt;&gt;&gt; anomaly_detector.fit(normal_data)\n&gt;&gt;&gt; detected_anomalies = anomaly_detector.detect(abnormal_data)"
+  },
+  {
+    "objectID": "api/CombinedDetector.html#methods",
+    "href": "api/CombinedDetector.html#methods",
+    "title": "CombinedDetector",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\ndetect\nDetect anomalies\n\n\nfit\nSet detector parameters based on data.\n\n\nsave\nSave a detector for later use.\n\n\nvalidate\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\nCombinedDetector.detect(data)\nDetect anomalies\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nTime series data with possible anomalies\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.Series or pd.DataFrame\nTime series with bools, True == anomaly.\n\n\n\n\n\n\n\nCombinedDetector.fit(data)\nSet detector parameters based on data.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\nUnion[pd.Series, pd.DataFrame]\nNormal (non-anomalous) time series data for training. If DataFrame, must contain exactly one column\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nSelf\n\n\n\n\n\n\n\n\nCombinedDetector.save(path)\nSave a detector for later use.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile path to save the detector to.\nrequired\n\n\n\n\n\n\n\nCombinedDetector.validate(data)\nCheck that input data is in correct format and possibly adjust.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npd.Series or pd.DataFrame\nInput data to validate.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\npd.DataFrame\nValidated data.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nWrongInputDataTypeError\nIf data is not a pd.Series or pd.DataFrame."
+  },
+  {
+    "objectID": "api/load.html",
+    "href": "api/load.html",
+    "title": "load",
+    "section": "",
+    "text": "load(path)\nLoad a saved model from disk saved with Detector.save\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile-like object to load detector from.\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nDetector\nThe loaded detector instance."
+  },
+  {
+    "objectID": "api/load.html#parameters",
+    "href": "api/load.html#parameters",
+    "title": "load",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\npath\nstr or Path\nFile-like object to load detector from.\nrequired"
+  },
+  {
+    "objectID": "api/load.html#returns",
+    "href": "api/load.html#returns",
+    "title": "load",
+    "section": "",
+    "text": "Name\nType\nDescription\n\n\n\n\n\nDetector\nThe loaded detector instance."
+  },
+  {
+    "objectID": "index.html#set-up-in-5-minutes",
+    "href": "index.html#set-up-in-5-minutes",
+    "title": "tsod: Anomaly Detection for time series data.",
+    "section": " Set up in 5 minutes",
+    "text": "Set up in 5 minutes\nInstall tsod with pip and get up and running in minutes"
+  },
+  {
+    "objectID": "index.html#its-just-python",
+    "href": "index.html#its-just-python",
+    "title": "tsod: Anomaly Detection for time series data.",
+    "section": " It’s just Python",
+    "text": "It’s just Python\nUse familiar Python workflows to integrate anomaly detection into your models and pipelines"
+  },
+  {
+    "objectID": "index.html#rule-based-detectors",
+    "href": "index.html#rule-based-detectors",
+    "title": "tsod: Anomaly Detection for time series data.",
+    "section": " Rule-based detectors",
+    "text": "Rule-based detectors\nChoose from detectors like RangeDetector and ConstantValueDetector to identify anomalies."
+  },
+  {
+    "objectID": "index.html#open-source-mit",
+    "href": "index.html#open-source-mit",
+    "title": "tsod: Anomaly Detection for time series data.",
+    "section": " Open Source, MIT",
+    "text": "Open Source, MIT\ntsod is licensed under MIT and the source code is available on GitHub"
+  },
+  {
+    "objectID": "design.html",
+    "href": "design.html",
+    "title": "Design philosophy",
+    "section": "",
+    "text": "tsod aims to use a syntax familiar to users of scientific computing libraries such as Pandas & sckit-learn.\n\n\n\n$ pip install tsod\n\n\n\ntsod is an open source project licensed under the MIT license. The software is provided free of charge with the source code available for inspection and modification.\nContributions are welcome!\n\n\n\nBy developing tsod on GitHub along with a completely open discussion, we believe that the collaboration between developers and end-users results in a useful library.\n\n\n\nBy providing the historical versions of tsod on PyPI it is possible to reproduce the behaviour of an older existing system, based on an older version.\nInstall specific version\npip install tsod==0.2.0\n\n\n\nFeatures are being added all the time, by developers at DHI in offices all around the globe as well as external contributors using tsod in their work. These new features are always available from the main branch on GitHub and thanks to automated testing, it is always possible to verify that the tests passes before downloading a new development version.\nInstall development version\n$ pip install https://github.com/DHI/tsod/archive/main.zip"
+  },
+  {
+    "objectID": "design.html#familiar",
+    "href": "design.html#familiar",
+    "title": "Design philosophy",
+    "section": "",
+    "text": "tsod aims to use a syntax familiar to users of scientific computing libraries such as Pandas & sckit-learn."
+  },
+  {
+    "objectID": "design.html#easy-to-install",
+    "href": "design.html#easy-to-install",
+    "title": "Design philosophy",
+    "section": "",
+    "text": "$ pip install tsod"
+  },
+  {
+    "objectID": "design.html#open-source",
+    "href": "design.html#open-source",
+    "title": "Design philosophy",
+    "section": "",
+    "text": "tsod is an open source project licensed under the MIT license. The software is provided free of charge with the source code available for inspection and modification.\nContributions are welcome!"
+  },
+  {
+    "objectID": "design.html#easy-to-collaborate",
+    "href": "design.html#easy-to-collaborate",
+    "title": "Design philosophy",
+    "section": "",
+    "text": "By developing tsod on GitHub along with a completely open discussion, we believe that the collaboration between developers and end-users results in a useful library."
+  },
+  {
+    "objectID": "design.html#reproducible",
+    "href": "design.html#reproducible",
+    "title": "Design philosophy",
+    "section": "",
+    "text": "By providing the historical versions of tsod on PyPI it is possible to reproduce the behaviour of an older existing system, based on an older version.\nInstall specific version\npip install tsod==0.2.0"
+  },
+  {
+    "objectID": "design.html#easy-access-to-new-features",
+    "href": "design.html#easy-access-to-new-features",
+    "title": "Design philosophy",
+    "section": "",
+    "text": "Features are being added all the time, by developers at DHI in offices all around the globe as well as external contributors using tsod in their work. These new features are always available from the main branch on GitHub and thanks to automated testing, it is always possible to verify that the tests passes before downloading a new development version.\nInstall development version\n$ pip install https://github.com/DHI/tsod/archive/main.zip"
+  }
+]

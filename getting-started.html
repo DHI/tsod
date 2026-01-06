@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>tsod</title>
+<title>getting-started – tsod</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -19,6 +19,41 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -41,8 +76,6 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="site_libs/bootstrap/bootstrap-0b37c64f34216b628666a8dac638b53b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/quarto-contrib/fontawesome6-6.7.2/all.min.css" rel="stylesheet">
-<link href="site_libs/quarto-contrib/fontawesome6-6.7.2/latex-fontsize.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -74,7 +107,7 @@ ul.task-list li input[type="checkbox"] {
 
 </head>
 
-<body class="nav-fixed fullcontent quarto-light">
+<body class="nav-fixed quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -92,11 +125,11 @@ ul.task-list li input[type="checkbox"] {
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="./index.html" aria-current="page"> 
+    <a class="nav-link" href="./index.html"> 
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./getting-started.html"> 
+    <a class="nav-link active" href="./getting-started.html" aria-current="page"> 
 <span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
@@ -133,39 +166,90 @@ ul.task-list li input[type="checkbox"] {
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#example" id="toc-example" class="nav-link active" data-scroll-target="#example">Example</a></li>
+  <li><a href="#saving-and-loading" id="toc-saving-and-loading" class="nav-link" data-scroll-target="#saving-and-loading">Saving and loading</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/DHI/tsod/edit/main/docs/getting-started.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li></ul></div><div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="getting-started.ipynb" download="getting-started.ipynb"><i class="bi bi-journal-code"></i>Jupyter</a></li></ul></div></nav>
+    </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
+<main class="content" id="quarto-document-content">
 
-
-
-
-<p><img src="https://raw.githubusercontent.com/DHI/tsod/main/images/logo/tsod.png" class="img-fluid"></p>
-<section id="tsod-anomaly-detection-for-time-series-data." class="level1">
-<h1>tsod: Anomaly Detection for time series data.</h1>
-<p><img src="https://img.shields.io/badge/OS-Windows%20%7C%20Linux-blue.png" class="img-fluid" alt="OS"> <img src="https://img.shields.io/pypi/pyversions/tsod.svg" class="img-fluid" alt="Python version"> <img src="https://badge.fury.io/py/tsod.svg" class="img-fluid" alt="PyPI version"></p>
-<div class="grid">
-<div class="g-col-6">
-<section id="set-up-in-5-minutes" class="level2">
-<h2 class="anchored" data-anchor-id="set-up-in-5-minutes"><i class="fa-solid fa-clock" aria-label="clock"></i> <strong>Set up in 5 minutes</strong></h2>
-<p>Install <strong>tsod</strong> with <a href="https://pypi.org/project/tsod/"><code>pip</code></a> and get up and running in minutes</p>
-</section>
-<section id="its-just-python" class="level2">
-<h2 class="anchored" data-anchor-id="its-just-python"><i class="fa-brands fa-python" aria-label="python"></i> <strong>It’s just Python</strong></h2>
-<p>Use familiar Python workflows to integrate anomaly detection into your models and pipelines</p>
-</section>
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Getting started</h1>
 </div>
-<div class="g-col-6">
-<section id="rule-based-detectors" class="level2">
-<h2 class="anchored" data-anchor-id="rule-based-detectors"><i class="fa-solid fa-ruler" aria-label="ruler"></i> <strong>Rule-based detectors</strong></h2>
-<p>Choose from detectors like <code>RangeDetector</code> and <code>ConstantValueDetector</code> to identify anomalies.</p>
-</section>
-<section id="open-source-mit" class="level2">
-<h2 class="anchored" data-anchor-id="open-source-mit"><i class="fa-solid fa-scale-balanced" aria-label="scale-balanced"></i> <strong>Open Source, MIT</strong></h2>
-<p><strong>tsod</strong> is licensed under MIT and the source code is available on <a href="https://github.com/DHI/tsod">GitHub</a></p>
-</section>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><img src="https://raw.githubusercontent.com/DHI/tsod/main/images/anomaly.png" class="img-fluid"></p>
+<p>Sensors often provide faulty or missing observations. These anomalies must be detected automatically and replaced with more feasible values before feeding the data to numerical simulation engines as boundary conditions or real time decision systems.</p>
+<p>This package aims to provide examples and algorithms for detecting anomalies in time series data specifically tailored to DHI users and the water domain. It is simple to install and deploy operationally and is accessible to everyone (open-source).</p>
+<p><code>tsod</code> is library for timeseries data. The format of a timeseries is always a <a href="https://pandas.pydata.org/docs/reference/api/pandas.Series.html#pandas.Series"><code>pandas.Series</code></a> and in some cases with a <a href="https://pandas.pydata.org/docs/reference/api/pandas.DatetimeIndex.html#pandas.DatetimeIndex"><code>pandas.DatetimeIndex</code></a></p>
+<ol type="1">
+<li>Get data in the form of a a <a href="https://pandas.pydata.org/docs/reference/api/pandas.Series.html#pandas.Series"><code>pandas.Series</code></a> (see Data formats below)</li>
+<li>Select one or more detectors e.g.&nbsp;<a href="./api/RangeDetector.html#tsod.RangeDetector"><code>RangeDetector</code></a> or <a href="./api/ConstantValueDetector.html#tsod.ConstantValueDetector"><code>ConstantValueDetector</code></a></li>
+<li>Define parameters (e.g.&nbsp;min/max, max rate of change) or…</li>
+<li>Fit parameters based on normal data, i.e.&nbsp;without outliers</li>
+<li>Detect outliers in any dataset</li>
+</ol>
+<section id="example" class="level2">
+<h2 class="anchored" data-anchor-id="example">Example</h2>
+<div id="6dc6caa0" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tsod <span class="im">import</span> RangeDetector</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>rd <span class="op">=</span> RangeDetector(max_value<span class="op">=</span><span class="fl">2.0</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pd.Series([<span class="fl">0.0</span>, <span class="fl">1.0</span>, <span class="fl">3.0</span>]) <span class="co"># 3.0 is out of range i.e. an anomaly</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>anom <span class="op">=</span> rd.detect(data)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>anom</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<pre><code>0    False
+1    False
+2     True
+Name: 0, dtype: bool</code></pre>
 </div>
 </div>
+<div id="7db581b5" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>data[anom] <span class="co"># get anomalous data</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<pre><code>2    3.0
+dtype: float64</code></pre>
+</div>
+</div>
+<div id="9356ee4c" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>data[<span class="op">~</span>anom]  <span class="co"># get normal data</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="3">
+<pre><code>0    0.0
+1    1.0
+dtype: float64</code></pre>
+</div>
+</div>
+</section>
+<section id="saving-and-loading" class="level2">
+<h2 class="anchored" data-anchor-id="saving-and-loading">Saving and loading</h2>
+<p>Save a configured detector</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>cd <span class="op">=</span> CombinedDetector([ConstantValueDetector(), RangeDetector()])</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>cd.fit(normal_data)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>cd.save(<span class="st">"detector.joblib"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>… and then later load it from disk</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>my_detector <span class="op">=</span> tsod.load(<span class="st">"detector.joblib"</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>my_detector.detect(some_data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 
 </section>
@@ -579,7 +663,7 @@ ul.task-list li input[type="checkbox"] {
     </div>   
     <div class="nav-footer-center">
 <p>© 2025 DHI Group</p>
-<div class="toc-actions"><ul><li><a href="https://github.com/DHI/tsod/edit/main/docs/index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li></ul></div></div>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/DHI/tsod/edit/main/docs/getting-started.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li></ul></div></div>
     <div class="nav-footer-right">
       &nbsp;
     </div>
