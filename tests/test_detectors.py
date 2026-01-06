@@ -220,6 +220,31 @@ def test_diff_detector_autoset(range_data_series):
     assert sum(detected_anomalies) == 2
 
 
+def test_diff_detector_autoset_neg(range_data_series):
+    normal_data, abnormal_data, _ = range_data_series
+    normal_data.iloc[:] = [0, 1, 2, 3, 4, 5, 6, 7]
+    detector = DiffDetector(direction="negative").fit(
+        normal_data
+    )  # pos max=2, neg_max=-1
+    abnormal_data.iloc[4] = 2.0  # neg jump iloc[4->5] with -2
+    detected_anomalies = detector.detect(abnormal_data)
+    expected_is_anomaly = np.array(
+        [False, False, False, False, False, True, False, False]
+    )
+    assert all(detected_anomalies.values == expected_is_anomaly)
+
+
+def test_diff_autoset_on_all_negative(range_data_series):
+    normal_data, abnormal_data, _ = range_data_series
+    normal_data.iloc[:] = [0, -1, -2, -3, -4, -5, -6, -7]
+    detector = DiffDetector(direction="positive").fit(normal_data)  # max_diff set to 0
+    detected_anomalies = detector.detect(abnormal_data)
+    expected_is_anomaly = np.array(
+        [False, False, False, False, False, False, True, True]
+    )
+    assert all(detected_anomalies.values == expected_is_anomaly)
+
+
 def test_diff_detector_autoset_frame(range_data_series):
     normal_data, abnormal_data, expected_anomalies = range_data_series
 
@@ -564,8 +589,22 @@ def test_gradient_detector_sudden_jump():
     # Max gradient 2.0/h
     detector.fit(normal_data)
     anomalies = detector.detect(abnormal_data)
-
     assert sum(anomalies) == 1
+
+    # Fit and detect with direction positive
+    detector = GradientDetector(direction="positive")
+    detector.fit(normal_data)  # max 1.7
+    anomalies = detector.detect(abnormal_data)
+    assert detector._max_gradient * 3600 == normal_data.diff().max()
+    assert sum(anomalies) == 1
+    assert anomalies.iloc[2] is np.True_
+
+    # Fit and detect with direction negative
+    detector = GradientDetector(direction="negative")
+    detector.fit(normal_data)  # min -1.4
+    anomalies = detector.detect(abnormal_data)
+    assert detector._max_gradient * 3600 == -normal_data.diff().min()
+    assert sum(anomalies) == 0
 
 
 def test_gradient_detector_datetime_index_validation():
