@@ -175,18 +175,24 @@ class DiffDetector(Detector):
         self._max_diff: float = max_diff
 
         valid_directions = ("both", "positive", "negative")
-        if direction not in valid_directions:
+        if direction in valid_directions:
+            self._direction = direction
+        else:
             raise ValueError(
-                f"""Selected direction, '{direction}' is not a valid direction.
-                 Valid directions are: {valid_directions}"""
+                f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
             )
 
-        self._direction: str = direction
+    def _fit(self, data):
+        data_diffs = data.diff()
 
-    def _fit(self, data: pd.Series):
-        data_diff = data.diff()
+        if self._direction == "positive":
+            filtered_diffs = data_diffs[data_diffs >= 0]
+        elif self._direction == "negative":
+            filtered_diffs = data_diffs[data_diffs <= 0].abs()
+        else:  # both
+            filtered_diffs = data_diffs.abs()
 
-        self._max_diff = data_diff.max()
+        self._max_diff = filtered_diffs.max() if not filtered_diffs.empty else 0
         return self
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -357,17 +363,29 @@ class GradientDetector(Detector):
         self._max_gradient: float = max_gradient
 
         valid_directions = ("both", "positive", "negative")
-        if direction not in valid_directions:
+        if direction in valid_directions:
+            self._direction = direction
+        else:
             raise ValueError(
                 f"""Selected direction, '{direction}' is not a valid direction.
                  Valid directions are: {valid_directions}"""
             )
 
-        self._direction: str = direction
-
     def _fit(self, data: pd.Series):
-        _gradients = _gradient(data.to_frame())
-        self._max_gradient = _gradients.abs().max().iloc[0]
+        """Set max gradient based on data."""
+        gradients = _gradient(data.to_frame())
+
+        # Filter based on direction
+        if self._direction == "positive":
+            filtered_gradients = gradients[gradients >= 0]
+        elif self._direction == "negative":
+            filtered_gradients = gradients[gradients <= 0].abs()
+        else:  # both directions
+            filtered_gradients = gradients.abs()
+
+        self._max_gradient = (
+            filtered_gradients.max().iloc[0] if not filtered_gradients.empty else 0
+        )
         return self
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
