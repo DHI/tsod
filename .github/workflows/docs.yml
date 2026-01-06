@@ -1,33 +1,31 @@
 name: Documentation
 
-on:
+on: 
   push:
-    branches:    
-      - main
+    branches: [ main]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v4
+    
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v6
       with:
-        python-version: 3.12
-        
-    - name: Install package
-      run: |
-        pip install .[dev]
+        enable-cache: true
+
+    - name: Install dependencies
+      run: uv sync --group docs
     
-    - name: Sphinx Build
+    - name: Build documentation
       run: |
-        cd docs
-        make html
-    
+        make docs
+
     - name: Publish to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3.6.1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: docs/_build/html
+        publish_dir: docs/_site/
+      

@@ -26,18 +26,19 @@ classifiers = [
 ]
 
 [dependency-groups]
+test = ["pytest>=6", "pytest-cov>=4"]
+
 dev = [
+    { include-group = "test" },
     "ruff==0.14.5",
-    "pytest>=6",
-    "pytest-cov>=4",
-    "sphinx<7,>=4",
-    "sphinx-book-theme",
     "pandas-stubs",
 ]
 
-test = [
-    "pytest>=6",
-    "pytest-cov>=4",
+docs = [
+    "nbclient>=0.10.2",
+    "nbformat>=5.10.4",
+    "quarto-cli>=1.8.25",
+    "quartodoc>=0.11.1",
 ]
 
 [project.urls]

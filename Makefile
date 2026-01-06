@@ -20,7 +20,8 @@ coverage:
 	uv run pytest --cov-report html --cov=$(LIB) tests/
 
 docs:
-	cd docs && uv run make html
+	cd docs && uv run quartodoc build
+	uv run quarto render docs
 
 clean:
 	rm -rf .pytest_cache

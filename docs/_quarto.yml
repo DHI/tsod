@@ -1,0 +1,68 @@
+project:
+  type: website
+
+website:
+  title: "tsod"
+  page-footer: "© 2025 DHI Group"
+  repo-url: https://github.com/DHI/tsod
+  repo-actions: [edit]
+  repo-subdir: docs
+  
+  navbar:
+    tools:
+    - icon: github
+      menu:
+      - text: Source Code
+        url:  https://github.com/DHI/tsod
+      - text: Report a Bug
+        url:  https://github.com/DHI/tsod/issues
+    left:
+      - href: index.qmd
+        text: Home
+      - href: getting-started.qmd
+        text: Getting Started
+      - href: design.qmd
+      - href: api/index.qmd
+        text: API Reference       
+
+filters:
+  - interlinks
+interlinks:
+  sources:
+      pandas: 
+        url: https://pandas.pydata.org/docs/
+
+quartodoc:
+  options:
+    include_inherited: true
+  style: pkgdown
+  title: API Reference
+  dir: api
+  package: tsod
+  
+  renderer:
+    style: markdown
+    display_name: relative
+    
+
+  sections:
+    - title: tsod
+      desc: ""
+      
+      contents:
+      - RangeDetector
+      - ConstantValueDetector
+      - ConstantGradientDetector
+      - GradientDetector
+      - DiffDetector
+      - RollingStandardDeviationDetector
+      - CombinedDetector
+      - HampelDetector
+      - load
+    
+format:
+  html:
+    theme: cosmo
+    toc: true
+  ipynb:
+    toc: true

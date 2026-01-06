@@ -1,0 +1,47 @@
+---
+toc: false
+format-links: false
+---
+
+![](https://raw.githubusercontent.com/DHI/tsod/main/images/logo/tsod.png)
+
+
+# tsod: Anomaly Detection for time series data.
+![OS](https://img.shields.io/badge/OS-Windows%20%7C%20Linux-blue)
+![Python version](https://img.shields.io/pypi/pyversions/tsod.svg)
+![PyPI version](https://badge.fury.io/py/tsod.svg)
+
+::: {.grid}
+
+
+::: {.g-col-6}
+## {{< fa clock >}} **Set up in 5 minutes**
+
+Install **tsod** with [`pip`](https://pypi.org/project/tsod/) and get up
+and running in minutes
+
+
+
+## {{< fa brands python >}} **It's just Python**
+
+Use familiar Python workflows to integrate anomaly detection into your models and pipelines
+
+
+:::
+
+::: {.g-col-6}
+
+## {{< fa solid ruler >}} **Rule-based detectors**
+
+Choose from detectors like `RangeDetector` and `ConstantValueDetector` to identify anomalies.
+
+
+## {{< fa scale-balanced >}} **Open Source, MIT**
+
+**tsod** is licensed under MIT and the source code is available on [GitHub](https://github.com/DHI/tsod)
+
+
+:::
+
+:::
+

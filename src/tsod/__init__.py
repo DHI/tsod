@@ -8,6 +8,8 @@ from .detectors import (
     RollingStandardDeviationDetector,
 )
 
+from .hampel import HampelDetector
+
 
 from .base import load
 
@@ -22,4 +24,5 @@ __all__ = [
     "CombinedDetector",
     "RollingStandardDeviationDetector",
     "load",
+    "HampelDetector",
 ]

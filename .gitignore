@@ -120,8 +120,6 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
-# mkdocs documentation
-/site
 
 # mypy
 .mypy_cache/
@@ -131,9 +129,13 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Sphinx
-/doc/_build/
 
 data/
 
 uv.lock
+
+# Quarto
+docs/_site/
+
+# created by quartodoc
+docs/api
