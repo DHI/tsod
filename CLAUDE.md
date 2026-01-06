@@ -8,42 +8,82 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
+This project uses [uv](https://docs.astral.sh/uv/) for Python package management, following the same setup as mikeio and modelskill.
+
+### Quick Start
+```bash
+# Install dependencies and sync environment
+uv sync
+
+# Run tests
+make test
+
+# Run linting
+make lint
+
+# Run both linting and tests
+make check
+```
+
 ### Testing
 ```bash
+# Run all tests
+uv run pytest
+
 # Run all tests with coverage
-pytest --cov=tsod tests
+make coverage
+# or: uv run pytest --cov=tsod tests
 
 # Run a single test file
-pytest tests/test_detectors.py
+uv run pytest tests/test_detectors.py
 
 # Run a specific test
-pytest tests/test_detectors.py::test_name
+uv run pytest tests/test_detectors.py::test_name
 ```
 
 ### Linting
 ```bash
 # Run ruff linter (configured in pyproject.toml)
-ruff check .
+make lint
+# or: uv run ruff check .
 
 # Auto-fix issues
-ruff check --fix .
+uv run ruff check --fix .
+
+# Format code
+make format
+# or: uv run ruff format .
 ```
 
 ### Installation
 ```bash
-# Install package in development mode with dev dependencies
-pip install -e .[dev]
+# Sync all dependencies including dev group (default)
+uv sync
 
-# Install with test dependencies (used in CI)
-pip install .[test]
+# Sync only test dependencies (used in CI)
+uv sync --group test --no-dev
+
+# Build the package
+make build
+# or: uv build
 ```
 
 ### Documentation
 ```bash
 # Build documentation (Sphinx)
-cd docs
-make html
+make docs
+# or: cd docs && uv run make html
 ```
+
+### Available Make Targets
+- `make check` - Run linting and tests
+- `make test` - Run tests
+- `make lint` - Run linting
+- `make format` - Format code with ruff
+- `make coverage` - Generate HTML coverage report
+- `make build` - Build the package
+- `make docs` - Build documentation
+- `make clean` - Clean build artifacts
 
 ## Architecture
 
@@ -51,13 +91,13 @@ make html
 
 All anomaly detectors follow a scikit-learn-inspired API:
 
-1. **Base class**: `Detector` (abstract base class in `tsod/base.py`)
+1. **Base class**: `Detector` (abstract base class in `src/tsod/base.py`)
    - `fit(data)`: Train detector on "normal" data (optional for some detectors)
    - `detect(data)`: Returns pd.Series of booleans (True = anomaly)
    - `validate(data)`: Ensures input is pd.Series or pd.DataFrame
    - `save(path)` / `load(path)`: Persistence using joblib
 
-2. **Concrete detectors** (in `tsod/detectors.py`):
+2. **Concrete detectors** (in `src/tsod/detectors.py`):
    - Must implement `_detect(data)` method
    - Optionally override `_fit(data)` for training
    - All work with pandas Series as primary data structure
@@ -79,7 +119,7 @@ The library distinguishes between:
    - `ConstantGradientDetector` - linear interpolation artifacts
 4. **Statistical**:
    - `RollingStandardDeviationDetector` - high variation windows
-   - `HampelDetector` (in `tsod/hampel.py`) - median absolute deviation, optimized with numba
+   - `HampelDetector` (in `src/tsod/hampel.py`) - median absolute deviation, optimized with numba
 5. **Combined**: `CombinedDetector` - combines multiple detectors with OR logic
 
 ### Key Implementation Details

@@ -23,18 +23,14 @@ jobs:
     - uses: astral-sh/ruff-action@v2
       with:
           version: 0.14.5
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
       with:
         python-version: ${{ matrix.python-version }}
+        enable-cache: true
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install wheel pytest pytest-cov
-    
-    - name: Install tsod
-      run: |
-        pip install .[test]
+        uv sync --group test --no-dev
     - name: Test with pytest
       run: |
-        pytest --cov=tsod tests
+        uv run pytest --cov=tsod tests

@@ -1,9 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build]
-include = ["tsod/**/*"]
+requires = ["uv_build>=0.8.9,<0.9.0"]
+build-backend = "uv_build"
 
 [project]
 name = "tsod"
@@ -28,7 +25,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "ruff==0.14.5",
     "pytest>=6",
@@ -36,6 +33,11 @@ dev = [
     "sphinx<7,>=4",
     "sphinx-book-theme",
     "pandas-stubs",
+]
+
+test = [
+    "pytest>=6",
+    "pytest-cov>=4",
 ]
 
 [project.urls]
