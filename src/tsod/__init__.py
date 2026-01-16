@@ -1,3 +1,4 @@
+from importlib.metadata import version
 from .detectors import (
     RangeDetector,
     DiffDetector,
@@ -9,11 +10,12 @@ from .detectors import (
 )
 
 from .hampel import HampelDetector
-
-
 from .base import load
 
-__version__ = "0.2.0"
+try:
+    __version__ = version("tsod")
+except Exception:
+    __version__ = "unknown"
 
 __all__ = [
     "RangeDetector",
