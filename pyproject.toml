@@ -7,8 +7,9 @@ name = "tsod"
 version = "0.3.0"
 description = "Time series anomaly detection."
 authors = [
-    { name = "Henrik Andersson", email = "jan@dhigroup.com" }, 
-    { name = "Lars Jonasson", email = "lajo@dhigroup.com"}]
+    { name = "Henrik Andersson", email = "jan@dhigroup.com" },
+    { name = "Lars Jonasson", email = "lajo@dhigroup.com" },
+]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
