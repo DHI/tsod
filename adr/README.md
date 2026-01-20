@@ -31,3 +31,13 @@ When making significant architectural changes, please:
 2. Discuss with the team
 3. Update to Accepted status once implemented
 4. Update this index with a link to the new ADR
+
+### Superseding an Existing ADR
+
+When a new decision replaces an old one:
+
+1. Create the new ADR following the normal process
+2. In the new ADR, include a note in the Context section mentioning which ADR it supersedes (e.g., "This decision supersedes [ADR-001](001-previous-decision.md)")
+3. Update the Status field of the old ADR from "Accepted" to "Superseded"
+4. Do NOT modify the body of the old ADR (Context, Decision, Alternatives, Consequences) - it remains as an immutable historical record
+5. Both ADRs remain in the repository to preserve the full decision history
