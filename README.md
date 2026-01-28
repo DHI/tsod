@@ -31,12 +31,6 @@ Or development version:
 
 `pip install https://github.com/DHI/tsod/archive/main.zip`
 
-<!--
-## [Active learning web application](https://github.com/DHI/tsod/blob/main/tsod/active_learning/)
-There is a web application that is developed using [Streamlit](https://streamlit.io/). It can be found [here]() 
--->
-
-
 ## Vision
 * A simple and consistent API for anomaly detection of timeseries
 * The computational speed will be good for typical timeseries data found in the water domain, to support realtime detection
