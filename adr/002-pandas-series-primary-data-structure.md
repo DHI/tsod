@@ -1,6 +1,6 @@
 # ADR-002: pandas Series as Primary Data Structure
 
-**Status**: Accepted
+**Status**: Superseded
 
 **Date**: 2021-01
 
