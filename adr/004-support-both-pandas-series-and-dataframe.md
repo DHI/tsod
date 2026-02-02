@@ -1,6 +1,6 @@
 # ADR-004: Support both pandas Series and DataFrame
 
-**Status**: Draft
+**Status**: Accepted
 
 **Date**: 2026-02
 
