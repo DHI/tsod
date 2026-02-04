@@ -8,7 +8,7 @@
 
 ### Changed
 
-## [0.3.0] - 2026-02
+## [0.3.0] - 2026-02-04
 
 ### Added
 - Added support for anomaly detection on multicolumn dataframes
