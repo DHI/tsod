@@ -45,6 +45,7 @@ docs = [
     "nbformat>=5.10.4",
     "quarto-cli>=1.8.25",
     "quartodoc>=0.11.1",
+    "griffe<2",
 ]
 
 [project.urls]
