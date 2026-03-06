@@ -136,6 +136,9 @@ uv.lock
 
 # Quarto
 docs/_site/
+docs/.quarto/
+docs/**/*.quarto_ipynb*
+docs/api/*.qmd
+!docs/api/_metadata.yml
 
 # created by quartodoc
-docs/api
