@@ -5,7 +5,7 @@ toc: false
 
 # Examples
 
-This section contains realistic, water-domain examples for using **tsod**.
+This section contains water-domain examples for using **tsod**.
 
 Each example follows the same practical structure:
 
