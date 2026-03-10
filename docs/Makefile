@@ -20,4 +20,5 @@ preview: api
 	uv run quarto preview
 
 clean:
-	rm -rf _site api objects.json
+	rm -rf _site objects.json
+	rm -f api/*.qmd

@@ -1,0 +1,58 @@
+---
+title: Quick start
+description: Detect basic anomalies in a synthetic water-level time series
+jupyter: tsod
+---
+
+This example shows a minimal end-to-end workflow on water-level data.
+
+## Imports
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from tsod import RangeDetector
+```
+
+## Create sample data
+
+```{python}
+rng = np.random.default_rng(42)
+time = pd.date_range("2025-01-01", periods=240, freq="h")
+
+baseline = 1.5 + 0.2 * np.sin(np.linspace(0, 6 * np.pi, len(time)))
+noise = rng.normal(0, 0.03, len(time))
+water_level = baseline + noise
+
+# Inject a few unrealistic spikes
+water_level[[40, 120, 180]] = [2.4, 0.2, 2.6]
+
+series = pd.Series(water_level, index=time, name="water_level_m")
+series.head()
+```
+
+## Detect anomalies
+
+```{python}
+detector = RangeDetector(min_value=0.8, max_value=2.1)
+anomalies = detector.detect(series)
+
+anomalies.sum()
+```
+
+## Visualize results
+
+```{python}
+fig, ax = plt.subplots(figsize=(10, 4))
+series.plot(ax=ax, label="Water level")
+series[anomalies].plot(ax=ax, linestyle="", marker="o", color="red", label="Anomaly")
+ax.set_ylabel("m")
+ax.set_title("Quick anomaly screening")
+ax.legend()
+```
+
+## Next step
+
+Try combining multiple detectors for a more robust signal in [Combining detectors](combining-detectors.qmd).
