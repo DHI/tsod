@@ -139,6 +139,10 @@ docs/_site/
 docs/.quarto/
 docs/**/*.quarto_ipynb*
 docs/api/*.qmd
+!docs/api/index.qmd
 !docs/api/_metadata.yml
+# Generated from notebooks/ by docs/scripts/generate_examples_from_notebooks.py
+docs/examples/*.ipynb
+docs/examples/*_files/
 
 # created by quartodoc

@@ -38,8 +38,11 @@ website:
       style: docked
       contents:
         - examples/index.qmd
-        - examples/quick-start.qmd
-        - examples/combining-detectors.qmd
+        # BEGIN_GENERATED_EXAMPLES — managed by docs/scripts/generate_examples_from_notebooks.py
+        - examples/getting-started.ipynb
+        - examples/example-water-level.ipynb
+        - examples/detect-on-dataframes.ipynb
+        # END_GENERATED_EXAMPLES
 
 filters:
   - interlinks
@@ -79,6 +82,7 @@ quartodoc:
 format:
   html:
     theme: cosmo
+    css: custom.css
     toc: true
-  ipynb:
-    toc: true
+  # ipynb:
+  #   toc: true

@@ -1,6 +1,6 @@
 LIB = src/tsod
 
-.PHONY: check build lint format test coverage docs clean
+.PHONY: check build lint format test coverage docs examples clean
 
 check: lint test
 
@@ -19,13 +19,15 @@ test:
 coverage:
 	uv run pytest --cov-report html --cov=$(LIB) tests/
 
+examples:
+	$(MAKE) -C docs examples
+
 docs:
-	cd docs && uv run quartodoc build
-	uv run quarto render docs
+	$(MAKE) -C docs build
 
 clean:
 	rm -rf .pytest_cache
 	rm -rf .mypy_cache
 	rm -rf .coverage
 	rm -rf dist
-	rm -rf docs/_build
+	$(MAKE) -C docs clean

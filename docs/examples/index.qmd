@@ -1,34 +1,17 @@
 ---
 title: Examples
+page-layout: full
 toc: false
 ---
 
 # Examples
 
-This section contains water-domain examples for using **tsod**.
+This page is auto-generated from notebooks in `notebooks/`.
 
-Each example follows the same practical structure:
+## Available notebook examples
 
-- show imports
-- create sample data
-- demonstrate `detect()` and `fit()` where relevant
-- show visualization of results
+- [Getting started](getting-started.ipynb)
+- [Example Water Level](example-water-level.ipynb)
+- [Detect on DataFrames](detect-on-dataframes.ipynb)
 
-## Available examples
-
-### [Quick start](quick-start.qmd)
-
-A minimal end-to-end example to get running quickly with a simple detector workflow.
-
-### [Combining detectors](combining-detectors.qmd)
-
-Demonstrates how to combine multiple detectors and interpret the merged anomaly signal.
-
-### [Water level example notebook](https://github.com/DHI/tsod/blob/main/notebooks/Example%20Water%20Level.ipynb)
-
-A realistic notebook example from the water domain based on observed water-level time series.
-
-## Planned additions
-
-Additional examples from different water-related domains will be added over time.
-
+Regenerate with `make examples`.

@@ -1,0 +1,7 @@
+#quarto-content.page-layout-full main.content.column-body > #title-block-header + p {
+  display: none;
+}
+
+#quarto-content.page-layout-full main.content.column-body {
+  max-width: min(1600px, calc(100vw - 4rem));
+}

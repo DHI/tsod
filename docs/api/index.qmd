@@ -1,0 +1,17 @@
+# API Reference {.doc .doc-index}
+
+## tsod
+
+
+
+| | |
+| --- | --- |
+| [RangeDetector](RangeDetector.qmd#tsod.RangeDetector) | Detect values outside range. |
+| [ConstantValueDetector](ConstantValueDetector.qmd#tsod.ConstantValueDetector) | Detect contiguous periods of constant values within a configurable time window. |
+| [ConstantGradientDetector](ConstantGradientDetector.qmd#tsod.ConstantGradientDetector) | Detect constant gradients. |
+| [GradientDetector](GradientDetector.qmd#tsod.GradientDetector) | Detect abrupt changes in time series data. |
+| [DiffDetector](DiffDetector.qmd#tsod.DiffDetector) | Detect sudden shifts in data, irrespective of time axis. |
+| [RollingStandardDeviationDetector](RollingStandardDeviationDetector.qmd#tsod.RollingStandardDeviationDetector) | Detect large variations. |
+| [CombinedDetector](CombinedDetector.qmd#tsod.CombinedDetector) | Combine detectors. |
+| [HampelDetector](HampelDetector.qmd#tsod.HampelDetector) | Hampel filter implementation that works on numpy arrays, implemented with numba. |
+| [load](load.qmd#tsod.load) | Load a saved model from disk saved with `Detector.save` |
