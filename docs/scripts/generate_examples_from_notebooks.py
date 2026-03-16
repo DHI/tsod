@@ -1,6 +1,7 @@
 import json
 import re
 from pathlib import Path
+from urllib.parse import quote
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 NOTEBOOKS_DIR = REPO_ROOT / "notebooks"
@@ -10,31 +11,10 @@ QUARTO_YML = REPO_ROOT / "docs" / "_quarto.yml"
 _SIDEBAR_BEGIN = "        # BEGIN_GENERATED_EXAMPLES — managed by docs/scripts/generate_examples_from_notebooks.py"
 _SIDEBAR_END = "        # END_GENERATED_EXAMPLES"
 _EXAMPLE_ORDER = {
-    "getting-started.ipynb": 0,
-    "example-water-level.ipynb": 1,
-    "detect-on-dataframes.ipynb": 2,
+    "Getting started.ipynb": 0,
+    "Example Water Level.ipynb": 1,
+    "Detect on DataFrames.ipynb": 2,
 }
-
-
-def slugify(name: str) -> str:
-    """Create a filesystem-friendly slug from a notebook stem."""
-    pieces: list[str] = []
-    current: list[str] = []
-
-    for char in name.lower():
-        if char.isalnum():
-            current.append(char)
-            continue
-
-        if current:
-            pieces.append("".join(current))
-            current = []
-
-    if current:
-        pieces.append("".join(current))
-
-    slug = "-".join(pieces)
-    return slug or "example"
 
 
 def sort_entries(entries: list[tuple[str, str]]) -> list[tuple[str, str]]:
@@ -111,8 +91,7 @@ def copy_notebook_to_examples(notebook_path: Path) -> tuple[str, str]:
     notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
     stem = notebook_path.stem
     title = title_from_notebook(notebook, fallback=stem)
-    slug = slugify(stem)
-    ipynb_path = EXAMPLES_DIR / f"{slug}.ipynb"
+    ipynb_path = EXAMPLES_DIR / notebook_path.name
 
     rewrite_cell_source_paths(notebook)
     apply_front_matter_cell(notebook, title=title, notebook_name=notebook_path.name)
@@ -138,7 +117,8 @@ def write_index(entries: list[tuple[str, str]]) -> None:
     ]
 
     for title, rel_path in sort_entries(entries):
-        index_lines.append(f"- [{title}]({rel_path})")
+        encoded_path = quote(rel_path, safe="/")
+        index_lines.append(f"- [{title}]({encoded_path})")
 
     index_lines.append("")
     index_lines.append("Regenerate with `make examples`.")

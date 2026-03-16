@@ -39,9 +39,9 @@ website:
       contents:
         - examples/index.qmd
         # BEGIN_GENERATED_EXAMPLES — managed by docs/scripts/generate_examples_from_notebooks.py
-        - examples/getting-started.ipynb
-        - examples/example-water-level.ipynb
-        - examples/detect-on-dataframes.ipynb
+        - examples/Getting started.ipynb
+        - examples/Example Water Level.ipynb
+        - examples/Detect on DataFrames.ipynb
         # END_GENERATED_EXAMPLES
 
 filters:

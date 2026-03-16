@@ -10,8 +10,8 @@ This page is auto-generated from notebooks in `notebooks/`.
 
 ## Available notebook examples
 
-- [Getting started](getting-started.ipynb)
-- [Example Water Level](example-water-level.ipynb)
-- [Detect on DataFrames](detect-on-dataframes.ipynb)
+- [Getting started](Getting%20started.ipynb)
+- [Example Water Level](Example%20Water%20Level.ipynb)
+- [Detect on DataFrames](Detect%20on%20DataFrames.ipynb)
 
 Regenerate with `make examples`.
