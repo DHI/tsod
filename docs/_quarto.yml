@@ -2,13 +2,15 @@ project:
   type: website
 
 website:
-  title: "tsod"
+  title: ""
   page-footer: "© 2025 DHI Group"
   repo-url: https://github.com/DHI/tsod
   repo-actions: [edit]
   repo-subdir: docs
+  page-navigation: true
   
   navbar:
+    logo: https://raw.githubusercontent.com/DHI/tsod/main/images/logo/tsod.png
     tools:
     - icon: github
       menu:
@@ -17,13 +19,28 @@ website:
       - text: Report a Bug
         url:  https://github.com/DHI/tsod/issues
     left:
-      - href: index.qmd
-        text: Home
-      - href: getting-started.qmd
-        text: Getting Started
-      - href: design.qmd
-      - href: api/index.qmd
-        text: API Reference       
+      - text: Home
+        href: index.qmd
+      - text: User Guide
+        href: user-guide/getting-started.qmd
+      - text: Examples
+        href: examples/index.qmd
+      - text: API Reference
+        href: api/index.qmd    
+
+  sidebar:
+    - title: "User Guide"
+      style: docked
+      contents:
+        - user-guide/getting-started.qmd
+        - user-guide/design.qmd
+    - title: "Examples"
+      style: docked
+      contents:
+        - href: examples/index.qmd
+        - href: examples/getting-started.qmd
+        - href: examples/detect-on-dataframes.qmd
+        - href: examples/example-water-level.qmd
 
 filters:
   - interlinks
@@ -63,6 +80,5 @@ quartodoc:
 format:
   html:
     theme: cosmo
-    toc: true
-  ipynb:
+    css: style.css
     toc: true

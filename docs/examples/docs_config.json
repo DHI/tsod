@@ -1,0 +1,19 @@
+{
+  "examples": [
+    {
+      "notebook": "Getting started.ipynb",
+      "title": "Getting started",
+      "description": "Basic anomaly detection using RangeDetector, GradientDetector, and more."
+    },
+    {
+      "notebook": "Detect on DataFrames.ipynb",
+      "title": "Detect on DataFrames",
+      "description": "Apply a detector to all columns of a DataFrame at once."
+    },
+    {
+      "notebook": "Example Water Level.ipynb",
+      "title": "Example Water Level",
+      "description": "Clean a real water level time series using a combined detector."
+    }
+  ]
+}

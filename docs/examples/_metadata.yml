@@ -1,0 +1,6 @@
+page-layout: full
+execute:
+  freeze: auto  # Cache executed outputs; only re-run cells when source changes.
+format:
+  html:
+    fig-responsive: true
