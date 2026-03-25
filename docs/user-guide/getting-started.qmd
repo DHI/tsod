@@ -13,9 +13,9 @@ Sensors often provide faulty or missing observations. These anomalies must be de
 
 This package aims to provide examples and algorithms for detecting anomalies in time series data specifically tailored to DHI users and the water domain. It is simple to install and deploy operationally and is accessible to everyone (open-source).
 
-`tsod` is library for timeseries data. The format of a timeseries is always a [](`pandas.Series`) and in some cases with a [](`pandas.DatetimeIndex`) 
+`tsod` is a library for time series data. The supported input formats are [](`pandas.Series`) and [](`pandas.DataFrame`) (single or multicolumn), and the output type always matches the input type.
 
-1. Get data in the form of a a [](`pandas.Series`) (see Data formats below) 
+1. Get data in the form of a a [](`pandas.Series`) or [](`pandas.DataFrame`). 
 2. Select one or more detectors e.g. [](`~tsod.RangeDetector`) or [](`~tsod.ConstantValueDetector`)
 3. Define parameters (e.g. min/max, max rate of change) or...
 4. Fit parameters based on normal data, i.e. without outliers

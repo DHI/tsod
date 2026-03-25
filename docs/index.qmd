@@ -34,7 +34,7 @@ Use familiar Python workflows to integrate anomaly detection into your models an
 
 ## {{< fa solid ruler >}} **Rule-based detectors**
 
-Choose from detectors like `RangeDetector` and `ConstantValueDetector` to identify anomalies.
+Choose from detectors like `RangeDetector` and `ConstantValueDetector` to identify anomalies. Explore example notebooks in [**Examples**](examples/index.qmd)
 
 
 ## {{< fa scale-balanced >}} **Open Source, MIT**
