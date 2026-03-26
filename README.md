@@ -14,10 +14,8 @@ This package aims to provide examples and algorithms for detecting anomalies in 
 
 ## Getting Started
 
-* [Documentation](https://dhi.github.io/tsod/getting_started.html)
-* [Notebook](https://github.com/DHI/tsod/blob/main/notebooks/Getting%20started.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](http://colab.research.google.com/github/DHI/tsod/blob/main/notebooks/Getting%20started.ipynb)
-
-
+* [Documentation](https://dhi.github.io/tsod/)
+* [Example](https://dhi.github.io/tsod/examples/getting-started.html)
 
 ## Installation
 
