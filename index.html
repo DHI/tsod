@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.36">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>tsod</title>
+<title>index</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -32,15 +35,14 @@ ul.task-list li input[type="checkbox"] {
 <meta name="quarto:offset" content="./">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-0b37c64f34216b628666a8dac638b53b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-6ebf626d957987a3094d36c3262c2f72.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <link href="site_libs/quarto-contrib/fontawesome6-6.7.2/all.min.css" rel="stylesheet">
 <link href="site_libs/quarto-contrib/fontawesome6-6.7.2/latex-fontsize.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
@@ -72,6 +74,7 @@ ul.task-list li input[type="checkbox"] {
 }</script>
 
 
+<link rel="stylesheet" href="style.css">
 </head>
 
 <body class="nav-fixed fullcontent quarto-light">
@@ -81,8 +84,9 @@ ul.task-list li input[type="checkbox"] {
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
-    <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">tsod</span>
+    <a href="./index.html" class="navbar-brand navbar-brand-logo">
+    <img src="https://raw.githubusercontent.com/DHI/tsod/main/images/logo/tsod.png" alt="" class="navbar-logo light-content">
+    <img src="https://raw.githubusercontent.com/DHI/tsod/main/images/logo/tsod.png" alt="" class="navbar-logo dark-content">
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -96,12 +100,12 @@ ul.task-list li input[type="checkbox"] {
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./getting-started.html"> 
-<span class="menu-text">Getting Started</span></a>
+    <a class="nav-link" href="./user-guide/getting-started.html"> 
+<span class="menu-text">User Guide</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./design.html"> 
-<span class="menu-text">Design philosophy</span></a>
+    <a class="nav-link" href="./examples/index.html"> 
+<span class="menu-text">Examples</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="./api/index.html"> 
@@ -146,23 +150,26 @@ ul.task-list li input[type="checkbox"] {
 <p><img src="https://img.shields.io/badge/OS-Windows%20%7C%20Linux-blue.png" class="img-fluid" alt="OS"> <img src="https://img.shields.io/pypi/pyversions/tsod.svg" class="img-fluid" alt="Python version"> <img src="https://badge.fury.io/py/tsod.svg" class="img-fluid" alt="PyPI version"></p>
 <div class="grid">
 <div class="g-col-6">
-<section id="set-up-in-5-minutes" class="level2">
-<h2 class="anchored" data-anchor-id="set-up-in-5-minutes"><i class="fa-solid fa-clock" aria-label="clock"></i> <strong>Set up in 5 minutes</strong></h2>
+<section id="b58fc729-690b-4000-b19f-365a4093b2ff7b7b3c20666120636c6f636b203e7d7d-set-up-in-5-minutes" class="level2">
+<h2 class="anchored" data-anchor-id="b58fc729-690b-4000-b19f-365a4093b2ff7b7b3c20666120636c6f636b203e7d7d-set-up-in-5-minutes"><i class="fa-solid fa-clock" aria-label="clock"></i> <strong>Set up in 5 minutes</strong></h2>
 <p>Install <strong>tsod</strong> with <a href="https://pypi.org/project/tsod/"><code>pip</code></a> and get up and running in minutes</p>
+<p><a href="./user-guide/getting-started.html"><strong>Getting started</strong></a></p>
 </section>
-<section id="its-just-python" class="level2">
-<h2 class="anchored" data-anchor-id="its-just-python"><i class="fa-brands fa-python" aria-label="python"></i> <strong>It’s just Python</strong></h2>
+<section id="b58fc729-690b-4000-b19f-365a4093b2ff7b7b3c206661206272616e647320707974686f6e203e7d7d-its-just-python" class="level2">
+<h2 class="anchored" data-anchor-id="b58fc729-690b-4000-b19f-365a4093b2ff7b7b3c206661206272616e647320707974686f6e203e7d7d-its-just-python"><i class="fa-brands fa-python" aria-label="python"></i> <strong>It’s just Python</strong></h2>
 <p>Use familiar Python workflows to integrate anomaly detection into your models and pipelines</p>
+<p><a href="./api/index.html"><strong>API Reference</strong></a></p>
 </section>
 </div>
 <div class="g-col-6">
-<section id="rule-based-detectors" class="level2">
-<h2 class="anchored" data-anchor-id="rule-based-detectors"><i class="fa-solid fa-ruler" aria-label="ruler"></i> <strong>Rule-based detectors</strong></h2>
-<p>Choose from detectors like <code>RangeDetector</code> and <code>ConstantValueDetector</code> to identify anomalies.</p>
+<section id="b58fc729-690b-4000-b19f-365a4093b2ff7b7b3c20666120736f6c69642072756c6572203e7d7d-rule-based-detectors" class="level2">
+<h2 class="anchored" data-anchor-id="b58fc729-690b-4000-b19f-365a4093b2ff7b7b3c20666120736f6c69642072756c6572203e7d7d-rule-based-detectors"><i class="fa-solid fa-ruler" aria-label="ruler"></i> <strong>Rule-based detectors</strong></h2>
+<p>Choose from detectors like <code>RangeDetector</code> and <code>ConstantValueDetector</code> to identify anomalies. Explore example notebooks in <a href="./examples/index.html"><strong>Examples</strong></a></p>
 </section>
-<section id="open-source-mit" class="level2">
-<h2 class="anchored" data-anchor-id="open-source-mit"><i class="fa-solid fa-scale-balanced" aria-label="scale-balanced"></i> <strong>Open Source, MIT</strong></h2>
+<section id="b58fc729-690b-4000-b19f-365a4093b2ff7b7b3c206661207363616c652d62616c616e636564203e7d7d-open-source-mit" class="level2">
+<h2 class="anchored" data-anchor-id="b58fc729-690b-4000-b19f-365a4093b2ff7b7b3c206661207363616c652d62616c616e636564203e7d7d-open-source-mit"><i class="fa-solid fa-scale-balanced" aria-label="scale-balanced"></i> <strong>Open Source, MIT</strong></h2>
 <p><strong>tsod</strong> is licensed under MIT and the source code is available on <a href="https://github.com/DHI/tsod">GitHub</a></p>
+<p><a href="./user-guide/design.html"><strong>Design philosophy</strong></a></p>
 </section>
 </div>
 </div>

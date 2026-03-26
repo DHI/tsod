@@ -1,0 +1,10 @@
+[
+  {
+    "listing": "/examples/index.html",
+    "items": [
+      "/examples/detect-on-dataframes.html",
+      "/examples/example-water-level.html",
+      "/examples/getting-started.html"
+    ]
+  }
+]
