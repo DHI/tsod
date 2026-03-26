@@ -1,6 +1,6 @@
 LIB = src/tsod
 
-.PHONY: check build lint format test coverage docs clean
+.PHONY: check build lint format test coverage docs convert-notebooks clean
 
 check: lint test
 
@@ -19,7 +19,10 @@ test:
 coverage:
 	uv run pytest --cov-report html --cov=$(LIB) tests/
 
-docs:
+convert-notebooks:
+	uv run python scripts/convert_docs_notebooks.py
+
+docs: convert-notebooks
 	cd docs && uv run quartodoc build
 	uv run quarto render docs
 

@@ -134,8 +134,15 @@ data/
 
 uv.lock
 
-# Quarto
+# Docs
+docs/.quarto/
 docs/_site/
-
-# created by quartodoc
-docs/api
+docs/_site_old/
+docs/_freeze/
+docs/api/
+docs/objects.json
+docs/**/*.quarto_ipynb
+docs/examples/*_files/
+docs/examples/getting-started.qmd
+docs/examples/detect-on-dataframes.qmd
+docs/examples/example-water-level.qmd

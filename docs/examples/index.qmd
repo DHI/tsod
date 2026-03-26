@@ -1,0 +1,7 @@
+---
+title: "Examples"
+page-layout: article
+listing: 
+    type: default
+    fields: [image, title, description]
+---

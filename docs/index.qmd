@@ -20,12 +20,13 @@ format-links: false
 Install **tsod** with [`pip`](https://pypi.org/project/tsod/) and get up
 and running in minutes
 
-
+[**Getting started**](user-guide/getting-started.qmd)
 
 ## {{< fa brands python >}} **It's just Python**
 
 Use familiar Python workflows to integrate anomaly detection into your models and pipelines
 
+[**API Reference**](api/index.qmd)
 
 :::
 
@@ -33,13 +34,14 @@ Use familiar Python workflows to integrate anomaly detection into your models an
 
 ## {{< fa solid ruler >}} **Rule-based detectors**
 
-Choose from detectors like `RangeDetector` and `ConstantValueDetector` to identify anomalies.
+Choose from detectors like `RangeDetector` and `ConstantValueDetector` to identify anomalies. Explore example notebooks in [**Examples**](examples/index.qmd)
 
 
 ## {{< fa scale-balanced >}} **Open Source, MIT**
 
 **tsod** is licensed under MIT and the source code is available on [GitHub](https://github.com/DHI/tsod)
 
+[**Design philosophy**](user-guide/design.qmd)
 
 :::
 
