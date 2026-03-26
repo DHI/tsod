@@ -257,7 +257,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div id="67bc3fff" class="cell" data-execution_count="1">
+<div id="dd4de6a3" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tsod <span class="im">import</span> (</span>
@@ -271,12 +271,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    HampelDetector</span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="d612edf5" class="cell" data-execution_count="2">
+<div id="b65c8c48" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>series <span class="op">=</span> pd.read_csv(<span class="st">"../../tests/data/example.csv"</span>, parse_dates<span class="op">=</span><span class="va">True</span>, index_col<span class="op">=</span><span class="dv">0</span>).iloc[:, <span class="dv">0</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <section id="range" class="level3">
 <h3 class="anchored" data-anchor-id="range"><strong>Range</strong></h3>
-<div id="5f0abf98" class="cell" data-execution_count="3">
+<div id="a08f47e3" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>rd <span class="op">=</span> RangeDetector(min_value<span class="op">=</span><span class="fl">0.01</span>, max_value<span class="op">=</span><span class="fl">2.0</span>)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>anomalies <span class="op">=</span> rd.detect(series)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># plot results</span></span>
@@ -293,7 +293,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="constant-value" class="level3">
 <h3 class="anchored" data-anchor-id="constant-value"><strong>Constant value</strong></h3>
-<div id="eac279c4" class="cell" data-execution_count="4">
+<div id="060b9cc8" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>cd <span class="op">=</span> ConstantValueDetector()</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>anomalies <span class="op">=</span> cd.detect(series)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># plot results</span></span>
@@ -310,7 +310,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="combination" class="level3">
 <h3 class="anchored" data-anchor-id="combination"><strong>Combination</strong></h3>
-<div id="cdf80c57" class="cell" data-execution_count="5">
+<div id="e97908d2" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> CombinedDetector(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    [RangeDetector(max_value<span class="op">=</span><span class="fl">2.0</span>), ConstantValueDetector()]</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>)</span>
@@ -330,7 +330,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="constant-gradient" class="level3">
 <h3 class="anchored" data-anchor-id="constant-gradient"><strong>Constant gradient</strong></h3>
-<div id="1c2ffe92" class="cell" data-execution_count="6">
+<div id="c23767b1" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>cgd <span class="op">=</span> ConstantGradientDetector()</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>anomalies <span class="op">=</span> cgd.detect(series)</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># plot results</span></span>
@@ -347,7 +347,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="gradient" class="level3">
 <h3 class="anchored" data-anchor-id="gradient"><strong>Gradient</strong></h3>
-<div id="17ecd0dc" class="cell" data-execution_count="7">
+<div id="d454d87b" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>magd <span class="op">=</span> GradientDetector()</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Fit the detector to set the absolut maximum gradient theshold from the first 10 points of the series. </span></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>magd.fit(series[<span class="dv">0</span>:<span class="dv">10</span>]) </span>
@@ -364,7 +364,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<div id="88235f56" class="cell" data-execution_count="8">
+<div id="ebd9bdbc" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Do the same thing but accept large negative gradients</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>magd <span class="op">=</span> GradientDetector(direction<span class="op">=</span><span class="st">"positive"</span>)</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>magd.fit(series[<span class="dv">0</span>:<span class="dv">10</span>]) </span>
@@ -385,7 +385,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="rolling-standard-deviation" class="level3">
 <h3 class="anchored" data-anchor-id="rolling-standard-deviation"><strong>Rolling standard deviation</strong></h3>
 <p>Can be used to detect sudden large variations</p>
-<div id="aa7eaa8f" class="cell" data-execution_count="9">
+<div id="9a948903" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create synthetic data with anomalies</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">42</span>)</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>normal_data <span class="op">=</span> pd.Series(</span>
@@ -406,7 +406,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>All data is within an acceptable range, but the variation is larger than expected and thus an anomaly.</p>
-<div id="d393de60" class="cell" data-execution_count="10">
+<div id="cbcea308" class="cell" data-execution_count="10">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>rsd <span class="op">=</span> RollingStandardDeviationDetector(window_size<span class="op">=</span><span class="dv">10</span>, center<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>rsd.fit(normal_data) <span class="co"># Fit the detector to the normal part of the data</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>anomalies <span class="op">=</span> rsd.detect(all_data)</span>
@@ -425,14 +425,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="diff" class="level3">
 <h3 class="anchored" data-anchor-id="diff"><strong>Diff</strong></h3>
 <p>The diff detector detects sudden changes, without consideration of the time elapsed</p>
-<div id="e6c9f607" class="cell" data-execution_count="11">
+<div id="39103fec" class="cell" data-execution_count="11">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>drd <span class="op">=</span> DiffDetector()</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>drd.fit(normal_data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="11">
-<pre><code>&lt;tsod.detectors.DiffDetector at 0x7f18897b87a0&gt;</code></pre>
+<pre><code>&lt;tsod.detectors.DiffDetector at 0x7f3a41d47350&gt;</code></pre>
 </div>
 </div>
-<div id="9f351702" class="cell" data-execution_count="12">
+<div id="8d6b7d6f" class="cell" data-execution_count="12">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>anomalies <span class="op">=</span> drd.detect(all_data)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> all_data.plot(figsize<span class="op">=</span>(<span class="dv">16</span>, <span class="dv">4</span>), label<span class="op">=</span><span class="st">"Data"</span>, legend<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> all_data[anomalies].plot(ax<span class="op">=</span>ax, style<span class="op">=</span><span class="st">"ro"</span>, label<span class="op">=</span><span class="st">"Anomaly"</span>, legend<span class="op">=</span><span class="va">True</span>, title<span class="op">=</span>drd.<span class="fu">__str__</span>(), grid<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -448,7 +448,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="hampel-filter" class="level3">
 <h3 class="anchored" data-anchor-id="hampel-filter"><strong>Hampel filter</strong></h3>
 <p>Detects outliers by comparing each point to the its surrounding window using median absolute deviation.</p>
-<div id="139de4a4" class="cell" data-execution_count="13">
+<div id="060cdce4" class="cell" data-execution_count="13">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>hmp_detector <span class="op">=</span> HampelDetector(window_size<span class="op">=</span><span class="dv">5</span>, threshold<span class="op">=</span><span class="dv">1</span>)</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>anomalies <span class="op">=</span> hmp_detector.detect(all_data)</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> all_data.plot(figsize<span class="op">=</span>(<span class="dv">16</span>, <span class="dv">4</span>), label<span class="op">=</span><span class="st">"Data"</span>, legend<span class="op">=</span><span class="va">True</span>)</span>
