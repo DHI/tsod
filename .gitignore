@@ -130,8 +130,6 @@ dmypy.json
 .pyre/
 
 
-data/
-
 uv.lock
 
 # Docs

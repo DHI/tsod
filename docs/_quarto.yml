@@ -73,6 +73,8 @@ quartodoc:
       - GradientDetector
       - DiffDetector
       - RollingStandardDeviationDetector
+      - DriftDetector
+      - CusumDriftDetector
       - CombinedDetector
       - HampelDetector
       - load
