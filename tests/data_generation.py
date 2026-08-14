@@ -44,3 +44,41 @@ def create_random_walk_with_outliers(
     )
 
     return random_walk_with_outliers, sorted(outlier_indices), random_walk
+
+
+def create_drifting_series(
+    n_steps, drift_start, drift_per_step, noise_scale=1.0, seed=42
+):
+    """Generate a noisy stationary series that starts drifting part way through.
+
+    Parameters
+    ------------
+    n_steps : int
+        Length of the time series to be generated.
+    drift_start : int
+        Index at which the drift begins.
+    drift_per_step : float
+        Amount added to the signal per step once the drift has begun. A negative
+        value drifts downwards.
+    noise_scale : float
+        Standard deviation of the noise added to the signal.
+    seed : int
+        Random seed
+
+    Returns
+    -------
+    drifting : np.ndarray
+        The generated time series, drifting from `drift_start` onwards.
+    normal : np.ndarray
+        The same series without the drift, i.e. noise only.
+    """
+    assert 0 <= drift_start <= n_steps
+
+    rng = np.random.default_rng(seed)
+    normal = rng.normal(scale=noise_scale, size=n_steps)
+
+    drift = np.zeros(n_steps)
+    n_drifting = n_steps - drift_start
+    drift[drift_start:] = np.arange(n_drifting) * drift_per_step
+
+    return normal + drift, normal

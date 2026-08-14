@@ -7,8 +7,10 @@ from .detectors import (
     ConstantValueDetector,
     CombinedDetector,
     RollingStandardDeviationDetector,
+    DriftDetector,
 )
 
+from .cusum import CusumDriftDetector
 from .hampel import HampelDetector
 from .base import load
 
@@ -25,6 +27,8 @@ __all__ = [
     "ConstantValueDetector",
     "CombinedDetector",
     "RollingStandardDeviationDetector",
+    "DriftDetector",
+    "CusumDriftDetector",
     "load",
     "HampelDetector",
 ]
