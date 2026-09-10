@@ -2,19 +2,85 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from tsod.custom_exceptions import InvalidArgumentError, NotFittedError
-from tsod.detectors import CombinedDetector, DriftDetector, _rolling_slope
-from tsod.cusum import CusumDriftDetector
+from tsod.detectors import (
+    CombinedDetector,
+    DriftDetector,
+    RangeDetector,
+)
 
-from tests.data_generation import create_drifting_series
+
+def create_spiky_drifting_series(
+    n_steps,
+    drift_start,
+    drift_per_step,
+    noise_scale=1.0,
+    n_spikes=20,
+    spike_scale=30.0,
+    max_spike_length=40,
+    seed=42,
+):
+    """Generate a drifting series contaminated by large one-sided event spikes.
+
+    Models an event-driven signal, e.g. a river level with storm peaks far above
+    its baseline, on which a slow drift has to be found. The spikes are one-sided
+    and decay, so they behave like real events rather than symmetric outliers.
+
+    Parameters
+    ------------
+    n_steps : int
+        Length of the time series to be generated.
+    drift_start : int
+        Index at which the drift begins.
+    drift_per_step : float
+        Amount added to the signal per step once the drift has begun. A negative
+        value drifts downwards.
+    noise_scale : float
+        Standard deviation of the noise added to the signal.
+    n_spikes : int
+        Number of event spikes to add.
+    spike_scale : float
+        Mean height of an event spike, in the units of the data.
+    max_spike_length : int
+        Longest an event may last, in steps. Lengths are drawn up to this.
+    seed : int
+        Random seed
+
+    Returns
+    -------
+    drifting : np.ndarray
+        The generated time series, with spikes throughout and drifting from
+        `drift_start` onwards.
+    normal : np.ndarray
+        The same series without the drift, i.e. noise and spikes only.
+    """
+    assert 0 <= drift_start <= n_steps
+
+    rng = np.random.default_rng(seed)
+    normal = rng.normal(scale=noise_scale, size=n_steps)
+
+    for position in rng.choice(n_steps, n_spikes, replace=False):
+        length = min(rng.integers(2, max_spike_length + 1), n_steps - position)
+        decay = np.exp(-np.arange(length) / max(length / 3.0, 1.0))
+        normal[position : position + length] += rng.exponential(spike_scale) * decay
+
+    drift = np.zeros(n_steps)
+    drift[drift_start:] = np.arange(n_steps - drift_start) * drift_per_step
+
+    return normal + drift, normal
 
 
 @pytest.fixture
-def drift_data_series():
-    n_steps = 400
-    drift_start = 200
-    drifting, normal = create_drifting_series(
-        n_steps, drift_start=drift_start, drift_per_step=0.2, noise_scale=1.0
+def spiky_drift_series():
+    """A drifting signal buried under events far larger than the drift."""
+    n_steps = 4000
+    drift_start = 2000
+    drifting, normal = create_spiky_drifting_series(
+        n_steps,
+        drift_start=drift_start,
+        drift_per_step=0.02,
+        noise_scale=1.0,
+        n_spikes=40,
+        spike_scale=40.0,
     )
     time = pd.date_range(start="2020", periods=n_steps, freq="1h")
     return (
@@ -24,440 +90,205 @@ def drift_data_series():
     )
 
 
-def test_rolling_slope_recovers_known_trend():
-    time = pd.date_range(start="2020", periods=50, freq="1h")
-    # exactly 1 unit per hour
-    data = pd.Series(np.arange(50, dtype=float), index=time).to_frame()
-
-    slope = _rolling_slope(data, window_size=10).iloc[:, 0]
-
-    assert slope.iloc[:9].isna().all()  # incomplete windows
-    assert slope.iloc[9:].to_numpy() == pytest.approx(1.0 / 3600.0)
+def _drift(values, window, lookback, index=None):
+    """The drift, from the detector's own calculation."""
+    data = pd.Series(values, dtype=float, index=index)
+    detector = DriftDetector(window=window, lookback=lookback)
+    return detector._drift(data.to_frame()).iloc[:, 0]
 
 
-def test_rolling_slope_ignores_nan():
-    time = pd.date_range(start="2020", periods=50, freq="1h")
-    values = np.arange(50, dtype=float)
-    values[[3, 17, 42]] = np.nan
-    data = pd.Series(values, index=time).to_frame()
+def test_drift_is_zero_on_a_flat_signal():
+    drift = _drift(np.full(300, 7.0), window=10, lookback=50)
 
-    slope = _rolling_slope(data, window_size=10).iloc[:, 0]
-
-    # A gap reduces the number of points in a window, but not the trend
-    assert slope.iloc[9:].to_numpy() == pytest.approx(1.0 / 3600.0)
+    assert drift.iloc[: 10 + 50 - 1].isna().all()  # no full window and lookback yet
+    assert (drift.iloc[10 + 50 - 1 :] == 0.0).all()
 
 
-def test_rolling_slope_non_uniform_dt():
-    ind = pd.DatetimeIndex(
-        [
-            "2020-01-01 01:00:00",
-            "2020-01-01 01:00:30",
-            "2020-01-01 01:02:00",
-            "2020-01-01 01:04:00",
-            "2020-01-01 01:08:00",
-        ]
-    )
-    # value equals elapsed seconds, so the trend is exactly 1 per second
-    data = pd.Series(index=ind, data=[0.0, 30.0, 120.0, 240.0, 480.0]).to_frame()
+def test_drift_is_undamped():
+    """The whole point: the drift is the distance travelled over the lookback.
 
-    slope = _rolling_slope(data, window_size=3).iloc[:, 0]
+    Non-overlapping windows report the full `rate * lookback`. Nesting the two
+    windows instead, so that the earlier one contains the later one, would
+    attenuate this to `rate * (lookback - window) / 2`.
+    """
+    rate, window, lookback = 0.3, 10, 50
+    values = np.arange(400) * rate
 
-    assert slope.iloc[2:].to_numpy() == pytest.approx(1.0)
+    drift = _drift(values, window=window, lookback=lookback)
 
+    assert drift.iloc[window + lookback :].to_numpy() == pytest.approx(rate * lookback)
+    # Comfortably above what a nested pair of windows could have reported
+    assert drift.iloc[-1] > rate * (lookback - window) / 2
 
-def test_rolling_slope_long_series_precision():
-    """Sums of squares must not lose the trend on a multi-year series."""
-    time = pd.date_range(start="2000", periods=20000, freq="1h")
-    data = pd.Series(np.arange(20000, dtype=float), index=time).to_frame()
-
-    slope = _rolling_slope(data, window_size=100).iloc[:, 0]
-
-    assert slope.iloc[99:].to_numpy() == pytest.approx(1.0 / 3600.0, rel=1e-9)
+    # And it scales with the lookback, since that is where the signal comes from
+    doubled = _drift(values, window=window, lookback=2 * lookback)
+    assert doubled.iloc[-1] == pytest.approx(2 * drift.iloc[-1])
 
 
-def test_drift_detector(drift_data_series):
-    normal, drifting, drift_start = drift_data_series
+def test_drift_ignores_a_spike():
+    values = np.zeros(400)
+    values[200:203] = 50.0
 
-    detector = DriftDetector(window_size=48)
-    detector.fit(normal)
+    drift = _drift(values, window=10, lookback=50)
+
+    assert np.nanmax(np.abs(drift.to_numpy())) == 0.0
+
+
+def test_drift_reports_a_step_for_one_lookback():
+    window, lookback, height = 10, 50, 4.0
+    values = np.zeros(400)
+    values[200:] = height
+
+    drift = _drift(values, window=window, lookback=lookback)
+
+    # Full height while the step is behind the baseline but not yet behind the
+    # reference, i.e. for about one lookback, and then nothing
+    assert np.isclose(drift, height).sum() == pytest.approx(lookback, abs=window)
+    assert drift.iloc[-1] == 0.0
+
+
+def test_drift_counts_points_not_time():
+    """A count of points reaches further back once samples go missing.
+
+    This is the price of taking only ints: `lookback` is a number of samples, so
+    with gaps it spans more time than intended and overstates the drift.
+    """
+    rate = 0.3
+    time = pd.date_range(start="2020", periods=400, freq="1h")
+    full = pd.Series(np.arange(400) * rate, index=time)
+    rng = np.random.default_rng(0)
+    sparse = full[rng.random(400) > 0.4]
+
+    evenly_spaced = _drift(full.to_numpy(), window=10, lookback=50, index=time)
+    with_gaps = _drift(sparse.to_numpy(), window=10, lookback=50, index=sparse.index)
+
+    assert evenly_spaced.iloc[-1] == pytest.approx(rate * 50)
+    assert with_gaps.iloc[-1] > 1.5 * rate * 50
+
+
+def test_drift_rejects_durations():
+    """Only whole numbers of points, so a duration is refused outright."""
+    for bad in ("30D", pd.Timedelta("30D"), 10.0, True):
+        with pytest.raises(ValueError, match="must be a number of points"):
+            DriftDetector(window=bad, lookback=1000)
+        with pytest.raises(ValueError, match="must be a number of points"):
+            DriftDetector(window=10, lookback=bad)
+
+
+def test_drift_detects_drift_buried_under_events(spiky_drift_series):
+    """Events forty times the noise must not stop the drift being found."""
+    normal, drifting, drift_start = spiky_drift_series
+
+    detector = DriftDetector(window=200, lookback=800).fit(normal)
     anomalies = detector.detect(drifting)
 
-    assert isinstance(anomalies, pd.Series)
-    assert len(anomalies) == len(drifting)
-
-    # Nothing is flagged before the drift starts, and it is caught once a full
-    # window lies inside the drifting part
-    assert not anomalies.iloc[:drift_start].any()
-    assert anomalies.iloc[drift_start + 48 :].all()
-
-
-def test_drift_detector_ignores_noise(drift_data_series):
-    normal, _, _ = drift_data_series
-
-    detector = DriftDetector(window_size=48)
-    detector.fit(normal)
-
-    # Fitting on the normal data means its own steepest trend is not an anomaly
     assert not detector.detect(normal).any()
+    assert not anomalies.iloc[:drift_start].any()
+    assert anomalies.iloc[-1]
+
+    # The criterion learned from the spiky clean data is set by the drift-free
+    # baseline wander, not by the events, so it stays far below the drift the
+    # series eventually reaches
+    assert detector.drift_limit < 0.02 * 800
 
 
-def test_drift_detector_explicit_rate():
-    time = pd.date_range(start="2020", periods=200, freq="1h")
-    # 0.5 per day
-    data = pd.Series(np.arange(200) * 0.5 / 24.0, index=time)
+def test_drift_fit_matches_an_explicit_shift(spiky_drift_series):
+    normal, drifting, _ = spiky_drift_series
 
-    too_strict = DriftDetector(window_size=24, max_drift_rate=0.1 / 86400.0)
-    assert too_strict.detect(data).iloc[23:].all()
+    fitted = DriftDetector(window=200, lookback=800).fit(normal)
+    explicit = DriftDetector(window=200, lookback=800, drift_limit=fitted.drift_limit)
 
-    tolerant = DriftDetector(window_size=24, max_drift_rate=1.0 / 86400.0)
-    assert not tolerant.detect(data).any()
+    assert (fitted.detect(drifting) == explicit.detect(drifting)).all()
 
 
-def test_drift_detector_recovers_after_step_change():
-    """A single jump is not drift, GradientDetector is the tool for that."""
-    time = pd.date_range(start="2020", periods=200, freq="1h")
-    values = np.zeros(200)
-    values[100:] = 10.0
-    data = pd.Series(values, index=time)
+def test_drift_without_criterion_flags_nothing():
+    """An unset limit is infinite, as for RangeDetector, so nothing exceeds it."""
+    data = pd.Series(np.arange(300) * 0.1)
 
-    detector = DriftDetector(window_size=48, max_drift_rate=1.0 / 86400.0)
-    anomalies = detector.detect(data)
-
-    # The step looks like drift while it sits inside the window, but not once the
-    # window has moved past it
-    assert not anomalies.iloc[:100].any()
-    assert not anomalies.iloc[160:].any()
+    assert not DriftDetector(window=10, lookback=50).detect(data).any()
 
 
-def test_drift_detector_direction():
-    time = pd.date_range(start="2020", periods=100, freq="1h")
-    rising = pd.Series(np.arange(100) * 0.1, index=time)
-    falling = pd.Series(-np.arange(100) * 0.1, index=time)
-
-    max_rate = 0.01 / 86400.0
+def test_drift_direction():
+    rising = pd.Series(np.arange(400) * 0.3)
+    falling = pd.Series(-np.arange(400) * 0.3)
 
     positive = DriftDetector(
-        window_size=24, max_drift_rate=max_rate, direction="positive"
+        window=10, lookback=50, drift_limit=1.0, direction="positive"
     )
-    assert positive.detect(rising).iloc[23:].all()
-    assert not positive.detect(falling).any()
-
     negative = DriftDetector(
-        window_size=24, max_drift_rate=max_rate, direction="negative"
+        window=10, lookback=50, drift_limit=1.0, direction="negative"
     )
-    assert negative.detect(falling).iloc[23:].all()
+
+    assert positive.detect(rising).any()
+    assert not positive.detect(falling).any()
+    assert negative.detect(falling).any()
     assert not negative.detect(rising).any()
 
 
-def test_drift_detector_centered():
-    time = pd.date_range(start="2020", periods=100, freq="1h")
-    data = pd.Series(np.arange(100) * 0.1, index=time)
+def test_drift_counts_need_no_datetime_index():
+    data = pd.Series(np.arange(400) * 0.3)  # RangeIndex
 
-    detector = DriftDetector(window_size=25, max_drift_rate=0.0, center=True)
-    anomalies = detector.detect(data)
-
-    # Centered labels leave half a window undetermined at each end
-    assert not anomalies.iloc[:12].any()
-    assert not anomalies.iloc[-12:].any()
-    assert anomalies.iloc[12:-12].all()
+    assert DriftDetector(window=10, lookback=50, drift_limit=1.0).detect(data).any()
 
 
-def test_drift_detector_multicol(drift_data_series):
-    normal, drifting, drift_start = drift_data_series
+def test_drift_multicol(spiky_drift_series):
+    normal, drifting, drift_start = spiky_drift_series
+    normal_df = pd.DataFrame({"a": normal, "b": normal})
+    drifting_df = pd.DataFrame({"a": normal, "b": drifting})
 
-    df = pd.concat([normal.rename("a"), drifting.rename("b")], axis=1)
-
-    detector = DriftDetector(window_size=48, max_drift_rate=0.05 / 3600.0)
-    anomalies = detector.detect(df)
+    detector = DriftDetector(window=200, lookback=800).fit(normal)
+    anomalies = detector.detect(drifting_df)
 
     assert isinstance(anomalies, pd.DataFrame)
-    assert anomalies.shape == df.shape
-    assert not anomalies["a"].any()
-    assert anomalies["b"].iloc[drift_start + 48 :].all()
-
-
-def test_drift_detector_requires_datetime_index():
-    detector = DriftDetector(window_size=5)
-    data = pd.Series(np.arange(20, dtype=float))
-
-    with pytest.raises(
-        ValueError,
-        match="Slope calculation requires a DatetimeIndex. Got RangeIndex instead",
-    ):
-        detector.detect(data)
-
-
-def test_drift_detector_invalid_arguments():
-    with pytest.raises(ValueError, match="window_size must be at least 2"):
-        DriftDetector(window_size=1)
-
-    with pytest.raises(ValueError, match="max_drift_rate must be non-negative"):
-        DriftDetector(max_drift_rate=-1.0)
-
-    with pytest.raises(ValueError, match="is not a valid direction"):
-        DriftDetector(direction="sideways")
-
-
-def test_drift_detector_str():
-    detector = DriftDetector(window_size=10, max_drift_rate=1.0 / 86400.0)
-
-    assert "DriftDetector" in str(detector)
-    assert "1.0/day" in str(detector)
-
-
-def test_cusum_detector(drift_data_series):
-    normal, drifting, drift_start = drift_data_series
-
-    detector = CusumDriftDetector()
-    detector.fit(normal)
-    anomalies = detector.detect(drifting)
-
-    assert isinstance(anomalies, pd.Series)
-    assert len(anomalies) == len(drifting)
-    assert not anomalies.iloc[:drift_start].any()
-    assert anomalies.iloc[-1]
-
-
-def test_cusum_detects_drift_earlier_than_trend(drift_data_series):
-    """The point of accumulating evidence instead of windowing it."""
-    normal, drifting, _ = drift_data_series
-
-    cusum = CusumDriftDetector().fit(normal)
-    trend = DriftDetector(window_size=48).fit(normal)
-
-    first_cusum = cusum.detect(drifting).to_numpy().argmax()
-    first_trend = trend.detect(drifting).to_numpy().argmax()
-
-    assert first_cusum < first_trend
-
-
-def test_cusum_detector_ignores_noise(drift_data_series):
-    """Noise alone must not accumulate into a sustained alarm.
-
-    Unlike the other detectors, a control chart has a false alarm rate by design,
-    set by slack and threshold, so a few isolated flags are expected rather than
-    none at all.
-    """
-    normal, _, _ = drift_data_series
-
-    detector = CusumDriftDetector().fit(normal)
-    anomalies = detector.detect(normal)
-
-    assert anomalies.mean() < 0.05
-
-
-def test_cusum_detector_threshold_controls_false_alarms(drift_data_series):
-    normal, _, _ = drift_data_series
-
-    sensitive = CusumDriftDetector(threshold=2.0).fit(normal)
-    conservative = CusumDriftDetector(threshold=15.0).fit(normal)
-
-    assert sensitive.detect(normal).sum() > conservative.detect(normal).sum()
-    assert not conservative.detect(normal).any()
-
-
-def test_cusum_detector_flags_whole_drifted_period():
-    time = pd.date_range(start="2020", periods=200, freq="1h")
-    # a sustained offset, not a trend
-    shifted = pd.Series(np.concatenate([np.zeros(100), np.ones(100)]), index=time)
-
-    detector = CusumDriftDetector(slack=0.1, threshold=2.0)
-    # a constant normal level has no scale to fit, so set it directly
-    detector._center = 0.0
-    detector._scale = 1.0
-
-    anomalies = detector.detect(shifted)
-
-    assert not anomalies.iloc[:100].any()
-    # The sums are not reset on alarm, so the flag stays up for the whole period
-    assert anomalies.iloc[110:].all()
-
-
-def test_cusum_detector_direction():
-    time = pd.date_range(start="2020", periods=200, freq="1h")
-    up = pd.Series(np.concatenate([np.zeros(100), np.ones(100)]), index=time)
-    down = -up
-
-    cases = [("positive", True, False), ("negative", False, True), ("both", True, True)]
-    for direction, expected_up, expected_down in cases:
-        detector = CusumDriftDetector(slack=0.1, threshold=2.0, direction=direction)
-        detector._center = 0.0
-        detector._scale = 1.0
-
-        assert detector.detect(up).any() == expected_up
-        assert detector.detect(down).any() == expected_down
-
-
-def test_cusum_detector_handles_nan():
-    time = pd.date_range(start="2020", periods=200, freq="1h")
-    values = np.concatenate([np.zeros(100), np.ones(100)])
-    values[[5, 120, 150]] = np.nan
-    data = pd.Series(values, index=time)
-
-    detector = CusumDriftDetector(slack=0.1, threshold=2.0)
-    detector._center = 0.0
-    detector._scale = 1.0
-
-    anomalies = detector.detect(data)
-
-    assert not anomalies.iloc[:100].any()
-    assert anomalies.iloc[-1]
-
-
-def test_cusum_detector_multicol(drift_data_series):
-    normal, drifting, _ = drift_data_series
-
-    df = pd.concat([normal.rename("a"), drifting.rename("b")], axis=1)
-
-    detector = CusumDriftDetector(threshold=15.0).fit(normal)
-    anomalies = detector.detect(df)
-
-    assert isinstance(anomalies, pd.DataFrame)
-    assert anomalies.shape == df.shape
+    assert not detector.detect(normal_df).any().any()
     assert not anomalies["a"].any()
     assert anomalies["b"].iloc[-1]
 
 
-def test_cusum_detector_requires_fit(drift_data_series):
-    _, drifting, _ = drift_data_series
+def test_drift_invalid_arguments():
+    with pytest.raises(ValueError, match="window must be at least 1"):
+        DriftDetector(window=0, lookback=50)
 
-    detector = CusumDriftDetector()
-    with pytest.raises(NotFittedError):
-        detector.detect(drifting)
+    with pytest.raises(ValueError, match="lookback must be at least window"):
+        DriftDetector(window=50, lookback=10)
 
+    with pytest.raises(ValueError, match="drift_limit must be non-negative"):
+        DriftDetector(window=10, lookback=50, drift_limit=-1.0)
 
-def test_cusum_detector_fit_on_constant_data():
-    data = pd.Series(np.ones(100))
-
-    detector = CusumDriftDetector()
-    with pytest.raises(ValueError, match="Could not determine a scale"):
-        detector.fit(data)
+    with pytest.raises(ValueError, match="not a valid direction"):
+        DriftDetector(window=10, lookback=50, direction="sideways")
 
 
-def test_cusum_detector_robust_scale():
-    """Outliers in the training data must not inflate the scale."""
-    rng = np.random.default_rng(42)
-    values = rng.normal(size=200)
-    clean = pd.Series(values.copy())
-    values[[10, 50, 120]] = 100.0
-    contaminated = pd.Series(values)
+def test_drift_edge_cases():
+    detector = DriftDetector(window=10, lookback=50, drift_limit=1.0)
 
-    scale_clean = CusumDriftDetector().fit(clean)._scale
-    scale_contaminated = CusumDriftDetector().fit(contaminated)._scale
+    assert detector.detect(pd.Series([], dtype=float)).empty
 
-    assert scale_contaminated == pytest.approx(scale_clean, rel=0.1)
+    # Shorter than window + lookback, so nothing can be said and nothing is flagged
+    assert not detector.detect(pd.Series(np.arange(20) * 5.0)).any()
 
-
-def test_cusum_detector_invalid_arguments():
-    with pytest.raises(InvalidArgumentError, match="slack must be non-negative"):
-        CusumDriftDetector(slack=-1.0)
-
-    with pytest.raises(InvalidArgumentError, match="threshold must be positive"):
-        CusumDriftDetector(threshold=0.0)
-
-    with pytest.raises(ValueError, match="is not a valid direction"):
-        CusumDriftDetector(direction="sideways")
-
-
-def test_cusum_detector_str():
-    detector = CusumDriftDetector(slack=0.5, threshold=5.0)
-
-    assert "CusumDriftDetector" in str(detector)
-
-
-@pytest.fixture
-def tidal_data_series():
-    """A semi-diurnal tide, with the sensor fouling from day 20 onwards."""
-    dt_minutes, days, drift_per_day = 10, 40, 0.05
-    n_steps = days * 24 * (60 // dt_minutes)
-    time = pd.date_range(start="2020", periods=n_steps, freq=f"{dt_minutes}min")
-
-    hours = np.arange(n_steps) * dt_minutes / 60.0
-    rng = np.random.default_rng(1)
-    tide = np.sin(2 * np.pi * hours / 12.42) + 0.02 * rng.normal(size=n_steps)
-    drift = np.where(hours / 24 > 20, (hours / 24 - 20) * drift_per_day, 0.0)
-
-    points_per_cycle = int(round(12.42 * 60 / dt_minutes))
-    return (
-        pd.Series(tide, index=time),
-        pd.Series(tide + drift, index=time),
-        points_per_cycle,
-        hours / 24,
-    )
-
-
-def test_drift_detector_window_must_span_whole_cycles(tidal_data_series):
-    """A window shorter than the period measures the tide, not the drift."""
-    clean, fouled, points_per_cycle, day = tidal_data_series
-
-    half_cycle = DriftDetector(window_size=points_per_cycle // 2).fit(clean)
-    many_cycles = DriftDetector(window_size=10 * points_per_cycle).fit(clean)
-
-    # The fitted rate collapses once the tide averages out within the window
-    assert half_cycle.max_drift_rate > 1.0 / 86400.0
-    assert many_cycles.max_drift_rate < 0.05 / 86400.0
-
-    drifted = fouled.index[day > 21]
-    assert half_cycle.detect(fouled)[drifted].mean() < 0.05
-    assert many_cycles.detect(fouled)[drifted].mean() > 0.5
-
-    # Neither raises a false alarm on the undrifted part
-    before = fouled.index[day <= 20]
-    assert not half_cycle.detect(fouled)[before].any()
-    assert not many_cycles.detect(fouled)[before].any()
-
-
-@pytest.mark.parametrize(
-    "detector",
-    [
-        DriftDetector(window_size=5, max_drift_rate=0.0),
-        CusumDriftDetector(slack=0.1, threshold=2.0),
-    ],
-    ids=["drift", "cusum"],
-)
-def test_drift_detectors_edge_cases(detector):
-    if isinstance(detector, CusumDriftDetector):
-        detector._center = 0.0
-        detector._scale = 1.0
-
-    empty = pd.Series([], dtype=float, index=pd.DatetimeIndex([]))
-    assert len(detector.detect(empty)) == 0
-
-    # Too short to determine a trend, but must not raise
-    for n in (1, 2, 3):
-        short = pd.Series(
-            np.arange(n, dtype=float), index=pd.date_range("2020", periods=n, freq="1h")
-        )
-        assert len(detector.detect(short)) == n
-
-    all_nan = pd.Series(
-        np.full(20, np.nan), index=pd.date_range("2020", periods=20, freq="1h")
-    )
+    all_nan = pd.Series(np.full(300, np.nan))
     assert not detector.detect(all_nan).any()
 
-
-def test_drift_detector_rejects_duplicate_timestamps():
-    data = pd.Series(
-        [1.0, 2.0, 3.0],
-        index=pd.DatetimeIndex(["2020-01-01", "2020-01-01", "2020-01-02"]),
-    )
-
-    with pytest.raises(ValueError, match="Index must be monotonically increasing"):
-        DriftDetector(window_size=2).detect(data)
+    # A criterion cannot be learned from data that yields no drift at all
+    assert DriftDetector(window=10, lookback=50).fit(all_nan).drift_limit == 0.0
 
 
-def test_cusum_detector_fit_on_all_nan_data():
-    data = pd.Series(np.full(20, np.nan))
+def test_drift_str():
+    detector = DriftDetector(window=144, lookback=1008, drift_limit=0.25)
 
-    with pytest.raises(ValueError, match="Input data contains no valid values"):
-        CusumDriftDetector().fit(data)
+    assert "DriftDetector" in str(detector)
+    assert "144" in str(detector)
+    assert "1008" in str(detector)
+    assert "0.25" in str(detector)
+    assert "not set" in str(DriftDetector(window=10, lookback=50))
 
 
-def test_drift_detectors_combine(drift_data_series):
-    normal, drifting, drift_start = drift_data_series
+def test_drift_combines(spiky_drift_series):
+    normal, drifting, drift_start = spiky_drift_series
 
     combined = CombinedDetector(
-        [DriftDetector(window_size=48), CusumDriftDetector(threshold=15.0)]
+        [DriftDetector(window=200, lookback=800), RangeDetector()]
     )
     combined.fit(normal)
     anomalies = combined.detect(drifting)

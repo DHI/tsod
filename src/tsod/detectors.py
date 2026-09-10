@@ -25,81 +25,6 @@ def _gradient(data: pd.DataFrame, periods: int = 1) -> pd.DataFrame:
     return data.diff(periods=periods).div(dt, axis=0)
 
 
-def _rolling_slope(
-    data: pd.DataFrame, window_size: int, center: bool = False
-) -> pd.DataFrame:
-    """Slope of a least-squares straight line fitted in a rolling window.
-
-    The slope of an ordinary least-squares fit can be written in terms of sums
-    of t, y, t*y and t**2, so it is evaluated with rolling sums only, i.e.
-    without fitting a line per window. Because the actual time stamps are used,
-    non-equidistant data is handled correctly and the slope is a rate per
-    second. Missing values are excluded from the fit rather than propagated, so
-    a window containing NaN still yields a slope as long as it holds at least
-    two valid points.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Time series data, must have a DatetimeIndex.
-    window_size : int
-        Number of points in the rolling window.
-    center : bool, default=False
-        If True, set the labels at the center of the window instead of at its
-        trailing edge.
-
-    Returns
-    -------
-    pd.DataFrame
-        Slope per second. Windows that are not fully populated yield NaN.
-    """
-    if not isinstance(data, pd.DataFrame):
-        raise TypeError("Input data must be a pandas.DataFrame.")
-
-    if not isinstance(data.index, pd.DatetimeIndex):
-        raise ValueError(
-            "Slope calculation requires a DatetimeIndex. "
-            f"Got {type(data.index).__name__} instead."
-        )
-
-    if data.empty:
-        return data.astype(float)
-
-    seconds = pd.Series((data.index - data.index[0]).total_seconds(), index=data.index)
-    if len(seconds) > 1 and seconds.diff().iloc[1:].min() < 1e-15:
-        raise ValueError("Index must be monotonically increasing")
-
-    # Express time in units of the typical sampling interval instead of seconds.
-    # This keeps the sums of squares small, which matters because the
-    # denominator below is a difference of two large and nearly equal numbers.
-    scale = seconds.diff().iloc[1:].median() if len(seconds) > 1 else 1.0
-    if not scale > 0:
-        scale = 1.0
-    time = seconds / scale
-
-    def _slope(values: pd.Series) -> pd.Series:
-        valid = values.notna().astype(np.float64)
-        filled = values.fillna(0.0)
-
-        def rolling_sum(series: pd.Series) -> pd.Series:
-            return series.rolling(window_size, center=center).sum()
-
-        n = rolling_sum(valid)
-        sum_t = rolling_sum(time * valid)
-        sum_tt = rolling_sum(time * time * valid)
-        sum_y = rolling_sum(filled)
-        sum_ty = rolling_sum(time * filled)
-
-        denominator = n * sum_tt - sum_t * sum_t
-        # A slope is undefined for fewer than two points, and the denominator
-        # vanishes when all valid points in the window share one time stamp.
-        denominator = denominator.where((n >= 2) & (denominator > 0))
-
-        return (n * sum_ty - sum_t * sum_y) / (denominator * scale)
-
-    return data.apply(_slope, axis=0)
-
-
 class CombinedDetector(Detector, Sequence):
     """Combine detectors.
 
@@ -480,93 +405,60 @@ class GradientDetector(Detector):
 
 
 class DriftDetector(Detector):
-    """Detect slowly drifting sensors.
+    """Detect a sensor that is slowly drifting.
 
-    Drift is a small, persistent, one-directional deviation, e.g. caused by
-    biofouling or a gradual loss of calibration. Each individual step is far too
-    small for `DiffDetector` or `GradientDetector` to react to, and the signal
-    only leaves the interval of `RangeDetector` once the drift has become severe.
-    This detector instead fits a least-squares straight line in a rolling window
-    and flags the windows whose slope is too steep, which makes it sensitive to a
-    trend that persists over many points.
-
-    Requires data with a DatetimeIndex. The drift rate is a rate per second, in
-    line with `GradientDetector`. Missing values are excluded from the fit rather
-    than propagated, so a window containing NaN still yields a drift rate as long
-    as it holds at least two valid points.
-
-    Note that a drifting sensor and a genuine slow change in the environment look
-    the same in a single time series. Consider applying the detector to a quantity
-    that is expected to be stationary, such as a daily minimum, or to the
-    difference between the sensor and a redundant reference.
+    Compares what the sensor typically reads now with what it typically read a
+    while ago. Both are rolling medians, so spikes do not move them, and the
+    difference between the two is how far the sensor has drifted. Drifting
+    further than `drift_limit` counts as an anomaly.
 
     Parameters
     ----------
-    window_size : int, default=100
-        Number of data points to fit the trend over. The window should be long
-        enough that noise and periodic variation average out, but short enough
-        that the drift is approximately linear within it. See the notes below on
-        choosing it for a periodic signal.
-    max_drift_rate : float, default=np.inf
-        Maximum trend to accept as normal, in units per second.
+    window : int, default=144
+        How many points to average over to get a typical value. Longer is
+        steadier, and it should cover whole cycles if the signal has a daily or
+        tidal rhythm.
+    lookback : int, default=1008
+        How many points back to compare against. Must be at least `window`, so
+        the two do not overlap. Longer finds slower drift, because slow drift
+        needs time to add up.
+    drift_limit : float, default=np.inf
+        How far the sensor may drift before it counts as an anomaly, in the units
+        of the data. Also set by `fit`, to the largest drift in the data given to
+        it.
     direction : {'both', 'positive', 'negative'}, default='both'
-        Direction of drift to detect. 'positive' detects only upward drift,
-        'negative' only downward drift, 'both' detects drift either way.
-    center : bool, default=False
-        If True, set the labels at the center of the window. The default labels
-        each window at its trailing edge, which is what real-time detection on a
-        growing series needs.
-
-    See Also
-    --------
-    GradientDetector : Detects abrupt change, i.e. a steep rate between
-        neighbouring points, rather than a trend sustained over a window.
-
-    Notes
-    -----
-    On a periodic signal, such as a tidal water level, the window must span
-    several whole cycles. A shorter window sits on the rising or falling limb of
-    the cycle, so its trend reflects the tide rather than the drift, and a
-    `max_drift_rate` fitted on such windows is far too large to react to a real
-    drift. As an example, for a semi-diurnal tide of 1 m amplitude a window of
-    half a cycle yields a fitted rate of about 10 m/day, whereas ten cycles
-    (roughly five days) brings it down to about 0.04 m/day and so makes a drift
-    of a few cm/day detectable.
-
-    Examples
-    --------
-    >>> time = pd.date_range("2020", periods=200, freq="1h")
-    >>> normal_data = pd.Series(np.random.normal(size=200), index=time)
-    >>> drifting_data = normal_data + np.linspace(0.0, 10.0, 200)
-
-    >>> detector = DriftDetector(window_size=50)
-    >>> detector.fit(normal_data)  # max drift rate inferred from normal data
-    >>> anomalies = detector.detect(drifting_data)
-
-    >>> # 1 cm per day is too much for this sensor
-    >>> detector = DriftDetector(window_size=50, max_drift_rate=0.01 / 86400)
-    >>> anomalies = detector.detect(drifting_data)
+        Which way to look. 'positive' catches only a sensor reading higher than
+        it used to, 'negative' only one reading lower, 'both' either way.
     """
 
     def __init__(
         self,
-        window_size: int = 100,
-        max_drift_rate: float = np.inf,
+        window: int = 144,
+        lookback: int = 1008,
+        drift_limit: float = np.inf,
         direction: str = "both",
-        center: bool = False,
     ):
         super().__init__()
 
-        if window_size < 2:
-            raise ValueError(f"window_size must be at least 2, got {window_size}")
-        if max_drift_rate < 0:
-            raise ValueError(
-                f"max_drift_rate must be non-negative, got {max_drift_rate}"
-            )
+        for name, value in (("window", window), ("lookback", lookback)):
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise ValueError(
+                    f"{name} must be a number of points, got {value!r}"
+                )
 
-        self._window_size: int = window_size
-        self._max_drift_rate: float = max_drift_rate
-        self._center: bool = center
+        if window < 1:
+            raise ValueError(f"window must be at least 1, got {window}")
+        if lookback < window:
+            raise ValueError(
+                "lookback must be at least window, so that the two do not overlap, "
+                f"got lookback={lookback} and window={window}"
+            )
+        if drift_limit < 0:
+            raise ValueError(f"drift_limit must be non-negative, got {drift_limit}")
+
+        self._window: int = window
+        self._lookback: int = lookback
+        self._drift_limit: float = drift_limit
 
         valid_directions = ("both", "positive", "negative")
         if direction in valid_directions:
@@ -577,44 +469,58 @@ class DriftDetector(Detector):
             )
 
     @property
-    def window_size(self) -> int:
-        return self._window_size
+    def window(self) -> int:
+        return self._window
 
     @property
-    def max_drift_rate(self) -> float:
-        return self._max_drift_rate
+    def lookback(self) -> int:
+        return self._lookback
 
-    def _slope(self, data: pd.DataFrame) -> pd.DataFrame:
-        return _rolling_slope(data, self._window_size, center=self._center)
+    @property
+    def drift_limit(self) -> float:
+        return self._drift_limit
+
+    def _drift(self, data: pd.DataFrame) -> pd.DataFrame:
+        """How far the sensor has drifted, in the units of the data."""
+        if data.empty:
+            return data.astype(float)
+
+        baseline = data.astype(float).rolling(self._window).median()
+
+        return baseline - baseline.shift(self._lookback)
 
     def _fit(self, data: pd.Series):
-        """Set the maximum drift rate to the steepest trend in normal data."""
-        slopes = self._slope(data.to_frame()).iloc[:, 0]
+        """Set the acceptable drift to the largest one in normal data."""
+        drift = self._drift(data.to_frame()).iloc[:, 0]
 
         if self._direction == "positive":
-            filtered_slopes = slopes[slopes >= 0]
+            filtered = drift[drift >= 0]
         elif self._direction == "negative":
-            filtered_slopes = slopes[slopes <= 0].abs()
+            filtered = drift[drift <= 0].abs()
         else:  # both
-            filtered_slopes = slopes.abs()
+            filtered = drift.abs()
 
-        max_slope = filtered_slopes.max()
-        self._max_drift_rate = 0.0 if pd.isna(max_slope) else max_slope
+        largest = filtered.max()
+        self._drift_limit = 0.0 if pd.isna(largest) else largest
         return self
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        slope = self._slope(data)
+        drift = self._drift(data)
 
+        # drift is NaN during warm-up, and NaN comparisons are False, so those points go unflagged
         if self._direction == "positive":
-            return slope > self._max_drift_rate
+            return drift > self._drift_limit
         elif self._direction == "negative":
-            return slope < -self._max_drift_rate
+            return drift < -self._drift_limit
         else:
-            return slope.abs() > self._max_drift_rate
+            return drift.abs() > self._drift_limit
 
     def __str__(self):
-        rate_per_day = self._max_drift_rate * 86400.0
+        if np.isfinite(self._drift_limit):
+            criterion = f"drift_limit:{self._drift_limit}"
+        else:
+            criterion = "drift_limit:not set"
         return (
-            f"{self.__class__.__name__}(window_size:{self._window_size}, "
-            f"max_drift_rate:{rate_per_day}/day, direction:{self._direction})"
+            f"{self.__class__.__name__}(window:{self._window}, lookback:{self._lookback}, "
+            f"{criterion}, direction:{self._direction})"
         )
