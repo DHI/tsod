@@ -1,12 +1,9 @@
 import os
-import numpy as np
-import pandas as pd
 import tsod
 from tsod import (
     RangeDetector,
     ConstantValueDetector,
     CombinedDetector,
-    DriftDetector,
 )
 
 
