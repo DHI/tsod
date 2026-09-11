@@ -442,9 +442,7 @@ class DriftDetector(Detector):
 
         for name, value in (("window", window), ("lookback", lookback)):
             if not isinstance(value, int) or isinstance(value, bool):
-                raise ValueError(
-                    f"{name} must be a number of points, got {value!r}"
-                )
+                raise ValueError(f"{name} must be a number of points, got {value!r}")
 
         if window < 1:
             raise ValueError(f"window must be at least 1, got {window}")

@@ -1,10 +1,6 @@
 import os
 import tsod
-from tsod import (
-    RangeDetector,
-    ConstantValueDetector,
-    CombinedDetector,
-)
+from tsod import RangeDetector, ConstantValueDetector, CombinedDetector
 
 
 def test_save_and_load(tmp_path):
