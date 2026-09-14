@@ -415,9 +415,9 @@ class DriftDetector(Detector):
     Parameters
     ----------
     window : int, default=144
-        How many points to average over to get a typical value. Longer is
-        steadier, and it should cover whole cycles if the signal has a daily or
-        tidal rhythm.
+        How many points the rolling median covers when working out a typical
+        value. Longer is steadier, and it should cover whole cycles if the
+        signal has a daily or tidal rhythm.
     lookback : int, default=1008
         How many points back to compare against. Must be at least `window`, so
         the two do not overlap. Longer finds slower drift, because slow drift
@@ -451,7 +451,7 @@ class DriftDetector(Detector):
                 "lookback must be at least window, so that the two do not overlap, "
                 f"got lookback={lookback} and window={window}"
             )
-        if drift_limit < 0:
+        if pd.isna(drift_limit) or drift_limit < 0:
             raise ValueError(f"drift_limit must be non-negative, got {drift_limit}")
 
         self._window: int = window
@@ -491,6 +491,12 @@ class DriftDetector(Detector):
         """Set the acceptable drift to the largest one in normal data."""
         drift = self._drift(data.to_frame()).iloc[:, 0]
 
+        if drift.isna().all():
+            raise ValueError(
+                f"Fit needs at least {self._window + self._lookback} valid points, "
+                f"got {int(data.count())}."
+            )
+
         if self._direction == "positive":
             filtered = drift[drift >= 0]
         elif self._direction == "negative":
@@ -498,6 +504,7 @@ class DriftDetector(Detector):
         else:  # both
             filtered = drift.abs()
 
+        # If the filtered series is empty the largest value will be NaN, set drift limit to 0.
         largest = filtered.max()
         self._drift_limit = 0.0 if pd.isna(largest) else largest
         return self
