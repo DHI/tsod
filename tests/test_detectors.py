@@ -786,6 +786,10 @@ def test_drift_detector_invalid_arguments():
     with pytest.raises(ValueError, match="drift_limit must be non-negative"):
         DriftDetector(window=10, lookback=50, drift_limit=-1.0)
 
+    # np.nan would compare False against everything, silently detecting nothing
+    with pytest.raises(ValueError, match="drift_limit must be non-negative"):
+        DriftDetector(window=10, lookback=50, drift_limit=np.nan)
+
     with pytest.raises(ValueError, match="not a valid direction"):
         DriftDetector(window=10, lookback=50, direction="sideways")
 
@@ -804,5 +808,30 @@ def test_drift_detector_edge_cases():
     all_nan = pd.Series(np.full(300, np.nan))
     assert not detector.detect(all_nan).any()
 
-    # A criterion cannot be learned from data that yields no drift at all
-    assert DriftDetector(window=10, lookback=50).fit(all_nan).drift_limit == 0.0
+
+def test_drift_detector_cannot_fit_without_a_measurable_drift():
+    # Fitting on these would learn a criterion of 0.0, flagging everything after
+    for hopeless in (
+        pd.Series(np.arange(20) * 5.0),  # shorter than window + lookback
+        pd.Series(np.full(300, np.nan)),
+    ):
+        with pytest.raises(ValueError, match="Fit needs at least"):
+            DriftDetector(window=10, lookback=50).fit(hopeless)
+
+    # A flat signal is a valid baseline, and it does allow no drift at all
+    flat = pd.Series(np.zeros(300))
+    assert DriftDetector(window=10, lookback=50).fit(flat).drift_limit == 0.0
+
+
+def test_drift_detector_fit_on_a_direction_that_never_happened():
+    # Every drift here goes down, so a detector watching for upward drift is
+    # fitted on nothing at all and should allow no upward drift
+    falling = pd.Series(-np.arange(300, dtype=float))
+    detector = DriftDetector(window=10, lookback=50, direction="positive").fit(falling)
+
+    assert detector.drift_limit == 0.0
+    assert not detector.detect(pd.Series(np.zeros(300))).any()
+    assert detector.detect(pd.Series(np.arange(300, dtype=float))).any()
+
+    # Watching both ways, the same data fits on the drift it does have
+    assert DriftDetector(window=10, lookback=50).fit(falling).drift_limit > 0.0
