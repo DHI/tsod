@@ -425,7 +425,8 @@ class DriftDetector(Detector):
     drift_limit : float, default=np.inf
         How far the sensor may drift before it counts as an anomaly, in the units
         of the data. Also set by `fit`, to the largest drift in the data given to
-        it.
+        it. Either pass it or call `fit` first: left at np.inf, `detect` runs but
+        never flags anything.
     direction : {'both', 'positive', 'negative'}, default='both'
         Which way to look. 'positive' catches only a sensor reading higher than
         it used to, 'negative' only one reading lower, 'both' either way.
