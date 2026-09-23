@@ -700,37 +700,66 @@ def test_constant_gradient_on_non_uniform_dt():
     assert anoms.sum() == 5
 
 
-def test_drift_is_zero_on_a_flat_signal():
+# The two _drift tests below call the private method on purpose: detect() only
+# returns booleans, so through the public API "not enough history yet" (NaN)
+# and "has not moved" (0.0) both come out as False and cannot be told apart.
+
+
+def test_drift_is_nan_until_window_and_lookback_are_filled():
     window, lookback = 10, 50
     flat = pd.Series(np.full(300, 7.0))
 
     drift = DriftDetector(window=window, lookback=lookback)._drift(flat.to_frame())
-    drift = drift.iloc[:, 0]
 
-    # No full window and lookback yet, so there is nothing to compare against
-    assert drift.iloc[: window + lookback - 1].isna().all()
-    assert (drift.iloc[window + lookback - 1 :] == 0.0).all()
+    assert drift.iloc[: window + lookback - 1, 0].isna().all()
 
 
-def test_drift_detector(drift_data_series):
-    normal, drifting, drift_start = drift_data_series
+def test_drift_is_zero_on_a_flat_signal_once_history_is_filled():
+    window, lookback = 10, 50
+    flat = pd.Series(np.full(300, 7.0))
 
-    detector = DriftDetector(window=50, lookback=200)
-    assert not detector.detect(drifting).any()  # no criterion set yet
+    drift = DriftDetector(window=window, lookback=lookback)._drift(flat.to_frame())
 
-    detector.fit(normal)
+    assert (drift.iloc[window + lookback - 1 :, 0] == 0.0).all()
+
+
+def test_drift_detector_without_fit_or_drift_limit_flags_nothing(drift_data_series):
+    # drift_limit stays np.inf, so detect() runs but can never flag
+    _, drifting, _ = drift_data_series
+
+    assert not DriftDetector(window=50, lookback=200).detect(drifting).any()
+
+
+def test_drift_detector_does_not_flag_the_data_it_was_fitted_on(drift_data_series):
+    normal, _, _ = drift_data_series
+
+    detector = DriftDetector(window=50, lookback=200).fit(normal)
+
     assert not detector.detect(normal).any()
 
-    anomalies = detector.detect(drifting)
+
+def test_drift_detector_flags_drift_only_after_it_starts(drift_data_series):
+    normal, drifting, drift_start = drift_data_series
+
+    anomalies = DriftDetector(window=50, lookback=200).fit(normal).detect(drifting)
+
     assert not anomalies.iloc[:drift_start].any()
     assert anomalies.iloc[-1]
 
-    # The criterion is set by the drift-free baseline wander, not by the events,
-    # which the rolling median leaves out
+
+def test_drift_detector_fitted_limit_ignores_spikes(drift_data_series):
+    # The limit is set by the drift-free baseline wander, not by the 40-unit
+    # event spikes, which the rolling median leaves out
+    normal, _, _ = drift_data_series
+
+    detector = DriftDetector(window=50, lookback=200).fit(normal)
+
     assert detector.drift_limit < 0.05 * 200
 
 
-def test_drift_detector_autoset(drift_data_series):
+def test_drift_detector_fitted_limit_detects_like_the_same_explicit_limit(
+    drift_data_series,
+):
     normal, drifting, _ = drift_data_series
 
     fitted = DriftDetector(window=50, lookback=200).fit(normal)
@@ -739,7 +768,7 @@ def test_drift_detector_autoset(drift_data_series):
     assert (fitted.detect(drifting) == explicit.detect(drifting)).all()
 
 
-def test_drift_detector_frame(drift_data_series):
+def test_drift_detector_frame_flags_only_the_drifting_column(drift_data_series):
     normal, drifting, drift_start = drift_data_series
     df = pd.DataFrame({"normal": normal, "drifting": drifting})
 
@@ -752,7 +781,7 @@ def test_drift_detector_frame(drift_data_series):
     assert anomalies["drifting"].iloc[-1]
 
 
-def test_drift_detector_direction():
+def test_drift_detector_direction_flags_only_the_watched_direction():
     rising = pd.Series(np.arange(400) * 0.3)
     falling = pd.Series(-np.arange(400) * 0.3)
 
@@ -769,7 +798,7 @@ def test_drift_detector_direction():
     assert not negative.detect(rising).any()
 
 
-def test_drift_detector_invalid_arguments():
+def test_drift_detector_rejects_invalid_arguments():
     # window and lookback are a number of points, never a duration
     for bad in ("30D", pd.Timedelta("30D"), 10.0, True):
         with pytest.raises(ValueError, match="must be a number of points"):
@@ -794,22 +823,32 @@ def test_drift_detector_invalid_arguments():
         DriftDetector(window=10, lookback=50, direction="sideways")
 
 
-def test_drift_detector_edge_cases():
+def test_drift_detector_does_not_need_a_datetime_index():
+    # window and lookback are points, not time
     detector = DriftDetector(window=10, lookback=50, drift_limit=1.0)
 
-    # Points, not time, so no DatetimeIndex is required
     assert detector.detect(pd.Series(np.arange(400) * 0.3)).any()
+
+
+def test_drift_detector_returns_empty_on_empty_input():
+    detector = DriftDetector(window=10, lookback=50, drift_limit=1.0)
 
     assert detector.detect(pd.Series([], dtype=float)).empty
 
-    # Shorter than window + lookback, so nothing can be said
+
+def test_drift_detector_flags_nothing_on_data_shorter_than_window_plus_lookback():
+    detector = DriftDetector(window=10, lookback=50, drift_limit=1.0)
+
     assert not detector.detect(pd.Series(np.arange(20) * 5.0)).any()
 
-    all_nan = pd.Series(np.full(300, np.nan))
-    assert not detector.detect(all_nan).any()
+
+def test_drift_detector_flags_nothing_on_all_nan_data():
+    detector = DriftDetector(window=10, lookback=50, drift_limit=1.0)
+
+    assert not detector.detect(pd.Series(np.full(300, np.nan))).any()
 
 
-def test_drift_detector_cannot_fit_without_a_measurable_drift():
+def test_drift_detector_fit_rejects_data_without_a_measurable_drift():
     # Fitting on these would learn a criterion of 0.0, flagging everything after
     for hopeless in (
         pd.Series(np.arange(20) * 5.0),  # shorter than window + lookback
@@ -818,12 +857,15 @@ def test_drift_detector_cannot_fit_without_a_measurable_drift():
         with pytest.raises(ValueError, match="Fit needs at least"):
             DriftDetector(window=10, lookback=50).fit(hopeless)
 
+
+def test_drift_detector_fit_on_a_flat_signal_allows_no_drift():
     # A flat signal is a valid baseline, and it does allow no drift at all
     flat = pd.Series(np.zeros(300))
+
     assert DriftDetector(window=10, lookback=50).fit(flat).drift_limit == 0.0
 
 
-def test_drift_detector_fit_on_a_direction_that_never_happened():
+def test_drift_detector_fit_on_a_direction_that_never_happened_allows_none_of_it():
     # Every drift here goes down, so a detector watching for upward drift is
     # fitted on nothing at all and should allow no upward drift
     falling = pd.Series(-np.arange(300, dtype=float))
@@ -833,5 +875,8 @@ def test_drift_detector_fit_on_a_direction_that_never_happened():
     assert not detector.detect(pd.Series(np.zeros(300))).any()
     assert detector.detect(pd.Series(np.arange(300, dtype=float))).any()
 
-    # Watching both ways, the same data fits on the drift it does have
+
+def test_drift_detector_fit_both_ways_uses_the_drift_there_is():
+    falling = pd.Series(-np.arange(300, dtype=float))
+
     assert DriftDetector(window=10, lookback=50).fit(falling).drift_limit > 0.0
