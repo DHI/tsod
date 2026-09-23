@@ -402,3 +402,131 @@ class GradientDetector(Detector):
         return (
             f"{self.__class__.__name__}({max_grad_hr}/hr, direction:{self._direction})"
         )
+
+
+class DriftDetector(Detector):
+    """Detect a sensor that is slowly drifting.
+
+    Compares what the sensor typically reads now with what it typically read a
+    while ago. Both are rolling medians, so spikes do not move them, and the
+    difference between the two is how far the sensor has drifted. Drifting
+    further than `drift_limit` counts as an anomaly.
+
+    Parameters
+    ----------
+    window : int, default=144
+        How many points the rolling median covers when working out a typical
+        value. Longer is steadier, and it should cover whole cycles if the
+        signal has a daily or tidal rhythm.
+    lookback : int, default=1008
+        How many points back to compare against. Must be at least `window`, so
+        the two do not overlap. Longer finds slower drift, because slow drift
+        needs time to add up.
+    drift_limit : float, default=np.inf
+        How far the sensor may drift before it counts as an anomaly, in the units
+        of the data. Also set by `fit`, to the largest drift in the data given to
+        it. Either pass it or call `fit` first: left at np.inf, `detect` runs but
+        never flags anything.
+    direction : {'both', 'positive', 'negative'}, default='both'
+        Which way to look. 'positive' catches only a sensor reading higher than
+        it used to, 'negative' only one reading lower, 'both' either way.
+    """
+
+    def __init__(
+        self,
+        window: int = 144,
+        lookback: int = 1008,
+        drift_limit: float = np.inf,
+        direction: str = "both",
+    ):
+        super().__init__()
+
+        for name, value in (("window", window), ("lookback", lookback)):
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise ValueError(f"{name} must be a number of points, got {value!r}")
+
+        if window < 1:
+            raise ValueError(f"window must be at least 1, got {window}")
+        if lookback < window:
+            raise ValueError(
+                "lookback must be at least window, so that the two do not overlap, "
+                f"got lookback={lookback} and window={window}"
+            )
+        if pd.isna(drift_limit) or drift_limit < 0:
+            raise ValueError(f"drift_limit must be non-negative, got {drift_limit}")
+
+        self._window: int = window
+        self._lookback: int = lookback
+        self._drift_limit: float = drift_limit
+
+        valid_directions = ("both", "positive", "negative")
+        if direction in valid_directions:
+            self._direction = direction
+        else:
+            raise ValueError(
+                f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
+            )
+
+    @property
+    def window(self) -> int:
+        return self._window
+
+    @property
+    def lookback(self) -> int:
+        return self._lookback
+
+    @property
+    def drift_limit(self) -> float:
+        return self._drift_limit
+
+    def _drift(self, data: pd.DataFrame) -> pd.DataFrame:
+        """How far the sensor has drifted, in the units of the data."""
+        if data.empty:
+            return data.astype(float)
+
+        baseline = data.astype(float).rolling(self._window).median()
+
+        return baseline - baseline.shift(self._lookback)
+
+    def _fit(self, data: pd.Series):
+        """Set the acceptable drift to the largest one in normal data."""
+        drift = self._drift(data.to_frame()).iloc[:, 0]
+
+        if drift.isna().all():
+            raise ValueError(
+                f"Fit needs at least {self._window + self._lookback} valid points, "
+                f"got {int(data.count())}."
+            )
+
+        if self._direction == "positive":
+            filtered = drift[drift >= 0]
+        elif self._direction == "negative":
+            filtered = drift[drift <= 0].abs()
+        else:  # both
+            filtered = drift.abs()
+
+        # If the filtered series is empty the largest value will be NaN, set drift limit to 0.
+        largest = filtered.max()
+        self._drift_limit = 0.0 if pd.isna(largest) else largest
+        return self
+
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+        drift = self._drift(data)
+
+        # drift is NaN during warm-up, and NaN comparisons are False, so those points go unflagged
+        if self._direction == "positive":
+            return drift > self._drift_limit
+        elif self._direction == "negative":
+            return drift < -self._drift_limit
+        else:
+            return drift.abs() > self._drift_limit
+
+    def __str__(self):
+        if np.isfinite(self._drift_limit):
+            criterion = f"drift_limit:{self._drift_limit}"
+        else:
+            criterion = "drift_limit:not set"
+        return (
+            f"{self.__class__.__name__}(window:{self._window}, lookback:{self._lookback}, "
+            f"{criterion}, direction:{self._direction})"
+        )
