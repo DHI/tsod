@@ -752,21 +752,13 @@ def test_drift_detector_frame(drift_data_series):
     assert anomalies["drifting"].iloc[-1]
 
 
-def test_drift_detector_direction():
+def test_drift_detector_either_way():
     rising = pd.Series(np.arange(400) * 0.3)
     falling = pd.Series(-np.arange(400) * 0.3)
+    detector = DriftDetector(window=10, lookback=50, drift_limit=1.0)
 
-    positive = DriftDetector(
-        window=10, lookback=50, drift_limit=1.0, direction="positive"
-    )
-    negative = DriftDetector(
-        window=10, lookback=50, drift_limit=1.0, direction="negative"
-    )
-
-    assert positive.detect(rising).any()
-    assert not positive.detect(falling).any()
-    assert negative.detect(falling).any()
-    assert not negative.detect(rising).any()
+    assert detector.detect(rising).any()
+    assert detector.detect(falling).any()
 
 
 def test_drift_detector_invalid_arguments():
@@ -789,9 +781,6 @@ def test_drift_detector_invalid_arguments():
     # np.nan would compare False against everything, silently detecting nothing
     with pytest.raises(ValueError, match="drift_limit must be non-negative"):
         DriftDetector(window=10, lookback=50, drift_limit=np.nan)
-
-    with pytest.raises(ValueError, match="not a valid direction"):
-        DriftDetector(window=10, lookback=50, direction="sideways")
 
 
 def test_drift_detector_edge_cases():
@@ -823,15 +812,77 @@ def test_drift_detector_cannot_fit_without_a_measurable_drift():
     assert DriftDetector(window=10, lookback=50).fit(flat).drift_limit == 0.0
 
 
-def test_drift_detector_fit_on_a_direction_that_never_happened():
-    # Every drift here goes down, so a detector watching for upward drift is
-    # fitted on nothing at all and should allow no upward drift
-    falling = pd.Series(-np.arange(300, dtype=float))
-    detector = DriftDetector(window=10, lookback=50, direction="positive").fit(falling)
+def offset_series(start, end=None, n_steps=400, size=5.0):
+    """Daily noise with an offset from `start` to `end` (to the end if None)."""
+    rng = np.random.default_rng(0)
+    values = rng.normal(scale=0.2, size=n_steps)
+    values[start:end] += size
+    return pd.Series(values, index=pd.date_range("2020", periods=n_steps, freq="1D"))
 
-    assert detector.drift_limit == 0.0
-    assert not detector.detect(pd.Series(np.zeros(300))).any()
-    assert detector.detect(pd.Series(np.arange(300, dtype=float))).any()
 
-    # Watching both ways, the same data fits on the drift it does have
-    assert DriftDetector(window=10, lookback=50).fit(falling).drift_limit > 0.0
+def test_drift_detector_no_echo_after_temporary_offset():
+    # Offset for a month, then fixed. Comparing one lookback back, the correct
+    # data after the fix would be flagged as drifting down by the same amount
+    data = offset_series(200, 230)
+    detector = DriftDetector(window=7, lookback=90, drift_limit=2.0)
+
+    anomalies = detector.detect(data)
+
+    assert not anomalies.iloc[:200].any()
+    assert anomalies.iloc[210:230].all()
+    assert not anomalies.iloc[240:].any()
+
+
+def test_drift_detector_persistent_offset_stays_flagged():
+    # Much longer than lookback, but the sensor is still off, so it stays flagged
+    data = offset_series(200)
+    anomalies = DriftDetector(window=7, lookback=90, drift_limit=2.0).detect(data)
+
+    assert not anomalies.iloc[:200].any()
+    assert anomalies.iloc[210:].all()
+
+
+def test_drift_detector_no_echo_after_temporary_drop():
+    data = offset_series(200, 230, size=-5.0)
+    anomalies = DriftDetector(window=7, lookback=90, drift_limit=2.0).detect(data)
+
+    assert not anomalies.iloc[:200].any()
+    assert anomalies.iloc[210:230].all()
+    assert not anomalies.iloc[240:].any()
+
+
+def test_drift_detector_matches_plain_drift_until_first_flag():
+    data = offset_series(200, 230)
+    detector = DriftDetector(window=7, lookback=90, drift_limit=2.0)
+
+    plain = detector._drift(data.to_frame()).iloc[:, 0].abs() > 2.0
+    anomalies = detector.detect(data)
+
+    first = int(plain.to_numpy().argmax())
+    assert (anomalies.iloc[: first + 1] == plain.iloc[: first + 1]).all()
+    # ...but not after, where the plain drift echoes the offset
+    assert plain.iloc[240:].any()
+
+    # With nothing beyond the limit the reference never freezes
+    loose = DriftDetector(window=7, lookback=90, drift_limit=100.0)
+    assert not loose.detect(data).any()
+
+
+def test_drift_detector_frame_columns_freeze_independently():
+    df = pd.DataFrame({"offset": offset_series(200, 230), "clean": offset_series(0, 0)})
+    anomalies = DriftDetector(window=7, lookback=90, drift_limit=2.0).detect(df)
+
+    assert list(anomalies.columns) == ["offset", "clean"]
+    assert anomalies["offset"].iloc[210:230].all()
+    assert not anomalies["offset"].iloc[240:].any()
+    assert not anomalies["clean"].any()
+
+
+def test_drift_detector_gap_during_offset():
+    # A gap in the data while frozen is not flagged, and not used as a reference
+    data = offset_series(200)
+    data.iloc[250:260] = np.nan
+    anomalies = DriftDetector(window=7, lookback=90, drift_limit=2.0).detect(data)
+
+    assert not anomalies.iloc[250:266].any()  # NaN within the rolling window
+    assert anomalies.iloc[266:].all()

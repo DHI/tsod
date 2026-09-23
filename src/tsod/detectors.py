@@ -410,7 +410,18 @@ class DriftDetector(Detector):
     Compares what the sensor typically reads now with what it typically read a
     while ago. Both are rolling medians, so spikes do not move them, and the
     difference between the two is how far the sensor has drifted. Drifting
-    further than `drift_limit` counts as an anomaly.
+    further than `drift_limit`, either way, counts as an anomaly.
+
+    While the sensor is flagged, it is compared with the last typical value from
+    before it was flagged, instead of one from `lookback` points back. Otherwise
+    a temporary offset would flag the correct data one `lookback` after it was
+    fixed, and a lasting offset would stop being flagged once `lookback` has
+    passed. A genuine, lasting change in level therefore stays flagged until the
+    detector is fitted again.
+
+    Unlike other detectors there is no `direction`, as the freezing is decided by
+    drift either way. Watching one way only would leave the detector frozen by
+    drift the other way, without a flag to show for it.
 
     Parameters
     ----------
@@ -423,12 +434,9 @@ class DriftDetector(Detector):
         the two do not overlap. Longer finds slower drift, because slow drift
         needs time to add up.
     drift_limit : float, default=np.inf
-        How far the sensor may drift before it counts as an anomaly, in the units
-        of the data. Also set by `fit`, to the largest drift in the data given to
-        it.
-    direction : {'both', 'positive', 'negative'}, default='both'
-        Which way to look. 'positive' catches only a sensor reading higher than
-        it used to, 'negative' only one reading lower, 'both' either way.
+        How far the sensor may drift either way before it counts as an anomaly,
+        in the units of the data. Also set by `fit`, to the largest drift in the
+        data given to it.
     """
 
     def __init__(
@@ -436,7 +444,6 @@ class DriftDetector(Detector):
         window: int = 144,
         lookback: int = 1008,
         drift_limit: float = np.inf,
-        direction: str = "both",
     ):
         super().__init__()
 
@@ -458,14 +465,6 @@ class DriftDetector(Detector):
         self._lookback: int = lookback
         self._drift_limit: float = drift_limit
 
-        valid_directions = ("both", "positive", "negative")
-        if direction in valid_directions:
-            self._direction = direction
-        else:
-            raise ValueError(
-                f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
-            )
-
     @property
     def window(self) -> int:
         return self._window
@@ -478,14 +477,57 @@ class DriftDetector(Detector):
     def drift_limit(self) -> float:
         return self._drift_limit
 
+    def _baseline(self, data: pd.DataFrame) -> pd.DataFrame:
+        """What the sensor typically reads, a rolling median."""
+        return data.astype(float).rolling(self._window).median()
+
     def _drift(self, data: pd.DataFrame) -> pd.DataFrame:
-        """How far the sensor has drifted, in the units of the data."""
+        """How far the sensor has drifted from `lookback` points back, in the units of the data."""
         if data.empty:
             return data.astype(float)
 
-        baseline = data.astype(float).rolling(self._window).median()
+        baseline = self._baseline(data)
 
         return baseline - baseline.shift(self._lookback)
+
+    def _frozen_flags(self, baseline: np.ndarray, drift: np.ndarray) -> np.ndarray:
+        """Flag drift against a reference that only moves through unflagged points.
+
+        `drift` is the plain drift from `lookback` points back. Up to its first
+        flag the reference has never frozen, so the plain drift is the answer
+        there, and only the rest is walked point by point.
+        """
+        # drift is NaN during warm-up, and NaN comparisons are False, so those points go unflagged
+        flags = np.abs(drift) > self._drift_limit
+        if not flags.any():
+            return flags
+
+        # The first flag has a valid, unflagged reference exactly lookback back,
+        # otherwise its drift would have been NaN
+        start = int(flags.argmax()) - self._lookback
+
+        # Python lists, as indexing numpy arrays one element at a time is several times slower
+        b = baseline[start:].tolist()
+        good = (~flags[start:] & ~np.isnan(baseline[start:])).tolist()
+        out = flags[start:].tolist()
+
+        last_good = 0
+        for i in range(self._lookback, len(b)):
+            j = i - self._lookback
+            if good[j]:
+                last_good = j
+
+            bi = b[i]
+            # NaN, so nothing can be said here, and it is no reference either
+            if bi != bi:
+                out[i] = good[i] = False
+                continue
+
+            out[i] = abs(bi - b[last_good]) > self._drift_limit
+            good[i] = not out[i]
+
+        flags[start:] = out
+        return flags
 
     def _fit(self, data: pd.Series):
         """Set the acceptable drift to the largest one in normal data."""
@@ -497,28 +539,22 @@ class DriftDetector(Detector):
                 f"got {int(data.count())}."
             )
 
-        if self._direction == "positive":
-            filtered = drift[drift >= 0]
-        elif self._direction == "negative":
-            filtered = drift[drift <= 0].abs()
-        else:  # both
-            filtered = drift.abs()
-
-        # If the filtered series is empty the largest value will be NaN, set drift limit to 0.
-        largest = filtered.max()
-        self._drift_limit = 0.0 if pd.isna(largest) else largest
+        self._drift_limit = drift.abs().max()
         return self
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        drift = self._drift(data)
+        # Not fitted, so nothing can drift too far
+        if not np.isfinite(self._drift_limit) or data.empty:
+            return pd.DataFrame(False, index=data.index, columns=data.columns)
 
-        # drift is NaN during warm-up, and NaN comparisons are False, so those points go unflagged
-        if self._direction == "positive":
-            return drift > self._drift_limit
-        elif self._direction == "negative":
-            return drift < -self._drift_limit
-        else:
-            return drift.abs() > self._drift_limit
+        baseline = self._baseline(data)
+        drift = (baseline - baseline.shift(self._lookback)).to_numpy()
+        baseline = baseline.to_numpy()
+
+        flags = np.empty(baseline.shape, dtype=bool)
+        for c in range(baseline.shape[1]):
+            flags[:, c] = self._frozen_flags(baseline[:, c], drift[:, c])
+        return pd.DataFrame(flags, index=data.index, columns=data.columns)
 
     def __str__(self):
         if np.isfinite(self._drift_limit):
@@ -527,5 +563,5 @@ class DriftDetector(Detector):
             criterion = "drift_limit:not set"
         return (
             f"{self.__class__.__name__}(window:{self._window}, lookback:{self._lookback}, "
-            f"{criterion}, direction:{self._direction})"
+            f"{criterion})"
         )
