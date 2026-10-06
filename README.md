@@ -29,6 +29,11 @@ Or development version:
 
 `pip install https://github.com/DHI/tsod/archive/main.zip`
 
+`numba` is installed by default, but it is only needed by `HampelDetector`. In environments where
+numba is unwanted, tsod can be installed without it (e.g. `pip install --no-deps tsod` followed by
+`pip install pandas joblib typing_extensions`). All other detectors then work as usual, and
+`HampelDetector` raises an `ImportError` explaining that numba is required.
+
 ## Vision
 * A simple and consistent API for anomaly detection of timeseries
 * The computational speed will be good for typical timeseries data found in the water domain, to support realtime detection

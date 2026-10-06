@@ -3,6 +3,9 @@ import pytest
 import numpy as np
 import pandas as pd
 import os
+import subprocess
+import sys
+import textwrap
 
 from tsod.custom_exceptions import WrongInputDataTypeError
 from tsod.detectors import (
@@ -384,6 +387,34 @@ def test_hampel_detector_frame(data_series):
     for col in anomalies.columns:
         anomalies_indices = np.array(np.where(anomalies[col])).flatten()
         assert all(i in expected_anomalies_indices for i in anomalies_indices)
+
+
+def test_tsod_usable_without_numba():
+    # Run in a separate interpreter, so that blocking numba does not affect other tests
+    code = textwrap.dedent(
+        """
+        import sys
+        sys.modules["numba"] = None  # simulate an environment without numba
+
+        import pandas as pd
+        import tsod
+
+        data = pd.Series([1.0, 2.0, 100.0, 3.0])
+        anomalies = tsod.RangeDetector(min_value=0.0, max_value=10.0).detect(data)
+        assert anomalies.tolist() == [False, False, True, False]
+
+        try:
+            tsod.HampelDetector()
+        except ImportError as e:
+            assert "numba" in str(e)
+        else:
+            raise AssertionError("HampelDetector should raise ImportError without numba")
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_constant_value_detector(constant_data_series):

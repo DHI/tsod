@@ -126,7 +126,7 @@ The library distinguishes between:
 ### Key Implementation Details
 
 - **Time handling**: Some detectors (e.g., `GradientDetector`) require `pd.DatetimeIndex` and calculate rates per second
-- **Performance**: `HampelDetector` uses `@jit(nopython=True)` from numba for speed
+- **Performance**: `HampelDetector` uses numba's `jit(nopython=True)` for speed. numba is a default dependency but is imported defensively in `hampel.py`; the rest of tsod must stay importable without numba (covered by `test_tsod_usable_without_numba`)
 - **Validation**: Input validation happens in base class before `_fit()` or `_detect()`
 - **Missing data**: Most detectors handle NaN values via numpy's `nanquantile`, `nanmedian`, etc.
 
