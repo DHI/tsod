@@ -31,8 +31,8 @@ Or development version:
 
 `numba` is installed by default, but it is only needed by `HampelDetector`. In environments where
 numba is unwanted, tsod can be installed without it (e.g. `pip install --no-deps tsod` followed by
-`pip install pandas joblib typing_extensions`). All other detectors then work as usual, and
-`HampelDetector` raises an `ImportError` explaining that numba is required.
+`pip install "pandas>=2.0.0" joblib typing_extensions`). All other detectors then work as usual,
+and `HampelDetector.detect()` raises an `ImportError` explaining that numba is required.
 
 ## Vision
 * A simple and consistent API for anomaly detection of timeseries

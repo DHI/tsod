@@ -403,12 +403,25 @@ def test_tsod_usable_without_numba():
         anomalies = tsod.RangeDetector(min_value=0.0, max_value=10.0).detect(data)
         assert anomalies.tolist() == [False, False, True, False]
 
+        # Creating a HampelDetector works; only detection requires numba
+        detector = tsod.HampelDetector()
         try:
-            tsod.HampelDetector()
+            detector.detect(data)
         except ImportError as e:
             assert "numba" in str(e)
         else:
-            raise AssertionError("HampelDetector should raise ImportError without numba")
+            raise AssertionError("HampelDetector.detect() should raise ImportError without numba")
+
+        # A detector restored with tsod.load() behaves the same
+        import os, tempfile
+        path = os.path.join(tempfile.mkdtemp(), "hampel.joblib")
+        detector.save(path)
+        try:
+            tsod.load(path).detect(data)
+        except ImportError as e:
+            assert "numba" in str(e)
+        else:
+            raise AssertionError("loaded HampelDetector.detect() should raise ImportError without numba")
         """
     )
     result = subprocess.run(

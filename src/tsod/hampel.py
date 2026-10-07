@@ -5,17 +5,24 @@ import pandas as pd
 from tsod.custom_exceptions import NotIntegerError, InvalidArgumentError
 from tsod.detectors import Detector
 
-# numba is a default dependency, but it is only needed by HampelDetector. Import it
-# defensively, so that the rest of tsod remains usable in environments without numba.
+# numba is a default dependency, but it is only needed by HampelDetector. Without numba,
+# a stand-in jit makes the decorated function raise ImportError when it is called, so the
+# rest of tsod (and creating a HampelDetector) works; only detection needs numba.
 try:
     from numba import jit
 except ImportError:
-    jit = None
 
-_NUMBA_MISSING_MSG = (
-    "HampelDetector requires numba, which is not installed. "
-    "Install it with: pip install numba"
-)
+    def jit(*args, **kwargs):
+        def decorator(func):
+            def numba_missing(*a, **k):
+                raise ImportError(
+                    "HampelDetector requires numba, which is not installed. "
+                    "Install it with: pip install numba"
+                )
+
+            return numba_missing
+
+        return decorator
 
 
 # GAUSSIAN_SCALE_FACTOR = k = 1/Phi^(-1)(3/4)
@@ -35,7 +42,8 @@ def _validate_arguments(window_size, threshold):
         raise InvalidArgumentError("threshold", "positive")
 
 
-def _hampel(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_FACTOR):
+@jit(nopython=True)
+def _detect(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_FACTOR):
     """
     Hampel filter implementation that works on numpy arrays, implemented with numba.
 
@@ -70,15 +78,6 @@ def _hampel(time_series, window_size, threshold=3, k=GAUSSIAN_SCALE_FACTOR):
     return is_outlier
 
 
-# Compiled lazily by numba on first call, as with the decorator form.
-_detect = jit(nopython=True)(_hampel) if jit is not None else None
-
-
-def _require_numba():
-    if _detect is None:
-        raise ImportError(_NUMBA_MISSING_MSG)
-
-
 class HampelDetector(Detector):
     """
     Hampel filter implementation that works on numpy arrays, implemented with numba.
@@ -96,14 +95,11 @@ class HampelDetector(Detector):
 
     def __init__(self, window_size=5, threshold=3):
         super().__init__()
-        _require_numba()
         _validate_arguments(window_size, threshold)
         self._threshold = threshold
         self._window_size = window_size
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        # Also checked here: a detector restored with tsod.load() skips __init__
-        _require_numba()
         # Apply column-wise detection
         return data.apply(
             lambda col: _detect(col.values, self._window_size, self._threshold), axis=0
