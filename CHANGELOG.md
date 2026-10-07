@@ -7,6 +7,7 @@
 ### Fixed
 
 ### Changed
+- numba is imported defensively: tsod can be imported and used without numba installed, and only `HampelDetector.detect()` requires it (raises `ImportError` with an installation hint). numba remains a default dependency, so standard installs are unaffected.
 
 ## [0.3.0] - 2026-02-04
 

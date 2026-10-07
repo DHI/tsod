@@ -1,10 +1,28 @@
 """Hampel detector"""
 
 import numpy as np
-from numba import jit
 import pandas as pd
 from tsod.custom_exceptions import NotIntegerError, InvalidArgumentError
 from tsod.detectors import Detector
+
+# numba is a default dependency, but it is only needed by HampelDetector. Without numba,
+# a stand-in jit makes the decorated function raise ImportError when it is called, so the
+# rest of tsod (and creating a HampelDetector) works; only detection needs numba.
+try:
+    from numba import jit
+except ImportError:
+
+    def jit(*args, **kwargs):
+        def decorator(func):
+            def numba_missing(*a, **k):
+                raise ImportError(
+                    "HampelDetector requires numba, which is not installed. "
+                    "Install it with: pip install numba"
+                )
+
+            return numba_missing
+
+        return decorator
 
 
 # GAUSSIAN_SCALE_FACTOR = k = 1/Phi^(-1)(3/4)
