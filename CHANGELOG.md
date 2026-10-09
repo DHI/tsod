@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- `GapDetector` flags the first point after a gap in the time axis (e.g. telemetry dropouts), using a given `max_gap` or the largest interval learned with `fit()`.
 
 ### Fixed
 
