@@ -142,7 +142,7 @@ The library distinguishes between:
 - Tests in `tests/` directory
 - Fixtures defined in test files (e.g., `data_series`, `range_data`)
 - Helper functions in `tests/data_generation.py` for creating test data
-- CI runs on Ubuntu and Windows with Python 3.10 and 3.13
+- CI runs on Ubuntu and Windows with Python 3.10, 3.14 and 3.15
 
 ## Important Conventions
 
