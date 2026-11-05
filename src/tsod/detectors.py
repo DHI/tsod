@@ -402,3 +402,67 @@ class GradientDetector(Detector):
         return (
             f"{self.__class__.__name__}({max_grad_hr}/hr, direction:{self._direction})"
         )
+
+
+class GapDetector(Detector):
+    """Detect gaps in the time axis, e.g. telemetry dropouts.
+
+    Flags the first point after a gap, i.e. points where the time since the
+    previous point is longer than `max_gap`. Only the timestamps are used,
+    values (including NaN) are ignored. Requires data with a DatetimeIndex.
+
+    Duplicate or unsorted timestamps give intervals <= 0 and are never flagged.
+
+    Parameters
+    ----------
+    max_gap : str or pd.Timedelta, optional
+        Longest allowed interval between two consecutive points, e.g. "15min".
+        Default is no limit, so nothing is detected until the detector is
+        fitted or a limit is given.
+
+    Examples
+    --------
+    >>> time = pd.date_range("2020", periods=6, freq="10min").delete(3)
+    >>> data = pd.Series(np.random.normal(size=5), index=time)
+
+    >>> detector = GapDetector(max_gap="15min")
+    >>> anomalies = detector.detect(data)  # flags the point after the missing one
+
+    >>> detector = GapDetector()
+    >>> detector.fit(normal_data)  # max_gap = largest interval in normal data
+    >>> anomalies = detector.detect(data)
+    """
+
+    def __init__(self, max_gap: str | pd.Timedelta | None = None):
+        super().__init__()
+        self._max_gap: pd.Timedelta = (
+            pd.Timedelta.max if max_gap is None else pd.Timedelta(max_gap)
+        )
+
+    @staticmethod
+    def _intervals(data: pd.Series | pd.DataFrame) -> pd.Series:
+        if not isinstance(data.index, pd.DatetimeIndex):
+            raise ValueError(
+                "Gap detection requires a DatetimeIndex. "
+                f"Got {type(data.index).__name__} instead."
+            )
+        return data.index.to_series().diff()
+
+    def _fit(self, data: pd.Series):
+        """Set max gap to the largest interval in data."""
+        if len(data) < 2:
+            raise ValueError("Fitting requires at least two data points")
+        self._max_gap = self._intervals(data).max()
+        return self
+
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+        is_gap = (self._intervals(data) > self._max_gap).to_numpy()
+        # Same time axis for all columns
+        return pd.DataFrame(
+            np.tile(is_gap[:, None], (1, data.shape[1])),
+            index=data.index,
+            columns=data.columns,
+        )
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(max_gap:{self._max_gap})"

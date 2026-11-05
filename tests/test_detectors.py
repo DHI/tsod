@@ -1,4 +1,4 @@
-from tsod.base import Detector
+from tsod.base import Detector, load
 import pytest
 import numpy as np
 import pandas as pd
@@ -16,6 +16,7 @@ from tsod.detectors import (
     ConstantValueDetector,
     ConstantGradientDetector,
     GradientDetector,
+    GapDetector,
 )
 
 from tsod.hampel import HampelDetector
@@ -720,3 +721,63 @@ def test_constant_gradient_on_non_uniform_dt():
     x = pd.Series(index=ind, data=[30, 60, 120, 180, 270])
     anoms = ConstantGradientDetector(window_size=2).detect(x)
     assert anoms.sum() == 5
+
+
+@pytest.fixture
+def gap_data_series():
+    # 10 min data where the points at 03:00 to 03:50 are missing
+    time = pd.date_range("2020-01-01", periods=48, freq="10min")
+    time = time.drop(time[18:24])
+    return pd.Series(np.arange(len(time), dtype=float), index=time)
+
+
+def test_gap_detector(gap_data_series):
+    anomalies = GapDetector(max_gap="15min").detect(gap_data_series)
+    assert anomalies.sum() == 1
+    assert anomalies.index[anomalies][0] == pd.Timestamp("2020-01-01 04:00")
+    assert not anomalies.iloc[0]  # no previous point
+
+
+def test_gap_detector_no_limit_detects_nothing(gap_data_series):
+    anomalies = GapDetector().detect(gap_data_series)
+    assert anomalies.sum() == 0
+
+
+def test_gap_detector_fit(gap_data_series):
+    normal_data = pd.Series(
+        1.0, index=pd.date_range("2019-12-31", periods=20, freq="10min")
+    )
+    detector = GapDetector()
+    detector.fit(normal_data)
+    assert detector._max_gap == pd.Timedelta("10min")
+    anomalies = detector.detect(gap_data_series)
+    assert anomalies.sum() == 1
+
+    with pytest.raises(ValueError, match="at least two data points"):
+        GapDetector().fit(normal_data.iloc[:1])
+
+
+def test_gap_detector_ignores_values(gap_data_series):
+    gap_data_series.iloc[5:10] = np.nan
+    anomalies = GapDetector(max_gap="15min").detect(gap_data_series)
+    assert anomalies.sum() == 1
+
+
+def test_gap_detector_frame(gap_data_series):
+    df = pd.DataFrame({"a": gap_data_series, "b": -gap_data_series})
+    anomalies = GapDetector(max_gap="15min").detect(df)
+    assert isinstance(anomalies, pd.DataFrame)
+    assert list(anomalies.columns) == ["a", "b"]
+    assert anomalies.sum().tolist() == [1, 1]
+
+
+def test_gap_detector_datetime_index_validation():
+    with pytest.raises(ValueError, match="requires a DatetimeIndex"):
+        GapDetector(max_gap="1h").detect(pd.Series([1.0, 2.0, 3.0]))
+
+
+def test_gap_detector_save_load(gap_data_series, tmp_path):
+    path = tmp_path / "gap_detector.joblib"
+    GapDetector(max_gap="15min").save(path)
+    anomalies = load(path).detect(gap_data_series)
+    assert anomalies.sum() == 1
