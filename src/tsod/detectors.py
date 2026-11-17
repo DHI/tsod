@@ -412,10 +412,10 @@ class SeasonalProfileDetector(Detector):
     """Detect values that are unusual for their position in a repeating cycle.
 
     The data is split into ``period`` slots (position modulo ``period``). For each
-    slot, the expected value is the median of that slot over all cycles, and the
-    spread is the scaled median absolute deviation (MAD) around it. A value is an
-    anomaly when its robust z-score, ``(value - slot median) / slot spread``, exceeds
-    ``threshold``.
+    slot, the expected value is the median of that slot over all cycles. The spread
+    is the scaled median absolute deviation (MAD) of the residuals from the slot
+    medians, pooled over all slots. A value is an anomaly when its robust z-score,
+    ``(value - slot median) / spread``, exceeds ``threshold``.
 
     This catches values that are normal for the series as a whole but not at that
     point in the cycle, e.g. daytime flow at night. The profile is built from the
@@ -434,10 +434,15 @@ class SeasonalProfileDetector(Detector):
 
     Notes
     -----
-    A slot is only evaluated when it has at least 3 non-missing values, so the data
-    should cover at least 3 cycles. Robustness holds while fewer than half the cycles
-    in a slot are anomalous. If all values in a slot are equal (MAD is zero), any
-    deviation from them is an anomaly. Missing values are never anomalies.
+    A slot is only evaluated when it has at least 4 non-missing values, so the data
+    should cover at least 4 cycles. Robustness holds while fewer than half the cycles
+    in a slot are anomalous.
+
+    The spread is shared by all slots because a per-slot MAD from only a few cycles
+    is too small and causes many false alarms. This assumes the noise level is
+    similar across the cycle. If more than half the residuals are zero (e.g. a
+    perfectly repeating cycle), the spread is zero and any deviation is an anomaly.
+    Missing values are never anomalies.
 
     Examples
     --------
@@ -447,7 +452,7 @@ class SeasonalProfileDetector(Detector):
     >>> anomalies = SeasonalProfileDetector(period=24).detect(flow)
     """
 
-    _MIN_VALUES_PER_SLOT = 3
+    _MIN_VALUES_PER_SLOT = 4
 
     def __init__(self, period: int, threshold: float = 3.0, direction: str = "both"):
         super().__init__()
@@ -477,10 +482,10 @@ class SeasonalProfileDetector(Detector):
         slot = np.arange(len(values)) % self._period
         by_slot = values.groupby(slot)
 
+        enough_values = by_slot.transform("count") >= self._MIN_VALUES_PER_SLOT
+
         deviation = values - by_slot.transform("median")
-        spread = (
-            deviation.abs().groupby(slot).transform("median") * GAUSSIAN_SCALE_FACTOR
-        )
+        spread = deviation[enough_values].abs().median() * GAUSSIAN_SCALE_FACTOR
         with np.errstate(divide="ignore", invalid="ignore"):
             z_score = deviation / spread
 
@@ -491,7 +496,6 @@ class SeasonalProfileDetector(Detector):
         else:
             anomalies = z_score < -self._threshold
 
-        enough_values = by_slot.transform("count") >= self._MIN_VALUES_PER_SLOT
         return pd.Series(
             (anomalies & enough_values).to_numpy(), index=data.index, name=data.name
         )

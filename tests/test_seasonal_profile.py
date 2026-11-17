@@ -112,16 +112,30 @@ def test_missing_values_are_not_anomalies(daily_cycle_with_noise):
     assert anomalies[anomaly_index]
 
 
-def test_fewer_than_three_cycles_are_not_evaluated():
-    two_cycles = pd.Series(np.tile([1.0, 2.0, 3.0, 4.0], 2))
-    two_cycles[1] = 1000.0
+def test_fewer_than_four_cycles_are_not_evaluated(daily_cycle_with_noise):
+    three_cycles = daily_cycle_with_noise.iloc[: 3 * PERIOD].copy()
+    three_cycles[PERIOD + 5] = 1000.0
 
-    anomalies = SeasonalProfileDetector(period=4).detect(two_cycles)
+    anomalies = SeasonalProfileDetector(period=PERIOD).detect(three_cycles)
 
     assert not anomalies.any()
 
 
-def test_any_deviation_from_a_constant_slot_is_an_anomaly():
+def test_spread_is_shared_by_all_slots(daily_cycle_with_noise):
+    # Hour 4 is almost noise-free, so a deviation of 0.2 is large for that hour
+    # alone, but small compared with the noise level of the whole cycle (0.1).
+    quiet_hour = np.arange(4, len(daily_cycle_with_noise), PERIOD)
+    deviating_index = 6 * PERIOD + 4
+    flow = daily_cycle_with_noise.copy()
+    flow[quiet_hour] = 10.0
+    flow[deviating_index] = 10.2
+
+    anomalies = SeasonalProfileDetector(period=PERIOD).detect(flow)
+
+    assert not anomalies[deviating_index]
+
+
+def test_any_deviation_from_a_perfectly_repeating_cycle_is_an_anomaly():
     flow = pd.Series(np.tile([1.0, 2.0], 10))
     flow[6] = 1.5
 
