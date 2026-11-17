@@ -5,6 +5,10 @@ import pandas as pd
 import numpy as np
 
 from .base import Detector
+from .custom_exceptions import InvalidArgumentError, NotIntegerError
+
+# Scales the median absolute deviation to the standard deviation of a normal distribution.
+GAUSSIAN_SCALE_FACTOR = 1.4826
 
 
 def _gradient(data: pd.DataFrame, periods: int = 1) -> pd.DataFrame:
@@ -402,3 +406,99 @@ class GradientDetector(Detector):
         return (
             f"{self.__class__.__name__}({max_grad_hr}/hr, direction:{self._direction})"
         )
+
+
+class SeasonalProfileDetector(Detector):
+    """Detect values that are unusual for their position in a repeating cycle.
+
+    The data is split into ``period`` slots (position modulo ``period``). For each
+    slot, the expected value is the median of that slot over all cycles. The spread
+    is the scaled median absolute deviation (MAD) of the residuals from the slot
+    medians, pooled over all slots. A value is an anomaly when its robust z-score,
+    ``(value - slot median) / spread``, exceeds ``threshold``.
+
+    This catches values that are normal for the series as a whole but not at that
+    point in the cycle, e.g. daytime flow at night. The profile is built from the
+    data passed to ``detect``, so no ``fit`` is needed and the cycle phase is always
+    consistent. The data must be regularly sampled.
+
+    Parameters
+    ----------
+    period : int
+        Number of time steps in one cycle, e.g. 24 for hourly data with a daily cycle.
+    threshold : float, default=3.0
+        Maximum robust z-score accepted as normal.
+    direction : {'both', 'positive', 'negative'}, default='both'
+        Direction of deviation to detect. 'positive' detects only values above the
+        slot median, 'negative' only values below it.
+
+    Notes
+    -----
+    A slot is only evaluated when it has at least 4 non-missing values, so the data
+    should cover at least 4 cycles. Robustness holds while fewer than half the cycles
+    in a slot are anomalous.
+
+    The spread is shared by all slots because a per-slot MAD from only a few cycles
+    is too small and causes many false alarms. This assumes the noise level is
+    similar across the cycle. If more than half the residuals are zero (e.g. a
+    perfectly repeating cycle), the spread is zero and any deviation is an anomaly.
+    Missing values are never anomalies.
+
+    Examples
+    --------
+    >>> t = np.arange(24 * 14)
+    >>> flow = pd.Series(10 + 5 * np.sin(2 * np.pi * t / 24))
+    >>> flow[24 * 7 + 3] = 15  # daytime peak value at night
+    >>> anomalies = SeasonalProfileDetector(period=24).detect(flow)
+    """
+
+    _MIN_VALUES_PER_SLOT = 4
+
+    def __init__(self, period: int, threshold: float = 3.0, direction: str = "both"):
+        super().__init__()
+
+        if not isinstance(period, (int, np.integer)) or isinstance(period, bool):
+            raise NotIntegerError("period")
+        if period < 2:
+            raise InvalidArgumentError("period", "at least 2")
+        if threshold <= 0:
+            raise InvalidArgumentError("threshold", "positive")
+
+        valid_directions = ("both", "positive", "negative")
+        if direction not in valid_directions:
+            raise ValueError(
+                f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
+            )
+
+        self._period: int = int(period)
+        self._threshold: float = threshold
+        self._direction: str = direction
+
+    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+        return data.apply(self._detect_single_column)
+
+    def _detect_single_column(self, data: pd.Series) -> pd.Series:
+        values = pd.Series(data.to_numpy(dtype=float))
+        slot = np.arange(len(values)) % self._period
+        by_slot = values.groupby(slot)
+
+        enough_values = by_slot.transform("count") >= self._MIN_VALUES_PER_SLOT
+
+        deviation = values - by_slot.transform("median")
+        spread = deviation[enough_values].abs().median() * GAUSSIAN_SCALE_FACTOR
+        with np.errstate(divide="ignore", invalid="ignore"):
+            z_score = deviation / spread
+
+        if self._direction == "both":
+            anomalies = z_score.abs() > self._threshold
+        elif self._direction == "positive":
+            anomalies = z_score > self._threshold
+        else:
+            anomalies = z_score < -self._threshold
+
+        return pd.Series(
+            (anomalies & enough_values).to_numpy(), index=data.index, name=data.name
+        )
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(period:{self._period}, threshold:{self._threshold}, direction:{self._direction})"
