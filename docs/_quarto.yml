@@ -75,6 +75,7 @@ quartodoc:
       - RollingStandardDeviationDetector
       - CombinedDetector
       - HampelDetector
+      - SeasonalProfileDetector
       - load
     
 format:
