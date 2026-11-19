@@ -38,3 +38,7 @@ class NonUniqueTimeStampsError(Exception):
 
 class WrongInputSizeError(ValueError):
     pass
+
+
+class NaNInDataError(ValueError):
+    pass

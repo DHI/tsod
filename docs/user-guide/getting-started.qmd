@@ -42,6 +42,21 @@ data[~anom]  # get normal data
 ```
 
 
+Missing values
+--------------
+Every detector takes a `nans` argument that sets how NaN values are handled:
+
+- `nans="omit"` (default): warn, drop the NaN rows and run on each slice of consecutive data between them, so values on either side of a NaN are never compared. The dropped rows are `False` in the output, which keeps the input index. In a DataFrame, each column is handled on its own.
+- `nans="raise"`: raise `NaNInDataError`.
+
+```python
+from tsod import DiffDetector
+DiffDetector(max_diff=1.0, nans="raise")
+```
+
+`CombinedDetector` leaves NaN handling to the detectors it combines.
+
+
 Saving and loading
 ------------------
 Save a configured detector

@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 from tsod.custom_exceptions import NotIntegerError, InvalidArgumentError
-from tsod.detectors import Detector
+from tsod.base import Detector, NanPolicy
 
 # numba is a default dependency, but it is only needed by HampelDetector. Without numba,
 # a stand-in jit makes the decorated function raise ImportError when it is called, so the
@@ -106,10 +106,13 @@ class HampelDetector(Detector):
         Lower limit for the scaled MAD, in data units. On flat or quantised data (e.g. rain
         gauges, on/off pumps) the MAD can be 0, and then any deviation from the median is
         flagged. Setting `min_mad` to about the sensor resolution prevents this. default=0.0
+    nans: {'omit', 'raise'} or NanPolicy
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on each slice of
+        consecutive data between them. 'raise' raises `NaNInDataError`. default='omit'
     """
 
-    def __init__(self, window_size=5, threshold=3, min_mad=0.0):
-        super().__init__()
+    def __init__(self, window_size=5, threshold=3, min_mad=0.0, nans=NanPolicy.OMIT):
+        super().__init__(nans=nans)
         _validate_arguments(window_size, threshold, min_mad)
         self._threshold = threshold
         self._window_size = int(window_size)

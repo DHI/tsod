@@ -10,7 +10,7 @@ from .detectors import (
 )
 
 from .hampel import HampelDetector
-from .base import load
+from .base import load, NanPolicy
 
 try:
     __version__ = version("tsod")
@@ -27,4 +27,5 @@ __all__ = [
     "RollingStandardDeviationDetector",
     "load",
     "HampelDetector",
+    "NanPolicy",
 ]

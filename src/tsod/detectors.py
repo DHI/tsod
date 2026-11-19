@@ -4,7 +4,7 @@ from collections.abc import Sequence
 import pandas as pd
 import numpy as np
 
-from .base import Detector
+from .base import Detector, NanPolicy
 
 
 def _gradient(data: pd.DataFrame, periods: int = 1) -> pd.DataFrame:
@@ -50,7 +50,8 @@ class CombinedDetector(Detector, Sequence):
     Parameters
     ----------
     detectors : list of Detector
-        List of detector instances to combine.
+        List of detector instances to combine. Each detector handles NaN values
+        with its own `nans` setting.
 
     Examples
     --------
@@ -62,6 +63,8 @@ class CombinedDetector(Detector, Sequence):
     >>> anomaly_detector.fit(normal_data)
     >>> detected_anomalies = anomaly_detector.detect(abnormal_data)
     """
+
+    _delegates_nans = True
 
     def __init__(self, detectors: list[Detector]):
         super().__init__()
@@ -107,6 +110,10 @@ class RangeDetector(Detector):
         Quantiles to use for determining min and max during fit.
         Default is [0.0, 1.0], which corresponds to absolute min and max values.
         Use values like [0.001, 0.999] to exclude extreme outliers.
+    nans : {'omit', 'raise'} or NanPolicy, default='omit'
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on
+        each slice of consecutive data between them. 'raise' raises
+        `NaNInDataError`.
 
     Examples
     --------
@@ -133,8 +140,9 @@ class RangeDetector(Detector):
         min_value: float = -np.inf,
         max_value: float = np.inf,
         quantiles: list[float] | None = None,
+        nans: str | NanPolicy = NanPolicy.OMIT,
     ):
-        super().__init__()
+        super().__init__(nans=nans)
 
         self._min: float = min_value
         self._max: float = max_value
@@ -187,6 +195,10 @@ class DiffDetector(Detector):
         Quantile of the training changes that `fit` uses as `max_diff`. The
         default 1.0 is the maximum; a lower value (e.g. 0.99) keeps outliers in
         the training data from setting the threshold.
+    nans : {'omit', 'raise'} or NanPolicy, default='omit'
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on
+        each slice of consecutive data between them. 'raise' raises
+        `NaNInDataError`.
 
     See Also
     --------
@@ -194,9 +206,13 @@ class DiffDetector(Detector):
     """
 
     def __init__(
-        self, max_diff: float = np.inf, direction: str = "both", quantile: float = 1.0
+        self,
+        max_diff: float = np.inf,
+        direction: str = "both",
+        quantile: float = 1.0,
+        nans: str | NanPolicy = NanPolicy.OMIT,
     ):
-        super().__init__()
+        super().__init__(nans=nans)
         self._max_diff: float = max_diff
         self._quantile = _validate_quantile(quantile)
 
@@ -209,7 +225,10 @@ class DiffDetector(Detector):
             )
 
     def _fit(self, data):
-        data_diffs = data.diff()
+        return self._fit_slices([data])
+
+    def _fit_slices(self, slices: list[pd.Series]):
+        data_diffs = pd.concat([data.diff() for data in slices])
 
         if self._direction == "positive":
             filtered_diffs = data_diffs[data_diffs >= 0]
@@ -257,6 +276,10 @@ class RollingStandardDeviationDetector(Detector):
         in the training data from setting the threshold. One outlier raises the
         standard deviation of every window that contains it, so `window_size`
         values per outlier.
+    nans : {'omit', 'raise'} or NanPolicy, default='omit'
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on
+        each slice of consecutive data between them. 'raise' raises
+        `NaNInDataError`.
     """
 
     def __init__(
@@ -265,15 +288,21 @@ class RollingStandardDeviationDetector(Detector):
         max_std: float = np.inf,
         center: bool = True,
         quantile: float = 1.0,
+        nans: str | NanPolicy = NanPolicy.OMIT,
     ):
-        super().__init__()
+        super().__init__(nans=nans)
         self._window_size: int = window_size
         self._max_std: float = max_std
         self._center: bool = center
         self._quantile = _validate_quantile(quantile)
 
     def _fit(self, data: pd.Series):
-        rolling_std = data.rolling(self._window_size).std()
+        return self._fit_slices([data])
+
+    def _fit_slices(self, slices: list[pd.Series]):
+        rolling_std = pd.concat(
+            [data.rolling(self._window_size).std() for data in slices]
+        )
         self._max_std = rolling_std.quantile(getattr(self, "_quantile", 1.0))
 
         return self
@@ -303,10 +332,19 @@ class ConstantValueDetector(Detector):
         time, so evenly spaced samples are assumed.
     threshold : float, default=1e-7
         Maximum variation (max - min) within window to consider constant.
+    nans : {'omit', 'raise'} or NanPolicy, default='omit'
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on
+        each slice of consecutive data between them. 'raise' raises
+        `NaNInDataError`.
     """
 
-    def __init__(self, window_size: int = 3, threshold: float = 1e-7):
-        super().__init__()
+    def __init__(
+        self,
+        window_size: int = 3,
+        threshold: float = 1e-7,
+        nans: str | NanPolicy = NanPolicy.OMIT,
+    ):
+        super().__init__(nans=nans)
 
         # Validate input
         if threshold < 0:
@@ -337,7 +375,7 @@ class ConstantValueDetector(Detector):
     def _detect_single_column(self, data: pd.Series) -> pd.Series:
         """Detect constant values in a single column."""
         # Early exit for windows size larger than data
-        if self.window_size >= data.shape[0]:
+        if self.window_size > data.shape[0]:
             return pd.Series(False, index=data.index)
 
         # Create shifted versions for comparison
@@ -380,10 +418,19 @@ class ConstantGradientDetector(ConstantValueDetector):
         constant, in gradient units (per second or per index unit). Set it from
         the scale of the data: slow, smooth signals have small gradient changes
         and are flagged with too large a threshold.
+    nans : {'omit', 'raise'} or NanPolicy, default='omit'
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on
+        each slice of consecutive data between them. 'raise' raises
+        `NaNInDataError`.
     """
 
-    def __init__(self, window_size: int = 3, threshold: float = 1e-7):
-        super().__init__(window_size=window_size, threshold=threshold)
+    def __init__(
+        self,
+        window_size: int = 3,
+        threshold: float = 1e-7,
+        nans: str | NanPolicy = NanPolicy.OMIT,
+    ):
+        super().__init__(window_size=window_size, threshold=threshold, nans=nans)
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         gradient = _gradient(data, periods=1)
@@ -413,6 +460,10 @@ class GradientDetector(Detector):
         Quantile of the training gradients that `fit` uses as `max_gradient`.
         The default 1.0 is the maximum; a lower value (e.g. 0.99) keeps outliers
         in the training data from setting the threshold.
+    nans : {'omit', 'raise'} or NanPolicy, default='omit'
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on
+        each slice of consecutive data between them. 'raise' raises
+        `NaNInDataError`.
     """
 
     def __init__(
@@ -420,8 +471,9 @@ class GradientDetector(Detector):
         max_gradient: float = np.inf,
         direction: str = "both",
         quantile: float = 1.0,
+        nans: str | NanPolicy = NanPolicy.OMIT,
     ):
-        super().__init__()
+        super().__init__(nans=nans)
         self._max_gradient: float = max_gradient
         self._quantile = _validate_quantile(quantile)
 
@@ -436,7 +488,10 @@ class GradientDetector(Detector):
 
     def _fit(self, data: pd.Series):
         """Set max gradient based on data."""
-        gradients = _gradient(data.to_frame())
+        return self._fit_slices([data])
+
+    def _fit_slices(self, slices: list[pd.Series]):
+        gradients = pd.concat([_gradient(data.to_frame()) for data in slices])
 
         # Filter based on direction
         if self._direction == "positive":
