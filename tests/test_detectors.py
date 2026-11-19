@@ -7,7 +7,11 @@ import subprocess
 import sys
 import textwrap
 
-from tsod.custom_exceptions import WrongInputDataTypeError
+from tsod.custom_exceptions import (
+    InvalidArgumentError,
+    NotIntegerError,
+    WrongInputDataTypeError,
+)
 from tsod.detectors import (
     RangeDetector,
     DiffDetector,
@@ -387,6 +391,27 @@ def test_hampel_detector_frame(data_series):
     for col in anomalies.columns:
         anomalies_indices = np.array(np.where(anomalies[col])).flatten()
         assert all(i in expected_anomalies_indices for i in anomalies_indices)
+
+
+def test_hampel_detector_min_mad():
+    rain = pd.Series(np.zeros(40))
+    rain.iloc[[10, 11, 25]] = [0.2, 0.4, 0.1]
+
+    assert HampelDetector(window_size=5).detect(rain).sum() == 3
+    assert HampelDetector(window_size=5, min_mad=0.1).detect(rain).sum() == 1
+
+
+def test_hampel_detector_accepts_numpy_int():
+    detector = HampelDetector(window_size=np.int64(5))
+
+    assert detector.detect(pd.Series(np.arange(20.0))).sum() == 0
+
+
+def test_hampel_detector_invalid_arguments():
+    with pytest.raises(NotIntegerError):
+        HampelDetector(window_size=2.5)
+    with pytest.raises(InvalidArgumentError):
+        HampelDetector(min_mad=-1.0)
 
 
 def test_tsod_usable_without_numba():
