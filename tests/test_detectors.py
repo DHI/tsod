@@ -263,6 +263,55 @@ def test_diff_detector_autoset_frame(range_data_series):
     assert detected_anomalies["normal"].sum() == 0
 
 
+@pytest.fixture
+def training_with_one_outlier():
+    rng = np.random.default_rng(1)
+    time = pd.date_range(start="2020", periods=500, freq="1h")
+    data = pd.Series(rng.normal(size=500), index=time)
+    data.iloc[100] = 30.0
+    return data
+
+
+def test_diff_detector_fit_quantile(training_with_one_outlier):
+    data = training_with_one_outlier
+
+    max_fit = DiffDetector().fit(data)
+    quantile_fit = DiffDetector(quantile=0.99).fit(data)
+
+    assert max_fit._max_diff > 25
+    assert quantile_fit._max_diff < 5
+
+
+def test_gradient_detector_fit_quantile(training_with_one_outlier):
+    data = training_with_one_outlier
+
+    max_fit = GradientDetector().fit(data)
+    quantile_fit = GradientDetector(quantile=0.99).fit(data)
+
+    assert max_fit._max_gradient * 3600 > 25
+    assert quantile_fit._max_gradient * 3600 < 5
+
+
+def test_rollingstddev_detector_fit_quantile(training_with_one_outlier):
+    data = training_with_one_outlier
+
+    max_fit = RollingStandardDeviationDetector().fit(data)
+    # The outlier is in 10 of ~500 windows, so the quantile must be below 0.98
+    quantile_fit = RollingStandardDeviationDetector(quantile=0.95).fit(data)
+
+    assert max_fit._max_std > 5
+    assert quantile_fit._max_std < 2
+
+
+@pytest.mark.parametrize(
+    "detector_class",
+    [DiffDetector, GradientDetector, RollingStandardDeviationDetector],
+)
+def test_fit_quantile_out_of_range_raises(detector_class):
+    with pytest.raises(ValueError, match="quantile must be between 0 and 1"):
+        detector_class(quantile=1.5)
+
+
 def test_combined_detector():
     path_to_tests_super_folder = os.path.abspath(__file__).split("tests")[0]
     df = pd.read_csv(
