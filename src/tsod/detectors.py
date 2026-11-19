@@ -35,6 +35,12 @@ def _gradient(data: pd.DataFrame, periods: int = 1) -> pd.DataFrame:
     return data.diff(periods=periods).div(dt.to_numpy(), axis=0)
 
 
+def _validate_quantile(quantile: float) -> float:
+    if not 0.0 <= quantile <= 1.0:
+        raise ValueError(f"quantile must be between 0 and 1, got {quantile}")
+    return quantile
+
+
 class CombinedDetector(Detector, Sequence):
     """Combine detectors.
 
@@ -177,15 +183,22 @@ class DiffDetector(Detector):
     direction : {'both', 'positive', 'negative'}, default='both'
         Direction of change to detect. 'positive' detects only increases,
         'negative' detects only decreases, 'both' detects changes in either direction.
+    quantile : float, default=1.0
+        Quantile of the training changes that `fit` uses as `max_diff`. The
+        default 1.0 is the maximum; a lower value (e.g. 0.99) keeps outliers in
+        the training data from setting the threshold.
 
     See Also
     --------
     GradientDetector : Similar functionality but considers actual time between data points.
     """
 
-    def __init__(self, max_diff: float = np.inf, direction: str = "both"):
+    def __init__(
+        self, max_diff: float = np.inf, direction: str = "both", quantile: float = 1.0
+    ):
         super().__init__()
         self._max_diff: float = max_diff
+        self._quantile = _validate_quantile(quantile)
 
         valid_directions = ("both", "positive", "negative")
         if direction in valid_directions:
@@ -205,7 +218,11 @@ class DiffDetector(Detector):
         else:  # both
             filtered_diffs = data_diffs.abs()
 
-        self._max_diff = filtered_diffs.max() if not filtered_diffs.empty else 0
+        self._max_diff = (
+            filtered_diffs.quantile(getattr(self, "_quantile", 1.0))
+            if not filtered_diffs.empty
+            else 0
+        )
         return self
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -234,18 +251,30 @@ class RollingStandardDeviationDetector(Detector):
         Maximum standard deviation to accept as normal.
     center : bool, default=True
         If True, set the labels at the center of the window.
+    quantile : float, default=1.0
+        Quantile of the training rolling standard deviations that `fit` uses as
+        `max_std`. The default 1.0 is the maximum; a lower value keeps outliers
+        in the training data from setting the threshold. One outlier raises the
+        standard deviation of every window that contains it, so `window_size`
+        values per outlier.
     """
 
     def __init__(
-        self, window_size: int = 10, max_std: float = np.inf, center: bool = True
+        self,
+        window_size: int = 10,
+        max_std: float = np.inf,
+        center: bool = True,
+        quantile: float = 1.0,
     ):
         super().__init__()
         self._window_size: int = window_size
         self._max_std: float = max_std
         self._center: bool = center
+        self._quantile = _validate_quantile(quantile)
 
     def _fit(self, data: pd.Series):
-        self._max_std = data.rolling(self._window_size).std().max()
+        rolling_std = data.rolling(self._window_size).std()
+        self._max_std = rolling_std.quantile(getattr(self, "_quantile", 1.0))
 
         return self
 
@@ -380,11 +409,21 @@ class GradientDetector(Detector):
     direction : {'both', 'positive', 'negative'}, default='both'
         Direction of change to detect. 'positive' detects only increases,
         'negative' detects only decreases, 'both' detects changes in either direction.
+    quantile : float, default=1.0
+        Quantile of the training gradients that `fit` uses as `max_gradient`.
+        The default 1.0 is the maximum; a lower value (e.g. 0.99) keeps outliers
+        in the training data from setting the threshold.
     """
 
-    def __init__(self, max_gradient: float = np.inf, direction: str = "both"):
+    def __init__(
+        self,
+        max_gradient: float = np.inf,
+        direction: str = "both",
+        quantile: float = 1.0,
+    ):
         super().__init__()
         self._max_gradient: float = max_gradient
+        self._quantile = _validate_quantile(quantile)
 
         valid_directions = ("both", "positive", "negative")
         if direction in valid_directions:
@@ -408,7 +447,9 @@ class GradientDetector(Detector):
             filtered_gradients = gradients.abs()
 
         self._max_gradient = (
-            filtered_gradients.max().iloc[0] if not filtered_gradients.empty else 0
+            filtered_gradients.quantile(getattr(self, "_quantile", 1.0)).iloc[0]
+            if not filtered_gradients.empty
+            else 0
         )
         return self
 
