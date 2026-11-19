@@ -56,9 +56,8 @@ def _detect(
     ----------
     time_series: numpy.ndarray
     window_size: int
-        The window range is from [(i - window_size):(i + window_size)], so window_size is half of the
-        window, counted in number of array elements (as opposed to specify a time span, which is not
-        supported by this implementation)
+        Half-width of the window: the window spans [i - window_size, i + window_size], counted
+        in number of array elements. Near the ends of the series the window is cut off.
     threshold: float
         The threshold for marking an outlier. A low threshold "narrows" the band within which values are deemed as
         outliers. n_sigmas
@@ -72,8 +71,11 @@ def _detect(
     # outlier_indices = []
     is_outlier = [False] * len(time_series)
 
-    for t in range(window_size, (len(time_series) - window_size)):
-        time_series_window = time_series[(t - window_size) : (t + window_size)]
+    n = len(time_series)
+    for t in range(n):
+        start = max(0, t - window_size)
+        stop = min(n, t + window_size + 1)
+        time_series_window = time_series[start:stop]
         median_in_window = np.nanmedian(time_series_window)
         mad_in_window = k * np.nanmedian(np.abs(time_series_window - median_in_window))
         mad_in_window = max(mad_in_window, min_mad)
@@ -93,9 +95,10 @@ class HampelDetector(Detector):
     Parameters
     ----------
     window_size: int
-        The window range is from [(i - window_size):(i + window_size)], so window_size is half of the
-        window, counted in number of array elements (as opposed to specify a time span, which is not
-        supported by this implementation)
+        Half-width of the window: the window spans [i - window_size, i + window_size], counted
+        in number of data points, not time, so evenly spaced samples are assumed. Near the
+        ends of the series the window is cut off, so the latest point is checked against the
+        previous `window_size` points. default=5
     threshold: float
         The threshold for marking an outlier. A low threshold "narrows" the band within which values are deemed as
         outliers. n_sigmas, default=3.0

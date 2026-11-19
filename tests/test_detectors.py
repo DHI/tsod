@@ -372,7 +372,8 @@ def test_rollingstddev_detector_frame():
 
 def test_hampel_detector(data_series):
     data_with_anomalies, expected_anomalies_indices, _ = data_series
-    detector = HampelDetector()
+    # The random walk moves in steps of 1, so windows can have MAD = 0
+    detector = HampelDetector(min_mad=1.0)
     anomalies = detector.detect(data_with_anomalies)
     anomalies_indices = np.array(np.where(anomalies)).flatten()
     # Validate if the found anomalies are also in the expected anomaly set
@@ -386,11 +387,40 @@ def test_hampel_detector_frame(data_series):
         {"col1": data_with_anomalies, "col2": data_with_anomalies}
     )
 
-    detector = HampelDetector()
+    detector = HampelDetector(min_mad=1.0)
     anomalies = detector.detect(data_with_anomalies_frame)
     for col in anomalies.columns:
         anomalies_indices = np.array(np.where(anomalies[col])).flatten()
         assert all(i in expected_anomalies_indices for i in anomalies_indices)
+
+
+def test_hampel_detector_checks_edge_points():
+    data = pd.Series(np.random.default_rng(0).normal(size=40))
+    data.iloc[[1, 39]] = 50.0
+
+    anomalies = HampelDetector(window_size=5).detect(data)
+
+    assert anomalies.iloc[1]
+    assert anomalies.iloc[39]
+
+
+def test_hampel_detector_window_is_symmetric():
+    rng = np.random.default_rng(1)
+    data = pd.Series(rng.normal(size=200))
+    data.iloc[rng.integers(0, 200, 20)] += 4.0
+    w = 5
+
+    # Reference: centred window of 2 * w + 1 points
+    window = data.rolling(2 * w + 1, center=True)
+    median = window.median()
+    mad = 1.4826 * window.apply(lambda x: np.median(np.abs(x - np.median(x))), raw=True)
+    expected = (data - median).abs() > 3 * mad
+
+    anomalies = HampelDetector(window_size=w).detect(data)
+
+    interior = slice(w, len(data) - w)
+    assert anomalies.iloc[interior].equals(expected.iloc[interior])
+    assert expected.iloc[interior].sum() > 0
 
 
 def test_hampel_detector_min_mad():
