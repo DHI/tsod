@@ -50,7 +50,8 @@ class CombinedDetector(Detector, Sequence):
     Parameters
     ----------
     detectors : list of Detector
-        List of detector instances to combine.
+        List of detector instances to combine. Each detector handles NaN values
+        with its own `nans` setting.
 
     Examples
     --------
@@ -62,6 +63,8 @@ class CombinedDetector(Detector, Sequence):
     >>> anomaly_detector.fit(normal_data)
     >>> detected_anomalies = anomaly_detector.detect(abnormal_data)
     """
+
+    _delegates_nans = True
 
     def __init__(self, detectors: list[Detector]):
         super().__init__()
