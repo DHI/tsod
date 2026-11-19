@@ -341,10 +341,15 @@ class ConstantGradientDetector(ConstantValueDetector):
     ----------
     window_size : int, default=3
         Minimum window size to consider as anomaly.
+    threshold : float, default=1e-7
+        Maximum variation of the gradient within the window to consider it
+        constant, in gradient units (per second or per index unit). Set it from
+        the scale of the data: slow, smooth signals have small gradient changes
+        and are flagged with too large a threshold.
     """
 
-    def __init__(self, window_size: int = 3):
-        super().__init__(window_size=window_size)
+    def __init__(self, window_size: int = 3, threshold: float = 1e-7):
+        super().__init__(window_size=window_size, threshold=threshold)
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         gradient = _gradient(data, periods=1)
@@ -354,7 +359,7 @@ class ConstantGradientDetector(ConstantValueDetector):
         return s1 | s2
 
     def __str__(self):
-        return f"{self.__class__.__name__}({self._window_size})"
+        return f"{self.__class__.__name__}(window_size: {self.window_size}, threshold: {self.threshold})"
 
 
 class GradientDetector(Detector):

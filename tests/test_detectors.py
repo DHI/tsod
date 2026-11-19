@@ -730,6 +730,18 @@ def test_edge_cases():
     #    detector.detect(all_nan_series)
 
 
+def test_constant_gradient_detector_threshold():
+    # 1 mm/h trend with tiny curvature: gradient changes are ~1e-9 per second
+    time = pd.date_range(start="2020", periods=20, freq="1h")
+    steps = np.arange(20)
+    data = pd.Series(10 + 0.001 * steps + 1e-5 * np.sin(steps), index=time)
+
+    assert ConstantGradientDetector(window_size=3).detect(data).sum() == 20
+    assert (
+        ConstantGradientDetector(window_size=3, threshold=1e-10).detect(data).sum() == 0
+    )
+
+
 def test_constant_gradient_on_non_uniform_dt():
     ind = pd.DatetimeIndex(
         [
