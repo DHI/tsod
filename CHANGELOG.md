@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- `quantile` parameter for `DiffDetector`, `GradientDetector` and `RollingStandardDeviationDetector`: `fit()` sets the threshold at this quantile of the training values instead of the maximum (default 1.0 keeps the maximum), so outliers in the training data do not set the threshold.
 - `ConstantGradientDetector(threshold=...)`: the threshold was fixed at 1e-7 and flagged slow, smooth signals.
 - `HampelDetector(min_mad=...)`: lower limit for the scaled MAD, for flat or quantised data where the MAD can be 0.
 
