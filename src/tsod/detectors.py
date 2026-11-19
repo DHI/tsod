@@ -337,7 +337,7 @@ class ConstantValueDetector(Detector):
     def _detect_single_column(self, data: pd.Series) -> pd.Series:
         """Detect constant values in a single column."""
         # Early exit for windows size larger than data
-        if self.window_size >= data.shape[0]:
+        if self.window_size > data.shape[0]:
             return pd.Series(False, index=data.index)
 
         # Create shifted versions for comparison

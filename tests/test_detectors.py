@@ -616,6 +616,14 @@ def test_constant_value_detector_edge_cases(constant_data_series):
         ConstantValueDetector(window_size=3, threshold=-1)
 
 
+def test_constant_value_detector_series_as_long_as_window():
+    data = pd.Series([1.0, 1.0, 1.0])
+
+    anomalies = ConstantValueDetector(window_size=3).detect(data)
+
+    assert anomalies.tolist() == [True, True, True]
+
+
 def test_constant_gradient_detector(constant_gradient_data_series):
     good_data, abnormal_data, _ = constant_gradient_data_series
 
