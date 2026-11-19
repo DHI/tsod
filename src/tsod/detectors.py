@@ -4,7 +4,7 @@ from collections.abc import Sequence
 import pandas as pd
 import numpy as np
 
-from .base import Detector
+from .base import Detector, NanPolicy
 
 
 def _gradient(data: pd.DataFrame, periods: int = 1) -> pd.DataFrame:
@@ -110,6 +110,10 @@ class RangeDetector(Detector):
         Quantiles to use for determining min and max during fit.
         Default is [0.0, 1.0], which corresponds to absolute min and max values.
         Use values like [0.001, 0.999] to exclude extreme outliers.
+    nans : {'omit', 'raise'} or NanPolicy, default='omit'
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on
+        each slice of consecutive data between them. 'raise' raises
+        `NaNInDataError`.
 
     Examples
     --------
@@ -136,8 +140,9 @@ class RangeDetector(Detector):
         min_value: float = -np.inf,
         max_value: float = np.inf,
         quantiles: list[float] | None = None,
+        nans: str | NanPolicy = NanPolicy.OMIT,
     ):
-        super().__init__()
+        super().__init__(nans=nans)
 
         self._min: float = min_value
         self._max: float = max_value
@@ -190,6 +195,10 @@ class DiffDetector(Detector):
         Quantile of the training changes that `fit` uses as `max_diff`. The
         default 1.0 is the maximum; a lower value (e.g. 0.99) keeps outliers in
         the training data from setting the threshold.
+    nans : {'omit', 'raise'} or NanPolicy, default='omit'
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on
+        each slice of consecutive data between them. 'raise' raises
+        `NaNInDataError`.
 
     See Also
     --------
@@ -197,9 +206,13 @@ class DiffDetector(Detector):
     """
 
     def __init__(
-        self, max_diff: float = np.inf, direction: str = "both", quantile: float = 1.0
+        self,
+        max_diff: float = np.inf,
+        direction: str = "both",
+        quantile: float = 1.0,
+        nans: str | NanPolicy = NanPolicy.OMIT,
     ):
-        super().__init__()
+        super().__init__(nans=nans)
         self._max_diff: float = max_diff
         self._quantile = _validate_quantile(quantile)
 
@@ -260,6 +273,10 @@ class RollingStandardDeviationDetector(Detector):
         in the training data from setting the threshold. One outlier raises the
         standard deviation of every window that contains it, so `window_size`
         values per outlier.
+    nans : {'omit', 'raise'} or NanPolicy, default='omit'
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on
+        each slice of consecutive data between them. 'raise' raises
+        `NaNInDataError`.
     """
 
     def __init__(
@@ -268,8 +285,9 @@ class RollingStandardDeviationDetector(Detector):
         max_std: float = np.inf,
         center: bool = True,
         quantile: float = 1.0,
+        nans: str | NanPolicy = NanPolicy.OMIT,
     ):
-        super().__init__()
+        super().__init__(nans=nans)
         self._window_size: int = window_size
         self._max_std: float = max_std
         self._center: bool = center
@@ -306,10 +324,19 @@ class ConstantValueDetector(Detector):
         time, so evenly spaced samples are assumed.
     threshold : float, default=1e-7
         Maximum variation (max - min) within window to consider constant.
+    nans : {'omit', 'raise'} or NanPolicy, default='omit'
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on
+        each slice of consecutive data between them. 'raise' raises
+        `NaNInDataError`.
     """
 
-    def __init__(self, window_size: int = 3, threshold: float = 1e-7):
-        super().__init__()
+    def __init__(
+        self,
+        window_size: int = 3,
+        threshold: float = 1e-7,
+        nans: str | NanPolicy = NanPolicy.OMIT,
+    ):
+        super().__init__(nans=nans)
 
         # Validate input
         if threshold < 0:
@@ -383,10 +410,19 @@ class ConstantGradientDetector(ConstantValueDetector):
         constant, in gradient units (per second or per index unit). Set it from
         the scale of the data: slow, smooth signals have small gradient changes
         and are flagged with too large a threshold.
+    nans : {'omit', 'raise'} or NanPolicy, default='omit'
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on
+        each slice of consecutive data between them. 'raise' raises
+        `NaNInDataError`.
     """
 
-    def __init__(self, window_size: int = 3, threshold: float = 1e-7):
-        super().__init__(window_size=window_size, threshold=threshold)
+    def __init__(
+        self,
+        window_size: int = 3,
+        threshold: float = 1e-7,
+        nans: str | NanPolicy = NanPolicy.OMIT,
+    ):
+        super().__init__(window_size=window_size, threshold=threshold, nans=nans)
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         gradient = _gradient(data, periods=1)
@@ -416,6 +452,10 @@ class GradientDetector(Detector):
         Quantile of the training gradients that `fit` uses as `max_gradient`.
         The default 1.0 is the maximum; a lower value (e.g. 0.99) keeps outliers
         in the training data from setting the threshold.
+    nans : {'omit', 'raise'} or NanPolicy, default='omit'
+        How to handle NaN values. 'omit' warns, drops the NaN rows and runs on
+        each slice of consecutive data between them. 'raise' raises
+        `NaNInDataError`.
     """
 
     def __init__(
@@ -423,8 +463,9 @@ class GradientDetector(Detector):
         max_gradient: float = np.inf,
         direction: str = "both",
         quantile: float = 1.0,
+        nans: str | NanPolicy = NanPolicy.OMIT,
     ):
-        super().__init__()
+        super().__init__(nans=nans)
         self._max_gradient: float = max_gradient
         self._quantile = _validate_quantile(quantile)
 

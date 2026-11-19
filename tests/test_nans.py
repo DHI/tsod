@@ -4,11 +4,26 @@ import pytest
 
 from tsod import (
     CombinedDetector,
+    ConstantGradientDetector,
     ConstantValueDetector,
     DiffDetector,
+    GradientDetector,
     HampelDetector,
+    NanPolicy,
     RangeDetector,
+    RollingStandardDeviationDetector,
 )
+from tsod.custom_exceptions import NaNInDataError
+
+DETECTOR_CLASSES = [
+    RangeDetector,
+    DiffDetector,
+    GradientDetector,
+    RollingStandardDeviationDetector,
+    ConstantValueDetector,
+    ConstantGradientDetector,
+    HampelDetector,
+]
 
 
 def test_detect_omits_nan_rows():
@@ -112,3 +127,53 @@ def test_combined_detector_leaves_nans_to_its_detectors():
 
     assert len(record) == 2
     assert anomalies.tolist() == [False, False, True, True]
+
+
+@pytest.mark.parametrize("detector_class", DETECTOR_CLASSES)
+def test_nans_raise_in_detect(detector_class):
+    data = pd.Series([0.0, np.nan, 1.0, 2.0])
+
+    with pytest.raises(NaNInDataError, match="1 NaN values"):
+        detector_class(nans="raise").detect(data)
+
+
+@pytest.mark.parametrize("detector_class", DETECTOR_CLASSES)
+def test_nans_raise_in_fit(detector_class):
+    data = pd.Series([0.0, np.nan, 1.0, 2.0])
+
+    with pytest.raises(NaNInDataError):
+        detector_class(nans="raise").fit(data)
+
+
+@pytest.mark.parametrize("detector_class", DETECTOR_CLASSES)
+def test_nans_default_is_omit(detector_class):
+    assert detector_class().nans is NanPolicy.OMIT
+
+
+def test_nans_accepts_enum():
+    detector = RangeDetector(max_value=5.0, nans=NanPolicy.RAISE)
+
+    assert detector.nans is NanPolicy.RAISE
+
+
+def test_nans_invalid_value_raises():
+    with pytest.raises(ValueError, match="nans must be one of"):
+        RangeDetector(nans="ignore")
+
+
+def test_combined_detector_uses_the_policy_of_each_detector():
+    data = pd.Series([0.0, np.nan, 10.0, 10.0])
+    combined = CombinedDetector([RangeDetector(max_value=5.0, nans="raise")])
+
+    with pytest.raises(NaNInDataError):
+        combined.detect(data)
+
+
+def test_detector_saved_before_nan_handling_omits_nans():
+    detector = RangeDetector(max_value=5.0)
+    del detector._nans  # as unpickled from an older tsod
+
+    with pytest.warns(UserWarning):
+        anomalies = detector.detect(pd.Series([0.0, np.nan, 10.0]))
+
+    assert anomalies.tolist() == [False, False, True]
