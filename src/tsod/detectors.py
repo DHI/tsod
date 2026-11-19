@@ -225,7 +225,10 @@ class DiffDetector(Detector):
             )
 
     def _fit(self, data):
-        data_diffs = data.diff()
+        return self._fit_slices([data])
+
+    def _fit_slices(self, slices: list[pd.Series]):
+        data_diffs = pd.concat([data.diff() for data in slices])
 
         if self._direction == "positive":
             filtered_diffs = data_diffs[data_diffs >= 0]
@@ -294,7 +297,12 @@ class RollingStandardDeviationDetector(Detector):
         self._quantile = _validate_quantile(quantile)
 
     def _fit(self, data: pd.Series):
-        rolling_std = data.rolling(self._window_size).std()
+        return self._fit_slices([data])
+
+    def _fit_slices(self, slices: list[pd.Series]):
+        rolling_std = pd.concat(
+            [data.rolling(self._window_size).std() for data in slices]
+        )
         self._max_std = rolling_std.quantile(getattr(self, "_quantile", 1.0))
 
         return self
@@ -480,7 +488,10 @@ class GradientDetector(Detector):
 
     def _fit(self, data: pd.Series):
         """Set max gradient based on data."""
-        gradients = _gradient(data.to_frame())
+        return self._fit_slices([data])
+
+    def _fit_slices(self, slices: list[pd.Series]):
+        gradients = pd.concat([_gradient(data.to_frame()) for data in slices])
 
         # Filter based on direction
         if self._direction == "positive":

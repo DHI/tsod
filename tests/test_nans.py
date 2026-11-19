@@ -111,6 +111,34 @@ def test_fit_omits_nan_rows():
     assert (detector._min, detector._max) == (0.0, 4.0)
 
 
+def test_diff_detector_fit_per_slice():
+    data = pd.Series([0.0, 1.0, np.nan, 10.0, 11.0])
+
+    with pytest.warns(UserWarning):
+        detector = DiffDetector().fit(data)
+
+    assert detector._max_diff == 1.0
+
+
+def test_gradient_detector_fit_per_slice():
+    index = pd.date_range("2020", periods=5, freq="1h")
+    data = pd.Series([0.0, 1.0, np.nan, 10.0, 11.0], index=index)
+
+    with pytest.warns(UserWarning):
+        detector = GradientDetector().fit(data)
+
+    assert detector._max_gradient * 3600 == pytest.approx(1.0)
+
+
+def test_rollingstddev_detector_fit_per_slice():
+    data = pd.Series([0.0, 0.0, 0.0, np.nan, 10.0, 10.0, 10.0])
+
+    with pytest.warns(UserWarning):
+        detector = RollingStandardDeviationDetector(window_size=3).fit(data)
+
+    assert detector._max_std == 0.0
+
+
 def test_fit_all_nan_raises():
     with pytest.raises(ValueError, match="all NaN"):
         RangeDetector().fit(pd.Series([np.nan, np.nan]))
