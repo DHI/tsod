@@ -3,8 +3,12 @@
 ## [Unreleased]
 
 ### Added
+- `ConstantGradientDetector(threshold=...)`: the threshold was fixed at 1e-7 and flagged slow, smooth signals.
+- `HampelDetector(min_mad=...)`: lower limit for the scaled MAD, for flat or quantised data where the MAD can be 0.
 
 ### Fixed
+- `HampelDetector` uses a symmetric window `[i - w, i + w]` (was `[i - w, i + w)`) and checks the first and last `w` points with a window cut off at the ends.
+- `HampelDetector` accepts numpy integers for `window_size`.
 
 ### Changed
 - `GradientDetector` and `ConstantGradientDetector` no longer require a DatetimeIndex: with a numeric index the gradient is per index unit (per step for a RangeIndex). A TimedeltaIndex works like a DatetimeIndex (per second).

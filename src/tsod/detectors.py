@@ -167,6 +167,9 @@ class RangeDetector(Detector):
 class DiffDetector(Detector):
     """Detect sudden shifts in data, irrespective of time axis.
 
+    Compares consecutive data points regardless of the time between them, so evenly
+    spaced samples are assumed.
+
     Parameters
     ----------
     max_diff : float, default=np.inf
@@ -225,7 +228,8 @@ class RollingStandardDeviationDetector(Detector):
     Parameters
     ----------
     window_size : int, default=10
-        Number of data points to evaluate over.
+        Number of data points to evaluate over. The window counts points, not
+        time, so evenly spaced samples are assumed.
     max_std : float, default=np.inf
         Maximum standard deviation to accept as normal.
     center : bool, default=True
@@ -266,7 +270,8 @@ class ConstantValueDetector(Detector):
     Parameters
     ----------
     window_size : int, default=3
-        Number of consecutive points to evaluate.
+        Number of consecutive points to evaluate. The window counts points, not
+        time, so evenly spaced samples are assumed.
     threshold : float, default=1e-7
         Maximum variation (max - min) within window to consider constant.
     """
@@ -341,10 +346,15 @@ class ConstantGradientDetector(ConstantValueDetector):
     ----------
     window_size : int, default=3
         Minimum window size to consider as anomaly.
+    threshold : float, default=1e-7
+        Maximum variation of the gradient within the window to consider it
+        constant, in gradient units (per second or per index unit). Set it from
+        the scale of the data: slow, smooth signals have small gradient changes
+        and are flagged with too large a threshold.
     """
 
-    def __init__(self, window_size: int = 3):
-        super().__init__(window_size=window_size)
+    def __init__(self, window_size: int = 3, threshold: float = 1e-7):
+        super().__init__(window_size=window_size, threshold=threshold)
 
     def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
         gradient = _gradient(data, periods=1)
@@ -354,7 +364,7 @@ class ConstantGradientDetector(ConstantValueDetector):
         return s1 | s2
 
     def __str__(self):
-        return f"{self.__class__.__name__}({self._window_size})"
+        return f"{self.__class__.__name__}(window_size: {self.window_size}, threshold: {self.threshold})"
 
 
 class GradientDetector(Detector):

@@ -7,7 +7,11 @@ import subprocess
 import sys
 import textwrap
 
-from tsod.custom_exceptions import WrongInputDataTypeError
+from tsod.custom_exceptions import (
+    InvalidArgumentError,
+    NotIntegerError,
+    WrongInputDataTypeError,
+)
 from tsod.detectors import (
     RangeDetector,
     DiffDetector,
@@ -368,7 +372,8 @@ def test_rollingstddev_detector_frame():
 
 def test_hampel_detector(data_series):
     data_with_anomalies, expected_anomalies_indices, _ = data_series
-    detector = HampelDetector()
+    # The random walk moves in steps of 1, so windows can have MAD = 0
+    detector = HampelDetector(min_mad=1.0)
     anomalies = detector.detect(data_with_anomalies)
     anomalies_indices = np.array(np.where(anomalies)).flatten()
     # Validate if the found anomalies are also in the expected anomaly set
@@ -382,11 +387,61 @@ def test_hampel_detector_frame(data_series):
         {"col1": data_with_anomalies, "col2": data_with_anomalies}
     )
 
-    detector = HampelDetector()
+    detector = HampelDetector(min_mad=1.0)
     anomalies = detector.detect(data_with_anomalies_frame)
     for col in anomalies.columns:
         anomalies_indices = np.array(np.where(anomalies[col])).flatten()
         assert all(i in expected_anomalies_indices for i in anomalies_indices)
+
+
+def test_hampel_detector_checks_edge_points():
+    data = pd.Series(np.random.default_rng(0).normal(size=40))
+    data.iloc[[1, 39]] = 50.0
+
+    anomalies = HampelDetector(window_size=5).detect(data)
+
+    assert anomalies.iloc[1]
+    assert anomalies.iloc[39]
+
+
+def test_hampel_detector_window_is_symmetric():
+    rng = np.random.default_rng(1)
+    data = pd.Series(rng.normal(size=200))
+    data.iloc[rng.integers(0, 200, 20)] += 4.0
+    w = 5
+
+    # Reference: centred window of 2 * w + 1 points
+    window = data.rolling(2 * w + 1, center=True)
+    median = window.median()
+    mad = 1.4826 * window.apply(lambda x: np.median(np.abs(x - np.median(x))), raw=True)
+    expected = (data - median).abs() > 3 * mad
+
+    anomalies = HampelDetector(window_size=w).detect(data)
+
+    interior = slice(w, len(data) - w)
+    assert anomalies.iloc[interior].equals(expected.iloc[interior])
+    assert expected.iloc[interior].sum() > 0
+
+
+def test_hampel_detector_min_mad():
+    rain = pd.Series(np.zeros(40))
+    rain.iloc[[10, 11, 25]] = [0.2, 0.4, 0.1]
+
+    assert HampelDetector(window_size=5).detect(rain).sum() == 3
+    assert HampelDetector(window_size=5, min_mad=0.1).detect(rain).sum() == 1
+
+
+def test_hampel_detector_accepts_numpy_int():
+    detector = HampelDetector(window_size=np.int64(5))
+
+    assert detector.detect(pd.Series(np.arange(20.0))).sum() == 0
+
+
+def test_hampel_detector_invalid_arguments():
+    with pytest.raises(NotIntegerError):
+        HampelDetector(window_size=2.5)
+    with pytest.raises(InvalidArgumentError):
+        HampelDetector(min_mad=-1.0)
 
 
 def test_tsod_usable_without_numba():
@@ -728,6 +783,18 @@ def test_edge_cases():
     # all_nan_series = pd.Series([np.nan, np.nan, np.nan])
     # with pytest.raises(ValueError, match="Input data cannot be all NaN"):
     #    detector.detect(all_nan_series)
+
+
+def test_constant_gradient_detector_threshold():
+    # 1 mm/h trend with tiny curvature: gradient changes are ~1e-9 per second
+    time = pd.date_range(start="2020", periods=20, freq="1h")
+    steps = np.arange(20)
+    data = pd.Series(10 + 0.001 * steps + 1e-5 * np.sin(steps), index=time)
+
+    assert ConstantGradientDetector(window_size=3).detect(data).sum() == 20
+    assert (
+        ConstantGradientDetector(window_size=3, threshold=1e-10).detect(data).sum() == 0
+    )
 
 
 def test_constant_gradient_on_non_uniform_dt():
