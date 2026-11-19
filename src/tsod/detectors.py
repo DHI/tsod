@@ -167,6 +167,9 @@ class RangeDetector(Detector):
 class DiffDetector(Detector):
     """Detect sudden shifts in data, irrespective of time axis.
 
+    Compares consecutive data points regardless of the time between them, so evenly
+    spaced samples are assumed.
+
     Parameters
     ----------
     max_diff : float, default=np.inf
@@ -225,7 +228,8 @@ class RollingStandardDeviationDetector(Detector):
     Parameters
     ----------
     window_size : int, default=10
-        Number of data points to evaluate over.
+        Number of data points to evaluate over. The window counts points, not
+        time, so evenly spaced samples are assumed.
     max_std : float, default=np.inf
         Maximum standard deviation to accept as normal.
     center : bool, default=True
@@ -266,7 +270,8 @@ class ConstantValueDetector(Detector):
     Parameters
     ----------
     window_size : int, default=3
-        Number of consecutive points to evaluate.
+        Number of consecutive points to evaluate. The window counts points, not
+        time, so evenly spaced samples are assumed.
     threshold : float, default=1e-7
         Maximum variation (max - min) within window to consider constant.
     """
