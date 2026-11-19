@@ -75,6 +75,7 @@ quartodoc:
       - RollingStandardDeviationDetector
       - CombinedDetector
       - HampelDetector
+      - NanPolicy
       - load
     
 format:

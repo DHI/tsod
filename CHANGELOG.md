@@ -3,11 +3,13 @@
 ## [Unreleased]
 
 ### Added
+- `nans` argument on every detector (`NanPolicy`): `"omit"` (default) warns, drops NaN rows and runs on each slice of consecutive data, so values on either side of a NaN are never compared; dropped rows are `False` in the output. `"raise"` raises `NaNInDataError`. DataFrame columns are handled one at a time. `CombinedDetector` leaves NaN handling to its detectors.
 - `quantile` parameter for `DiffDetector`, `GradientDetector` and `RollingStandardDeviationDetector`: `fit()` sets the threshold at this quantile of the training values instead of the maximum (default 1.0 keeps the maximum), so outliers in the training data do not set the threshold.
 - `ConstantGradientDetector(threshold=...)`: the threshold was fixed at 1e-7 and flagged slow, smooth signals.
 - `HampelDetector(min_mad=...)`: lower limit for the scaled MAD, for flat or quantised data where the MAD can be 0.
 
 ### Fixed
+- `ConstantValueDetector` flags a series that is exactly `window_size` points long and constant.
 - `HampelDetector` uses a symmetric window `[i - w, i + w]` (was `[i - w, i + w)`) and checks the first and last `w` points with a window cut off at the ends.
 - `HampelDetector` accepts numpy integers for `window_size`.
 

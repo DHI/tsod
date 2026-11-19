@@ -127,8 +127,8 @@ The library distinguishes between:
 
 - **Time handling**: `GradientDetector` and `ConstantGradientDetector` calculate rates per second for a DatetimeIndex/TimedeltaIndex and per index unit for a numeric index; other index types raise
 - **Performance**: `HampelDetector` uses `@jit(nopython=True)` from numba for speed. numba is a default dependency but is imported defensively in `hampel.py`: without numba, a stand-in `jit` makes `HampelDetector.detect()` raise `ImportError`, and the rest of tsod stays usable (covered by `test_tsod_usable_without_numba`)
-- **Validation**: Input validation happens in base class before `_fit()` or `_detect()`
-- **Missing data**: Most detectors handle NaN values via numpy's `nanquantile`, `nanmedian`, etc.
+- **Validation**: Input validation and NaN handling happen in the base class before `_fit()` or `_detect()`
+- **Missing data**: NaN handling lives in the base class (`nans="omit" | "raise"`, `NanPolicy`). With `omit`, `fit()`/`detect()` warn, drop NaN rows and call `_fit_slices()`/`_detect()` on each slice of consecutive data, column by column; `_detect()` never sees NaN. Detectors that compare neighbouring points in `fit` override `_fit_slices()` to compute per slice and pool. `CombinedDetector` sets `_delegates_nans = True`
 
 ## Code Style
 
