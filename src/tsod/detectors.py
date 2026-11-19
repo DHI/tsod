@@ -8,21 +8,31 @@ from .base import Detector
 
 
 def _gradient(data: pd.DataFrame, periods: int = 1) -> pd.DataFrame:
+    """Rate of change per unit of the index.
+
+    Per second for a DatetimeIndex or TimedeltaIndex, per index unit for a
+    numeric index (per step for the default RangeIndex).
+    """
     if not isinstance(data, pd.DataFrame):
         raise TypeError("Input data must be a pandas.DataFrame.")
 
-    if not isinstance(data.index, pd.DatetimeIndex):
+    index = data.index
+    if isinstance(index, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+        dt = index.to_series().diff(periods).dt.total_seconds()
+    elif pd.api.types.is_numeric_dtype(index):
+        dt = index.to_series().diff(periods).astype(float)
+    else:
         raise ValueError(
-            "Gradient calculation requires a DatetimeIndex. "
-            f"Got {type(data.index).__name__} instead."
+            "Gradient calculation requires a datetime, timedelta or numeric index. "
+            f"Got {type(index).__name__} with dtype {index.dtype} instead."
         )
 
-    dt = data.index.to_series().diff(periods).dt.total_seconds() * np.sign(periods)
+    dt = dt * np.sign(periods)
     if dt.min() < 1e-15:
         raise ValueError("Index must be monotonically increasing")
 
     # Broadcast division with dataframe correctly
-    return data.diff(periods=periods).div(dt, axis=0)
+    return data.diff(periods=periods).div(dt.to_numpy(), axis=0)
 
 
 class CombinedDetector(Detector, Sequence):
@@ -324,6 +334,9 @@ class ConstantGradientDetector(ConstantValueDetector):
 
     Typically caused by linear interpolation over a long interval.
 
+    The gradient is per second for a DatetimeIndex or TimedeltaIndex and per
+    index unit for a numeric index (per step for the default RangeIndex).
+
     Parameters
     ----------
     window_size : int, default=3
@@ -347,12 +360,13 @@ class ConstantGradientDetector(ConstantValueDetector):
 class GradientDetector(Detector):
     """Detect abrupt changes in time series data.
 
-    Requires data with a DatetimeIndex. Calculates rate of change per second.
+    The rate of change is per second for a DatetimeIndex or TimedeltaIndex and
+    per index unit for a numeric index (per step for the default RangeIndex).
 
     Parameters
     ----------
     max_gradient : float, default=np.inf
-        Maximum rate of change per second.
+        Maximum rate of change, per second or per index unit (see above).
     direction : {'both', 'positive', 'negative'}, default='both'
         Direction of change to detect. 'positive' detects only increases,
         'negative' detects only decreases, 'both' detects changes in either direction.
@@ -398,7 +412,4 @@ class GradientDetector(Detector):
             return gradient.abs() > self._max_gradient
 
     def __str__(self):
-        max_grad_hr = self._max_gradient * 3600.0
-        return (
-            f"{self.__class__.__name__}({max_grad_hr}/hr, direction:{self._direction})"
-        )
+        return f"{self.__class__.__name__}({self._max_gradient}, direction:{self._direction})"

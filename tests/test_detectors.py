@@ -651,30 +651,53 @@ def test_gradient_detector_sudden_jump():
     assert sum(anomalies) == 0
 
 
-def test_gradient_detector_datetime_index_validation():
-    """Test that GradientDetector raises ValueError when data doesn't have DatetimeIndex"""
-    ###### Integer index test ######
-    detector = GradientDetector()
+def test_gradient_detector_range_index_is_per_step():
+    data = pd.Series([0.0, 1.0, 2.0, 10.0, 11.0])
 
-    # Test data with integer index
-    data_with_int_index = pd.Series([1, 2, 3, 4, 5])
+    anomalies = GradientDetector(max_gradient=2.0).detect(data)
 
-    # Test with integer index
-    with pytest.raises(
-        ValueError,
-        match="Gradient calculation requires a DatetimeIndex. Got RangeIndex instead",
-    ):
-        detector.fit(data_with_int_index)
+    assert anomalies.tolist() == [False, False, False, True, False]
 
-    ###### DatetimeIndex test ######
-    detector = GradientDetector()
 
-    # Test data with valid DatetimeIndex data works fine
-    time = pd.date_range(start="2020", periods=5, freq="1h")
-    data_with_datetime_index = pd.Series([1, 2, 3, 4, 5], index=time)
+def test_gradient_detector_numeric_index_is_per_index_unit():
+    # Steps of 1, 2, 4, 8 index units with a rate of 1 per unit, except the jump at 4.0
+    data = pd.Series([0.0, 1.0, 3.0, 20.0, 15.0], index=[0.0, 1.0, 3.0, 4.0, 9.0])
 
-    # This should not raise an exception
-    detector.fit(data_with_datetime_index)
+    anomalies = GradientDetector(max_gradient=1.5).detect(data)
+
+    assert anomalies.tolist() == [False, False, False, True, False]
+
+
+def test_gradient_detector_timedelta_index_is_per_second():
+    index = pd.to_timedelta([0, 10, 20], unit="s")
+    data = pd.Series([0.0, 10.0, 100.0], index=index)
+
+    anomalies = GradientDetector(max_gradient=5.0).detect(data)
+
+    assert anomalies.tolist() == [False, False, True]
+
+
+def test_gradient_detector_fit_on_range_index():
+    normal = pd.Series([0.0, 1.0, 3.0, 4.0])
+
+    detector = GradientDetector().fit(normal)
+
+    assert detector._max_gradient == 2.0
+
+
+def test_gradient_detector_non_numeric_index_raises():
+    data = pd.Series([1.0, 2.0, 3.0], index=["a", "b", "c"])
+
+    with pytest.raises(ValueError, match="datetime, timedelta or numeric index"):
+        GradientDetector().detect(data)
+
+
+def test_constant_gradient_detector_range_index():
+    data = pd.Series([5.0, 0.0, 1.0, 2.0, 3.0, 4.0, 9.0, 7.0])
+
+    anomalies = ConstantGradientDetector(window_size=3).detect(data)
+
+    assert anomalies.tolist() == [False, True, True, True, True, True, False, False]
 
 
 def test_edge_cases():
