@@ -114,7 +114,7 @@ The library distinguishes between:
 1. **Range-based**: `RangeDetector` - detects values outside min/max thresholds or quantiles
 2. **Change-based**:
    - `DiffDetector` - sudden shifts (ignores time axis)
-   - `GradientDetector` - rate of change per second (requires DatetimeIndex)
+   - `GradientDetector` - rate of change per second (DatetimeIndex) or per index unit (numeric index)
 3. **Pattern-based**:
    - `ConstantValueDetector` - stuck sensors
    - `ConstantGradientDetector` - linear interpolation artifacts
@@ -125,7 +125,7 @@ The library distinguishes between:
 
 ### Key Implementation Details
 
-- **Time handling**: Some detectors (e.g., `GradientDetector`) require `pd.DatetimeIndex` and calculate rates per second
+- **Time handling**: `GradientDetector` and `ConstantGradientDetector` calculate rates per second for a DatetimeIndex/TimedeltaIndex and per index unit for a numeric index; other index types raise
 - **Performance**: `HampelDetector` uses `@jit(nopython=True)` from numba for speed. numba is a default dependency but is imported defensively in `hampel.py`: without numba, a stand-in `jit` makes `HampelDetector.detect()` raise `ImportError`, and the rest of tsod stays usable (covered by `test_tsod_usable_without_numba`)
 - **Validation**: Input validation happens in base class before `_fit()` or `_detect()`
 - **Missing data**: Most detectors handle NaN values via numpy's `nanquantile`, `nanmedian`, etc.
@@ -146,7 +146,7 @@ The library distinguishes between:
 
 ## Important Conventions
 
-- **Index types**: Be aware that some detectors require DatetimeIndex (GradientDetector), others work with any index
+- **Index types**: Gradient-based detectors need a datetime, timedelta or numeric index; the others work with any index
 - **Return values**: `detect()` always returns pd.Series of booleans, never modifies input
 - **Direction parameter**: Several detectors support `direction="both|positive|negative"` for asymmetric detection
 - **Window sizes**: Window-based detectors use integer window sizes (number of points, not time spans)
