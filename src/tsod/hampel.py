@@ -3,7 +3,8 @@
 import numpy as np
 import pandas as pd
 from tsod.custom_exceptions import NotIntegerError, InvalidArgumentError
-from tsod.detectors import Detector
+from tsod.base import Detector
+from tsod.data import EvenlySpacedData
 
 # numba is a default dependency, but it is only needed by HampelDetector. Without numba,
 # a stand-in jit makes the decorated function raise ImportError when it is called, so the
@@ -99,9 +100,9 @@ class HampelDetector(Detector):
         self._threshold = threshold
         self._window_size = window_size
 
-    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _detect(self, data: EvenlySpacedData) -> pd.DataFrame:
         # Apply column-wise detection
-        return data.apply(
+        return data.frame.apply(
             lambda col: _detect(col.values, self._window_size, self._threshold), axis=0
         ).astype(bool)
 

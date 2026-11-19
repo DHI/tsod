@@ -7,7 +7,7 @@ import subprocess
 import sys
 import textwrap
 
-from tsod.custom_exceptions import WrongInputDataTypeError
+from tsod.custom_exceptions import UnevenSpacingWarning, WrongInputDataTypeError
 from tsod.detectors import (
     RangeDetector,
     DiffDetector,
@@ -274,10 +274,13 @@ def test_combined_detector():
     )
 
     series = df.value
-    res = combined.detect(series)
+    # example.csv has one 59 minute step among 1 hour steps
+    with pytest.warns(UnevenSpacingWarning, match="ConstantValueDetector"):
+        res = combined.detect(series)
     assert isinstance(res, pd.Series)
 
-    res = combined.detect(df)
+    with pytest.warns(UnevenSpacingWarning):
+        res = combined.detect(df)
     assert isinstance(res, pd.DataFrame)
 
 
@@ -325,7 +328,7 @@ def test_rollingstddev_detector():
     )
     abnormal_data = pd.Series(rng.normal(scale=2.0, size=100))
 
-    all_data = pd.concat([normal_data, abnormal_data])
+    all_data = pd.concat([normal_data, abnormal_data], ignore_index=True)
 
     detector = RollingStandardDeviationDetector()
     anomalies = detector.detect(normal_data)

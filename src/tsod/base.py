@@ -81,7 +81,7 @@ class Detector(ABC):
         self._fit(self._prepare(df, "_fit"))
         return self
 
-    def _fit(self, data: pd.Series):
+    def _fit(self, data: SeriesData):
         # Default implementation is a NoOp
         return self
 
@@ -117,7 +117,7 @@ class Detector(ABC):
         return pred
 
     @abstractmethod
-    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _detect(self, data: SeriesData) -> pd.DataFrame:
         """Detect anomalies"""
         pass
 
