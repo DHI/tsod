@@ -42,6 +42,15 @@ data[~anom]  # get normal data
 ```
 
 
+Index requirements
+------------------
+Every detector needs a [](`pandas.DatetimeIndex`), [](`pandas.TimedeltaIndex`) or numeric index (such as the default `RangeIndex`); other indexes raise `UnsupportedIndexError`.
+
+Detectors that compare neighbouring points also need the index sorted in increasing order and raise `UnsortedIndexError` otherwise. Only `RangeDetector` accepts data in any order.
+
+`DiffDetector`, `RollingStandardDeviationDetector`, `ConstantValueDetector` and `HampelDetector` count data points rather than time, so they assume evenly spaced data. They warn with `UnevenSpacingWarning` when the steps between timestamps differ by more than 1 second (for a numeric index: when the steps are not equal), for example when timestamps are missing. Consider resampling such data first. `GradientDetector` and `ConstantGradientDetector` use the time between points and accept uneven spacing.
+
+
 Saving and loading
 ------------------
 Save a configured detector
