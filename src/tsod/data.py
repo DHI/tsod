@@ -55,7 +55,7 @@ def _is_time_index(index: pd.Index) -> bool:
     return isinstance(index, (pd.DatetimeIndex, pd.TimedeltaIndex))
 
 
-def check_index_type(index: pd.Index) -> None:
+def _check_index_type(index: pd.Index) -> None:
     """Raise `UnsupportedIndexError` unless the index is datetime, timedelta or numeric."""
     if _is_time_index(index):
         return
@@ -69,7 +69,7 @@ def check_index_type(index: pd.Index) -> None:
     )
 
 
-def is_evenly_spaced(index: pd.Index) -> bool:
+def _is_evenly_spaced(index: pd.Index) -> bool:
     """Whether every step of a sorted index is within tolerance of the median step."""
     if len(index) < 3:
         return True
@@ -89,9 +89,9 @@ def categorize(frame: pd.DataFrame) -> SeriesData:
         If the index is not a datetime, timedelta or numeric index.
     """
     index = frame.index
-    check_index_type(index)
+    _check_index_type(index)
     if not index.is_monotonic_increasing:
         return SeriesData(frame)
-    if not is_evenly_spaced(index):
+    if not _is_evenly_spaced(index):
         return SortedData(frame)
     return EvenlySpacedData(frame)
