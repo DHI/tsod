@@ -7,7 +7,7 @@ import subprocess
 import sys
 import textwrap
 
-from tsod.custom_exceptions import UnevenSpacingWarning, WrongInputDataTypeError
+from tsod.custom_exceptions import WrongInputDataTypeError
 from tsod.detectors import (
     RangeDetector,
     DiffDetector,
@@ -273,14 +273,10 @@ def test_combined_detector():
         ]
     )
 
-    series = df.value
-    # example.csv has one 59 minute step among 1 hour steps
-    with pytest.warns(UnevenSpacingWarning, match="ConstantValueDetector"):
-        res = combined.detect(series)
+    res = combined.detect(df.value)
     assert isinstance(res, pd.Series)
 
-    with pytest.warns(UnevenSpacingWarning):
-        res = combined.detect(df)
+    res = combined.detect(df)
     assert isinstance(res, pd.DataFrame)
 
 

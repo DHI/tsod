@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from tsod.data import (
-    SPACING_TOLERANCE,
+    STEP_RATIO,
     EvenlySpacedData,
     SeriesData,
     SortedData,
@@ -35,22 +35,36 @@ def test_duplicate_timestamps_are_sorted_but_uneven():
     assert type(categorize(frame(index))) is SortedData
 
 
-# The spacing rule is pending agreement with domain experts. These tests follow
-# SPACING_TOLERANCE, so changing its value needs no change here; changing the
-# rule itself (e.g. what the deviation is measured against) does.
-def hourly_with_last_step_off_by(deviation):
+# These tests follow STEP_RATIO, so changing its value needs no change here.
+def hourly_with_last_step_scaled_by(ratio):
     index = pd.date_range("2020", periods=4, freq="1h")
-    return index[:-1].append(pd.DatetimeIndex([index[-1] + deviation]))
+    last = index[-2] + ratio * pd.Timedelta(hours=1)
+    return index[:-1].append(pd.DatetimeIndex([last]))
 
 
-def test_step_off_by_the_spacing_tolerance_is_even():
-    index = hourly_with_last_step_off_by(SPACING_TOLERANCE)
+@pytest.mark.parametrize("ratio", [1 - STEP_RATIO / 2, 1 + STEP_RATIO / 2])
+def test_step_within_step_ratio_of_the_median_is_even(ratio):
+    index = hourly_with_last_step_scaled_by(ratio)
     assert type(categorize(frame(index))) is EvenlySpacedData
 
 
-def test_step_off_by_more_than_the_spacing_tolerance_is_uneven():
-    index = hourly_with_last_step_off_by(2 * SPACING_TOLERANCE)
+@pytest.mark.parametrize("ratio", [1 - 2 * STEP_RATIO, 1 + 2 * STEP_RATIO])
+def test_step_beyond_step_ratio_of_the_median_is_uneven(ratio):
+    index = hourly_with_last_step_scaled_by(ratio)
     assert type(categorize(frame(index))) is SortedData
+
+
+def test_missing_sample_is_uneven():
+    index = pd.Index([0.0, 1.0, 2.0, 4.0, 5.0])
+    assert type(categorize(frame(index))) is SortedData
+
+
+def test_step_ratio_is_independent_of_sampling_rate():
+    jittered = np.array([0.0, 1.0, 2.1, 3.0, 4.0])
+    daily = pd.Timestamp("2020") + pd.to_timedelta(jittered, unit="D")
+    secondly = pd.Timestamp("2020") + pd.to_timedelta(jittered, unit="s")
+    assert type(categorize(frame(daily))) is EvenlySpacedData
+    assert type(categorize(frame(secondly))) is EvenlySpacedData
 
 
 def test_categories_are_a_hierarchy():

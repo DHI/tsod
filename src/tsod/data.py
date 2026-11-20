@@ -23,10 +23,16 @@ import pandas as pd
 
 from .custom_exceptions import UnsupportedIndexError
 
-# TODO: consult the spacing tolerance with domain experts.
-SPACING_TOLERANCE = pd.Timedelta(seconds=1)
-"""Largest deviation from the median step for a time index to count as evenly
-spaced. A numeric index must have equal steps within floating point precision."""
+STEP_RATIO = 0.25
+"""Largest relative deviation of a step from the median step for the index to
+count as evenly spaced: every step must lie strictly between
+``(1 - STEP_RATIO)`` and ``(1 + STEP_RATIO)`` times the median step.
+
+Detectors that need evenly spaced data count points, so what matters is that
+each step covers one sampling period. Jitter within this band leaves that
+intact; a missing or repeated sample (a step of about 2 or 0 times the median)
+does not. The band is relative, so the same rule holds at any sampling rate and
+for every index type."""
 
 
 def _is_time_index(index: pd.Index) -> bool:
@@ -60,7 +66,7 @@ class SeriesData:
         return self.frame.index.is_monotonic_increasing
 
     def _is_evenly_spaced(self) -> bool:
-        """Whether every step of the index is within tolerance of the median step.
+        """Whether every step of the index is within `STEP_RATIO` of the median step.
 
         Checks spacing only, not order: a decreasing index with equal steps is
         evenly spaced.
@@ -68,11 +74,12 @@ class SeriesData:
         index = self.frame.index
         if len(index) < 3:
             return True
-        steps = index[1:] - index[:-1]
-        if _is_time_index(index):
-            return abs(steps - steps.median()).max() <= SPACING_TOLERANCE
-        steps = np.asarray(steps, dtype=float)
-        return bool(np.allclose(steps, np.median(steps)))
+        values = index.asi8 if _is_time_index(index) else index.to_numpy(float)
+        steps = np.diff(values)
+        median = np.median(steps)
+        if median == 0:
+            return False
+        return bool(np.all(np.abs(steps / median - 1) < STEP_RATIO))
 
 
 class SortedData(SeriesData):
@@ -80,7 +87,7 @@ class SortedData(SeriesData):
 
 
 class EvenlySpacedData(SortedData):
-    """Sorted data whose index steps are equal, within `SPACING_TOLERANCE`."""
+    """Sorted data whose index steps are equal, within `STEP_RATIO`."""
 
 
 def categorize(frame: pd.DataFrame) -> SeriesData:
