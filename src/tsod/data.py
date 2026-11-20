@@ -46,46 +46,26 @@ class SeriesData:
             raise ValueError("Input DataFrame must contain exactly one column.")
         return self.frame.iloc[:, 0]
 
-    @staticmethod
-    def _has_own_property(index: pd.Index) -> bool:
-        """Whether the index is datetime, timedelta or numeric.
-
-        Raises
-        ------
-        UnsupportedIndexError
-            If it is not, since no category accepts such an index.
-        """
+    def _has_supported_index(self) -> bool:
+        """Whether the index is datetime, timedelta or numeric."""
+        index = self.frame.index
         if _is_time_index(index):
             return True
-        if pd.api.types.is_numeric_dtype(
+        return pd.api.types.is_numeric_dtype(
             index.dtype
-        ) and not pd.api.types.is_bool_dtype(index.dtype):
-            return True
-        raise UnsupportedIndexError(
-            "tsod requires a DatetimeIndex, TimedeltaIndex or numeric index. "
-            f"Got {type(index).__name__} with dtype {index.dtype} instead."
-        )
+        ) and not pd.api.types.is_bool_dtype(index.dtype)
 
-
-class SortedData(SeriesData):
-    """Data whose index is sorted in increasing order (duplicates allowed)."""
-
-    @staticmethod
-    def _has_own_property(index: pd.Index) -> bool:
+    def _is_sorted(self) -> bool:
         """Whether the index is sorted in increasing order."""
-        return index.is_monotonic_increasing
+        return self.frame.index.is_monotonic_increasing
 
-
-class EvenlySpacedData(SortedData):
-    """Sorted data whose index steps are equal, within `SPACING_TOLERANCE`."""
-
-    @staticmethod
-    def _has_own_property(index: pd.Index) -> bool:
+    def _is_evenly_spaced(self) -> bool:
         """Whether every step of the index is within tolerance of the median step.
 
         Checks spacing only, not order: a decreasing index with equal steps is
         evenly spaced.
         """
+        index = self.frame.index
         if len(index) < 3:
             return True
         steps = index[1:] - index[:-1]
@@ -95,24 +75,32 @@ class EvenlySpacedData(SortedData):
         return bool(np.allclose(steps, np.median(steps)))
 
 
-_FROM_GENERAL_TO_SPECIFIC = (SeriesData, SortedData, EvenlySpacedData)
+class SortedData(SeriesData):
+    """Data whose index is sorted in increasing order (duplicates allowed)."""
+
+
+class EvenlySpacedData(SortedData):
+    """Sorted data whose index steps are equal, within `SPACING_TOLERANCE`."""
 
 
 def categorize(frame: pd.DataFrame) -> SeriesData:
     """Return `frame` wrapped in the most specific category it satisfies.
 
-    Each category checks only the property it adds to its parent. The
-    categories are tried from general to specific, stopping at the first one
-    whose property fails, so every property is checked at most once.
+    Each property is checked at most once, from general to specific.
 
     Raises
     ------
     UnsupportedIndexError
         If the index is not a datetime, timedelta or numeric index.
     """
-    category = SeriesData
-    for candidate in _FROM_GENERAL_TO_SPECIFIC:
-        if not candidate._has_own_property(frame.index):
-            break
-        category = candidate
-    return category(frame)
+    data = SeriesData(frame)
+    if not data._has_supported_index():
+        raise UnsupportedIndexError(
+            "tsod requires a DatetimeIndex, TimedeltaIndex or numeric index. "
+            f"Got {type(frame.index).__name__} with dtype {frame.index.dtype} instead."
+        )
+    if not data._is_sorted():
+        return data
+    if not data._is_evenly_spaced():
+        return SortedData(frame)
+    return EvenlySpacedData(frame)
