@@ -29,6 +29,10 @@ SPACING_TOLERANCE = pd.Timedelta(seconds=1)
 spaced. A numeric index must have equal steps within floating point precision."""
 
 
+def _is_time_index(index: pd.Index) -> bool:
+    return isinstance(index, (pd.DatetimeIndex, pd.TimedeltaIndex))
+
+
 @dataclass(frozen=True, eq=False)
 class SeriesData:
     """Data with a datetime, timedelta or numeric index, in any order."""
@@ -42,56 +46,73 @@ class SeriesData:
             raise ValueError("Input DataFrame must contain exactly one column.")
         return self.frame.iloc[:, 0]
 
+    @staticmethod
+    def _has_own_property(index: pd.Index) -> bool:
+        """Whether the index is datetime, timedelta or numeric.
+
+        Raises
+        ------
+        UnsupportedIndexError
+            If it is not, since no category accepts such an index.
+        """
+        if _is_time_index(index):
+            return True
+        if pd.api.types.is_numeric_dtype(
+            index.dtype
+        ) and not pd.api.types.is_bool_dtype(index.dtype):
+            return True
+        raise UnsupportedIndexError(
+            "tsod requires a DatetimeIndex, TimedeltaIndex or numeric index. "
+            f"Got {type(index).__name__} with dtype {index.dtype} instead."
+        )
+
 
 class SortedData(SeriesData):
     """Data whose index is sorted in increasing order (duplicates allowed)."""
+
+    @staticmethod
+    def _has_own_property(index: pd.Index) -> bool:
+        """Whether the index is sorted in increasing order."""
+        return index.is_monotonic_increasing
 
 
 class EvenlySpacedData(SortedData):
     """Sorted data whose index steps are equal, within `SPACING_TOLERANCE`."""
 
+    @staticmethod
+    def _has_own_property(index: pd.Index) -> bool:
+        """Whether every step of the index is within tolerance of the median step.
 
-def _is_time_index(index: pd.Index) -> bool:
-    return isinstance(index, (pd.DatetimeIndex, pd.TimedeltaIndex))
-
-
-def _check_index_type(index: pd.Index) -> None:
-    """Raise `UnsupportedIndexError` unless the index is datetime, timedelta or numeric."""
-    if _is_time_index(index):
-        return
-    if pd.api.types.is_numeric_dtype(index.dtype) and not pd.api.types.is_bool_dtype(
-        index.dtype
-    ):
-        return
-    raise UnsupportedIndexError(
-        "tsod requires a DatetimeIndex, TimedeltaIndex or numeric index. "
-        f"Got {type(index).__name__} with dtype {index.dtype} instead."
-    )
+        Checks spacing only, not order: a decreasing index with equal steps is
+        evenly spaced.
+        """
+        if len(index) < 3:
+            return True
+        steps = index[1:] - index[:-1]
+        if _is_time_index(index):
+            return abs(steps - steps.median()).max() <= SPACING_TOLERANCE
+        steps = np.asarray(steps, dtype=float)
+        return bool(np.allclose(steps, np.median(steps)))
 
 
-def _is_evenly_spaced(index: pd.Index) -> bool:
-    """Whether every step of a sorted index is within tolerance of the median step."""
-    if len(index) < 3:
-        return True
-    steps = index[1:] - index[:-1]
-    if _is_time_index(index):
-        return abs(steps - steps.median()).max() <= SPACING_TOLERANCE
-    steps = np.asarray(steps, dtype=float)
-    return bool(np.allclose(steps, np.median(steps)))
+_FROM_GENERAL_TO_SPECIFIC = (SeriesData, SortedData, EvenlySpacedData)
 
 
 def categorize(frame: pd.DataFrame) -> SeriesData:
     """Return `frame` wrapped in the most specific category it satisfies.
+
+    Each category checks only the property it adds to its parent. The
+    categories are tried from general to specific, stopping at the first one
+    whose property fails, so every property is checked at most once.
 
     Raises
     ------
     UnsupportedIndexError
         If the index is not a datetime, timedelta or numeric index.
     """
-    index = frame.index
-    _check_index_type(index)
-    if not index.is_monotonic_increasing:
-        return SeriesData(frame)
-    if not _is_evenly_spaced(index):
-        return SortedData(frame)
-    return EvenlySpacedData(frame)
+    category = SeriesData
+    for candidate in _FROM_GENERAL_TO_SPECIFIC:
+        if not candidate._has_own_property(frame.index):
+            break
+        category = candidate
+    return category(frame)
