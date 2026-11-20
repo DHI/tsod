@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 
 from .base import Detector
+from .data import EvenlySpacedData, SeriesData, SortedData
 
 
 def _gradient(data: pd.DataFrame, periods: int = 1) -> pd.DataFrame:
@@ -59,16 +60,17 @@ class CombinedDetector(Detector, Sequence):
 
         self._detectors: list[Detector] = detectors
 
-    def _fit(self, data: pd.Series):
+    def _fit(self, data: SeriesData):
         for detector in self._detectors:
-            detector.fit(data)
+            detector.fit(data.frame)
         return self
 
-    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _detect(self, data: SeriesData) -> pd.DataFrame:
+        # Each detector checks the data against its own requirements.
         # NaN handling: True | NaN -> True, False | NaN -> NaN
-        result = self._detectors[0].detect(data)
+        result = self._detectors[0].detect(data.frame)
         for detector in self._detectors[1:]:
-            result = result | detector.detect(data)
+            result = result | detector.detect(data.frame)
         return result
 
     def __getitem__(self, index):
@@ -131,16 +133,17 @@ class RangeDetector(Detector):
             assert 0.0 <= quantiles[1] <= 1.0
             self._quantiles = quantiles
 
-    def _fit(self, data: pd.Series):
-        quantiles = np.nanquantile(data, self._quantiles)
+    def _fit(self, data: SeriesData):
+        quantiles = np.nanquantile(data.series, self._quantiles)
         self._min = quantiles.min()
         self._max = quantiles.max()
 
         assert self._max >= self._min
         return self
 
-    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _detect(self, data: SeriesData) -> pd.DataFrame:
         """Detect anomalies outside range"""
+        data = data.frame
 
         if self._max is None:
             return data < self._min
@@ -182,8 +185,8 @@ class DiffDetector(Detector):
                 f"Selected direction, '{direction}' is not a valid direction. Valid directions are: {valid_directions}"
             )
 
-    def _fit(self, data):
-        data_diffs = data.diff()
+    def _fit(self, data: EvenlySpacedData):
+        data_diffs = data.series.diff()
 
         if self._direction == "positive":
             filtered_diffs = data_diffs[data_diffs >= 0]
@@ -195,7 +198,8 @@ class DiffDetector(Detector):
         self._max_diff = filtered_diffs.max() if not filtered_diffs.empty else 0
         return self
 
-    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _detect(self, data: EvenlySpacedData) -> pd.DataFrame:
+        data = data.frame
         if self._direction == "both":
             return (data.diff()).abs() > self._max_diff
         elif self._direction == "positive":
@@ -230,14 +234,15 @@ class RollingStandardDeviationDetector(Detector):
         self._max_std: float = max_std
         self._center: bool = center
 
-    def _fit(self, data: pd.Series):
-        self._max_std = data.rolling(self._window_size).std().max()
+    def _fit(self, data: EvenlySpacedData):
+        self._max_std = data.series.rolling(self._window_size).std().max()
 
         return self
 
-    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _detect(self, data: EvenlySpacedData) -> pd.DataFrame:
         anomalies = (
-            data.rolling(self._window_size, center=self._center).std() > self._max_std
+            data.frame.rolling(self._window_size, center=self._center).std()
+            > self._max_std
         )
 
         # anomalies = anomalies.astype(int).diff() > 0  # only take positive edges
@@ -281,14 +286,11 @@ class ConstantValueDetector(Detector):
     def window_size(self) -> int:
         return self._window_size
 
-    def _fit(self, data: pd.Series):
-        return self
-
-    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _detect(self, data: EvenlySpacedData) -> pd.DataFrame:
         """Detect constant values in single column or multiple columns."""
 
         # Apply detection to each column independently
-        return data.apply(self._detect_single_column, axis=0)
+        return data.frame.apply(self._detect_single_column, axis=0)
 
     def _detect_single_column(self, data: pd.Series) -> pd.Series:
         """Detect constant values in a single column."""
@@ -333,11 +335,12 @@ class ConstantGradientDetector(ConstantValueDetector):
     def __init__(self, window_size: int = 3):
         super().__init__(window_size=window_size)
 
-    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        gradient = _gradient(data, periods=1)
-        s1 = super()._detect(gradient)
-        gradient = _gradient(data, periods=-1)
-        s2 = super()._detect(gradient)
+    def _detect(self, data: SortedData) -> pd.DataFrame:
+        # Gradients account for the time between points, so spacing may vary
+        gradient = _gradient(data.frame, periods=1)
+        s1 = gradient.apply(self._detect_single_column, axis=0)
+        gradient = _gradient(data.frame, periods=-1)
+        s2 = gradient.apply(self._detect_single_column, axis=0)
         return s1 | s2
 
     def __str__(self):
@@ -371,9 +374,9 @@ class GradientDetector(Detector):
                  Valid directions are: {valid_directions}"""
             )
 
-    def _fit(self, data: pd.Series):
+    def _fit(self, data: SortedData):
         """Set max gradient based on data."""
-        gradients = _gradient(data.to_frame())
+        gradients = _gradient(data.frame)
 
         # Filter based on direction
         if self._direction == "positive":
@@ -388,8 +391,8 @@ class GradientDetector(Detector):
         )
         return self
 
-    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
-        gradient = _gradient(data)
+    def _detect(self, data: SortedData) -> pd.DataFrame:
+        gradient = _gradient(data.frame)
         if self._direction == "negative":
             return gradient < -self._max_gradient
         elif self._direction == "positive":

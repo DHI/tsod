@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
+import functools
+import typing
 from typing import Union, overload
+import warnings
 from typing_extensions import Self
 
 from pathlib import Path
@@ -7,7 +10,12 @@ import joblib
 
 import pandas as pd
 
-from .custom_exceptions import WrongInputDataTypeError
+from .custom_exceptions import (
+    UnevenSpacingWarning,
+    UnsortedIndexError,
+    WrongInputDataTypeError,
+)
+from .data import EvenlySpacedData, SeriesData, SortedData, categorize
 
 
 def load(path: Union[str, Path]):
@@ -27,7 +35,30 @@ def load(path: Union[str, Path]):
     return joblib.load(path)
 
 
+@functools.lru_cache(maxsize=None)
+def _accepted_data_type(method) -> type | None:
+    """The `SeriesData` category a `_fit`/`_detect` method declares for `data`.
+
+    Returns None when the hint is missing or is not a `SeriesData` category, e.g.
+    a detector written before the categories existed, which takes plain pandas.
+    """
+    hint = typing.get_type_hints(method).get("data")
+    if isinstance(hint, type) and issubclass(hint, SeriesData):
+        return hint
+    return None
+
+
 class Detector(ABC):
+    """Base class for detectors.
+
+    Subclasses implement `_detect()` and optionally `_fit()`, and declare the
+    data they need with the type hint of `data`: `SeriesData`, `SortedData` or
+    `EvenlySpacedData` (see `tsod.data`). `fit()` and `detect()` categorize the
+    input and check it against that hint: they raise `UnsortedIndexError` for
+    unsorted data when sorted data is required, and warn with
+    `UnevenSpacingWarning` when evenly spaced data is required but not given.
+    """
+
     def fit(self, data: Union[pd.Series, pd.DataFrame]) -> Self:
         """Set detector parameters based on data.
 
@@ -47,10 +78,10 @@ class Detector(ABC):
         if df.shape[1] != 1:
             raise ValueError("Input DataFrame must contain exactly one column.")
 
-        self._fit(df.iloc[:, 0])
+        self._fit(self._prepare(df, "_fit"))
         return self
 
-    def _fit(self, data: pd.Series):
+    def _fit(self, data: SeriesData):
         # Default implementation is a NoOp
         return self
 
@@ -78,7 +109,7 @@ class Detector(ABC):
         series_as_input = isinstance(data, pd.Series)
         data_as_dataframe = self.validate(data)
 
-        pred = self._detect(data_as_dataframe)
+        pred = self._detect(self._prepare(data_as_dataframe, "_detect"))
 
         if series_as_input:
             return pred.iloc[:, 0]
@@ -86,7 +117,7 @@ class Detector(ABC):
         return pred
 
     @abstractmethod
-    def _detect(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _detect(self, data: SeriesData) -> pd.DataFrame:
         """Detect anomalies"""
         pass
 
@@ -121,6 +152,29 @@ class Detector(ABC):
             raise ValueError("DataFrame columns names must be unique.")
 
         return df
+
+    def _prepare(self, df: pd.DataFrame, method_name: str):
+        """Categorize `df` and check it against what `method_name` accepts."""
+        data = categorize(df)
+        accepted = _accepted_data_type(getattr(type(self), method_name))
+        if accepted is None:
+            return data.series if method_name == "_fit" else data.frame
+        if isinstance(data, accepted):
+            return data
+        if issubclass(accepted, SortedData) and not isinstance(data, SortedData):
+            raise UnsortedIndexError(
+                f"{type(self).__name__} requires an index sorted in increasing "
+                "order. Sort the data first, e.g. with data.sort_index()."
+            )
+        if issubclass(accepted, EvenlySpacedData):
+            warnings.warn(
+                f"{type(self).__name__} counts data points and assumes evenly "
+                "spaced data, but the index steps differ. Results may be "
+                "misleading; consider resampling the data first.",
+                UnevenSpacingWarning,
+                stacklevel=3,
+            )
+        return data
 
     def __str__(self):
         return f"{self.__class__.__name__}"

@@ -99,7 +99,7 @@ All anomaly detectors follow a scikit-learn-inspired API:
    - `save(path)` / `load(path)`: Persistence using joblib
 
 2. **Concrete detectors** (in `src/tsod/detectors.py`):
-   - Must implement `_detect(data)` method
+   - Must implement `_detect(data)` method, with `data` hinted as the category it needs (see Data categories)
    - Optionally override `_fit(data)` for training
    - All work with pandas Series as primary data structure
 
@@ -128,6 +128,7 @@ The library distinguishes between:
 - **Time handling**: Some detectors (e.g., `GradientDetector`) require `pd.DatetimeIndex` and calculate rates per second
 - **Performance**: `HampelDetector` uses `@jit(nopython=True)` from numba for speed. numba is a default dependency but is imported defensively in `hampel.py`: without numba, a stand-in `jit` makes `HampelDetector.detect()` raise `ImportError`, and the rest of tsod stays usable (covered by `test_tsod_usable_without_numba`)
 - **Validation**: Input validation happens in base class before `_fit()` or `_detect()`
+- **Data categories**: `src/tsod/data.py` defines `SeriesData` (datetime/timedelta/numeric index) ⊃ `SortedData` ⊃ `EvenlySpacedData`. `Detector.fit()`/`detect()` call `categorize()` and check the result against the type hint of `data` in `_fit()`/`_detect()`: unsorted data raises `UnsortedIndexError` when `SortedData` is declared; uneven data warns with `UnevenSpacingWarning` when `EvenlySpacedData` is declared and still runs. Detectors read the pandas object from `data.frame` (or `data.series` in `_fit`). Methods without a category hint get plain pandas. Evenly spaced means every index step lies within `STEP_RATIO` (0.25) of the median step, relative to that step, for any index type
 - **Missing data**: Most detectors handle NaN values via numpy's `nanquantile`, `nanmedian`, etc.
 
 ## Code Style
@@ -146,7 +147,7 @@ The library distinguishes between:
 
 ## Important Conventions
 
-- **Index types**: Be aware that some detectors require DatetimeIndex (GradientDetector), others work with any index
+- **Index types**: every detector needs a DatetimeIndex, TimedeltaIndex or numeric index. The category hint shows what else a detector needs: `RangeDetector` accepts any order; Gradient and ConstantGradient need sorted data (and still a DatetimeIndex for now); Diff, RollingStd, ConstantValue and Hampel count points and need evenly spaced data
 - **Return values**: `detect()` always returns pd.Series of booleans, never modifies input
 - **Direction parameter**: Several detectors support `direction="both|positive|negative"` for asymmetric detection
 - **Window sizes**: Window-based detectors use integer window sizes (number of points, not time spans)

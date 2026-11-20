@@ -38,3 +38,15 @@ class NonUniqueTimeStampsError(Exception):
 
 class WrongInputSizeError(ValueError):
     pass
+
+
+class UnsupportedIndexError(TypeError):
+    """The index is not a DatetimeIndex, TimedeltaIndex or numeric index."""
+
+
+class UnsortedIndexError(ValueError):
+    """The index is not sorted in increasing order."""
+
+
+class UnevenSpacingWarning(UserWarning):
+    """A detector that assumes evenly spaced data got unevenly spaced data."""
